@@ -7,8 +7,8 @@ export default function useAuth() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token && router.pathname !== "/login") {
-      router.push("/login");
+    if (!token && router.pathname !== "/") {
+      router.push("/");
     } else {
       setAuthenticated(!!token);
     }

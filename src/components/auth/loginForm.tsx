@@ -7,14 +7,28 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (email === "teste@email.com" && password === "123") {
-      localStorage.setItem("token", "user_authenticated"); // Salva o token no localStorage
-      router.push("/paginaInicial"); // Redireciona para a página inicial
-    } else {
-      setError("E-mail ou senha incorretos.");
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error);
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", data.nome);
+
+      router.push("/paginaInicial");
+    } catch (err) {
+      setError((err as Error).message);
     }
   };
 
@@ -22,29 +36,37 @@ export default function LoginForm() {
     <form onSubmit={handleLogin}>
       {error && <div className="alert alert-danger">{error}</div>}
       
-      <div className="mb-3">
-        <label className="form-label">E-mail</label>
+      <div className="input-group mb-3">
+        <span className="input-group-text">
+          <i className="bi bi-envelope-fill"></i>
+        </span>
         <input
           type="email"
           className="form-control"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          placeholder="E-mail"
         />
       </div>
       
-      <div className="mb-3">
-        <label className="form-label">Senha</label>
+      <div className="input-group mb-3">
+        <span className="input-group-text">
+          <i className="bi bi-key-fill"></i>
+        </span>
         <input
           type="password"
           className="form-control"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          placeholder="Senha"
         />
       </div>
-
-      <button type="submit" className="btn btn-primary w-100">Entrar</button>
+      
+      <button type="submit" className="btn w-100" style={{backgroundColor: "green", color: "white"}}>
+        Entrar
+      </button>
     </form>
   );
 }

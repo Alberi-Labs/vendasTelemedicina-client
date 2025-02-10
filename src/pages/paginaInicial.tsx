@@ -1,15 +1,47 @@
-import Link from "next/link";
-import React from "react";
+import { useRouter } from "next/router";
 
+export default function PaginaInicial() {
+  const router = useRouter();
 
-
-
-export default function PagiginaInicial() {
-    return (
-        <div className="d-flex h-screen justify-content-center align-items-center">
-            <h3>Aqui você pode realizar vendas PF - Pessoa Física ou PJ - Pessoa Jurídica</h3>
-            <p className="lead text-sencondary"></p>
-            <Link href="/vendaPj">Venda Individual</Link>
+  return (
+    <div className="container text-center mt-5">
+      <h1>Olá, seja bem-vindo ao nosso sistema!</h1>
+      <p>
+        Aqui você pode efetuar vendas individuais ou empresariais, além de consultar relatórios para acompanhar seu desempenho.
+        O que você deseja fazer hoje?
+      </p>
+      <div className="d-flex justify-content-center gap-3 mt-4">
+        <div 
+          className="card p-3 text-center"
+          style={{ width: "200px", cursor: "pointer", transition: "background-color 0.3s ease-in-out" }}
+          onClick={() => router.push("/cadastroPf")}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
+        >
+          <i className="bi bi-person fs-1"></i>
+          <h5 className="mt-2">Venda Individual</h5>
         </div>
-    );
+        <div 
+          className="card p-3 text-center"
+          style={{ width: "200px", cursor: "pointer", transition: "background-color 0.3s ease-in-out" }}
+          onClick={() => router.push("/cadastroPj")}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
+        >
+          <i className="bi bi-building fs-1"></i>
+          <h5 className="mt-2">Venda Empresarial</h5>
+        </div>
+        <div 
+          className="card p-3 text-center"
+          style={{ width: "200px", cursor: "pointer", transition: "background-color 0.3s ease-in-out" }}
+          onClick={() => router.push("/consultarRelatorios")}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
+        >
+          <i className="bi bi-clipboard-data fs-1"></i>
+          <h5 className="mt-2">Consultar Relatórios</h5>
+        </div>
+      </div>
+    </div>
+  );
 }

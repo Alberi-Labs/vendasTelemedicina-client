@@ -8,7 +8,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const { authenticated } = useAuth();
 
-  const hideSidebarRoutes = ["/login"];
+  const hideSidebarRoutes = ["/"];
 
   return hideSidebarRoutes.includes(router.pathname) ? (
     <Component {...pageProps} />
