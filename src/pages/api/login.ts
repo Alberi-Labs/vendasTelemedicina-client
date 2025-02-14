@@ -12,7 +12,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log("🔹 Recebendo requisição de login para:", email);
 
-    // Verificar conexão com o banco de dados
     const [rows]: any = await pool.query("SELECT * FROM tb_usuarios WHERE email = ?", [email]);
 
     if (rows.length === 0) {
@@ -23,13 +22,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const user = rows[0];
     console.log("✅ Usuário encontrado:", user.nome);
 
-    // Comparação direta da senha (sem bcrypt)
     if (password !== user.senha) {
       console.error("❌ Senha incorreta para:", email);
       return res.status(401).json({ error: "Senha incorreta" });
     }
 
-    // Criar token JWT
     const token = jwt.sign({ id: user.id, nome: user.nome }, process.env.JWT_SECRET as string, {
       expiresIn: "1d",
     });

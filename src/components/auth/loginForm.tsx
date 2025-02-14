@@ -35,7 +35,7 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleLogin}>
       {error && <div className="alert alert-danger">{error}</div>}
-      
+
       <div className="input-group mb-3">
         <span className="input-group-text">
           <i className="bi bi-envelope-fill"></i>
@@ -49,7 +49,7 @@ export default function LoginForm() {
           placeholder="E-mail"
         />
       </div>
-      
+
       <div className="input-group mb-3">
         <span className="input-group-text">
           <i className="bi bi-key-fill"></i>
@@ -63,8 +63,8 @@ export default function LoginForm() {
           placeholder="Senha"
         />
       </div>
-      
-      <button type="submit" className="btn w-100" style={{backgroundColor: "green", color: "white"}}>
+
+      <button type="submit" className="btn w-100" style={{ backgroundColor: "green", color: "white" }}>
         Entrar
       </button>
     </form>
