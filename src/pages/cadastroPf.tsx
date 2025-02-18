@@ -141,7 +141,7 @@ export default function CadastroPf() {
             </select>
           </div>
 
-          <button type="submit" className="btn w-100" style={{ backgroundColor: "rgb(181, 205, 0)" }}>Registrar e Efetuar Venda</button>
+          <button type="submit" className="btn w-100" style={{ backgroundColor: "rgb(181, 205, 0)" }}>Registrar e Prosseguir para pagamento</button>
         </form>
       </div>
     </div>

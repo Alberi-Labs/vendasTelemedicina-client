@@ -7,7 +7,7 @@ import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 import Loading from "@/components/loading/loading";
 
 export default function CadastroPj() {
-  const [loading, setLoading] = useState(false); 
+  const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [pessoas, setPessoas] = useState<{ nome: string; cpf: string; nascimento: string; uf: string; genero: string }[]>([]);
   const [empresas, setEmpresas] = useState<{ idEmpresa: number; nomeEmpresa: string }[]>([]);
@@ -18,6 +18,7 @@ export default function CadastroPj() {
   const [empresaSelecionada, setEmpresaSelecionada] = useState<string>("");
   const [erroMensagem, setErroMensagem] = useState("");
   const [mensagemAlerta, setMensagemAlerta] = useState<{ texto: string; tipo: "success" | "danger" | "warning" | "info" | "primary" }>({ texto: "", tipo: "danger" });
+  const [clienteSelecionado, setClienteSelecionado] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -142,37 +143,132 @@ export default function CadastroPj() {
 
   return (
     <>
-      {mensagemAlerta.texto && <AvisoAlerta mensagem={mensagemAlerta.texto} tipo={mensagemAlerta.tipo} onClose={() => setMensagemAlerta({ texto: "", tipo: "danger" })} />}
+      {mensagemAlerta.texto && (
+        <AvisoAlerta
+          mensagem={mensagemAlerta.texto}
+          tipo={mensagemAlerta.tipo}
+          onClose={() => setMensagemAlerta({ texto: "", tipo: "danger" })}
+        />
+      )}
 
       <div className="container d-flex justify-content-center mt-5">
         <div className="p-4 rounded shadow-lg" style={{ backgroundColor: "#FFF", width: "75%" }}>
           <h2 className="text-center mb-4">Venda Empresarial</h2>
           <p className="text-center">Realize a venda empresarial preenchendo a planilha ou inserindo manualmente.</p>
 
-          <div className="text-center mb-4">
-            <Button variant="primary" onClick={() => setShowCadastroEmpresa(true)}>
-              Cadastrar Empresa
-            </Button>
-          </div>
+          <Row className="align-items-center mb-4">
+            {/* Dropdown de seleção de cliente */}
+            <Col md="8">
+              <Form.Label>Selecionar Cliente</Form.Label>
+              <Form.Select
+                value={clienteSelecionado || ""}
+                onChange={(e) => setClienteSelecionado(e.target.value)}
+              >
+                <option value="">Escolha um cliente</option>
+                {empresas.map((empresa) => (
+                  <option key={empresa.idEmpresa} value={empresa.idEmpresa}>
+                    {empresa.nomeEmpresa}
+                  </option>
+                ))}
+              </Form.Select>
+            </Col>
 
-          <div className="mb-4">
-            <Form.Label>Selecionar Empresa</Form.Label>
-            <Form.Select
-              value={empresaSelecionada}
-              onChange={(e) => {
-                const selectedId = e.target.value;
-                console.log("ID da empresa selecionado:", selectedId);
-                setEmpresaSelecionada(selectedId);
-              }}
-            >
-              <option value="">Selecione uma empresa</option>
-              {empresas.map((empresa) => (
-                <option key={empresa.idEmpresa} value={empresa.idEmpresa}>
-                  {empresa.nomeEmpresa}
-                </option>
-              ))}
-            </Form.Select>
+            {/* Botão para cadastrar novo cliente */}
+            <Col md="4" className="text-end">
+              <Button variant="primary" onClick={() => setShowCadastroEmpresa(true)}>
+                Cadastrar Cliente
+              </Button>
+            </Col>
+          </Row>
+
+          {clienteSelecionado && (
+            <>
+              <div className="w-75 mx-auto">
+                <div className="mb-3">
+                  <label className="form-label">Upload de Planilha</label>
+                  <input type="file" className="form-control" accept=".csv, .xlsx" onChange={handleFileUpload} />
+                </div>
+              </div>
+
+              <hr className="my-4" />
+
+              <h4 className="text-center mb-3">Adicionar Pessoa Manualmente</h4>
+              <Row className="align-items-center g-2">
+                <Col>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Nome"
+                    name="nome"
+                    value={novaPessoa.nome}
+                    onChange={(e) => setNovaPessoa({ ...novaPessoa, nome: e.target.value })}
+                  />
+                </Col>
+                <Col>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="CPF"
+                    name="cpf"
+                    value={novaPessoa.cpf}
+                    onChange={(e) => setNovaPessoa({ ...novaPessoa, cpf: e.target.value })}
+                  />
+                </Col>
+                <Col>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Data de Nascimento"
+                    name="nascimento"
+                    value={novaPessoa.nascimento}
+                    onChange={(e) => setNovaPessoa({ ...novaPessoa, nascimento: e.target.value })}
+                  />
+                </Col>
+                <Col>
+                  <select
+                    className="form-control"
+                    name="uf"
+                    value={novaPessoa.uf}
+                    onChange={(e) => setNovaPessoa({ ...novaPessoa, uf: e.target.value })}
+                  >
+                    <option value="">UF</option>
+                    {estados.map((estado) => (
+                      <option key={estado.sigla} value={estado.sigla}>
+                        {estado.nome}
+                      </option>
+                    ))}
+                  </select>
+                </Col>
+                <Col>
+                  <select
+                    className="form-control"
+                    name="genero"
+                    value={novaPessoa.genero}
+                    onChange={(e) => setNovaPessoa({ ...novaPessoa, genero: e.target.value })}
+                  >
+                    <option value="">Gênero</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Feminino">Feminino</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </Col>
+                <Col xs="auto">
+                  <Button variant="success" onClick={handleAddPessoa}>
+                    Adicionar
+                  </Button>
+                </Col>
+              </Row>
+              <div className="text-center mt-4">
+            {loading ? (
+              <Loading />
+            ) : (
+              <Button variant="success" className="w-50" onClick={handleEnviarDados}>
+                Enviar Dados
+              </Button>
+            )}
           </div>
+            </>
+          )}
 
           <CadastroEmpresa
             isOpen={showCadastroEmpresa}
@@ -185,95 +281,7 @@ export default function CadastroPj() {
             }
           />
 
-          <div className="w-75 mx-auto">
-            <div className="mb-3">
-              <label className="form-label">Upload de Planilha</label>
-              <input type="file" className="form-control" accept=".csv, .xlsx" onChange={handleFileUpload} />
-            </div>
-          </div>
-
-          <hr className="my-4" />
-
-          <h4 className="text-center mb-3">Adicionar Pessoa Manualmente</h4>
-          <Row className="align-items-center g-2">
-            <Col>
-              <input type="text" className="form-control" placeholder="Nome" name="nome" value={novaPessoa.nome} onChange={handleChange} />
-            </Col>
-            <Col>
-              <input type="text" className="form-control" placeholder="CPF" name="cpf" value={novaPessoa.cpf} onChange={handleChange} maxLength={14} />
-            </Col>
-            <Col>
-              <input type="text" className="form-control" placeholder="Data de Nascimento" name="nascimento" value={novaPessoa.nascimento} onChange={handleChange} maxLength={10} />
-            </Col>
-            <Col>
-              <select className="form-control" name="uf" value={novaPessoa.uf} onChange={handleChange}>
-                <option value="">UF</option>
-                {estados.map((estado) => (
-                  <option key={estado.sigla} value={estado.sigla}>
-                    {estado.nome}
-                  </option>
-                ))}
-              </select>
-            </Col>
-            <Col>
-              <select className="form-control" name="genero" value={novaPessoa.genero} onChange={handleChange}>
-                <option value="">Gênero</option>
-                <option value="Masculino">Masculino</option>
-                <option value="Feminino">Feminino</option>
-                <option value="Outro">Outro</option>
-              </select>
-            </Col>
-            <Col xs="auto">
-              <Button variant="success" onClick={handleAddPessoa}>
-                <i className="bi bi-plus-circle"></i> Adicionar
-              </Button>
-            </Col>
-          </Row>
-
-          {pessoas.length > 0 && (
-            <>
-              <h5 className="text-center mt-4">Pessoas Adicionadas</h5>
-              <div className="p-3 mt-3 rounded shadow-sm" style={{ backgroundColor: "#FFF" }}>
-                <Table striped bordered hover>
-                  <thead>
-                    <tr>
-                      <th>Nome</th>
-                      <th>CPF</th>
-                      <th>Data de Nascimento</th>
-                      <th>UF</th>
-                      <th>Gênero</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pessoas.map((pessoa, index) => (
-                      <tr key={index}>
-                        <td>{pessoa.nome}</td>
-                        <td>{pessoa.cpf}</td>
-                        <td>{pessoa.nascimento}</td>
-                        <td>{pessoa.uf}</td>
-                        <td>{pessoa.genero}</td>
-                        <td className="text-center">
-                          <Button variant="danger" size="sm" onClick={() => handleRemovePessoa(index)}>
-                            <i className="bi bi-trash"></i>
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-            </>
-          )}
-          <div className="text-center mt-4">
-            {loading ? (
-              <Loading />
-            ) : (
-              <Button variant="success" className="w-50" onClick={handleEnviarDados}>
-                Enviar Dados
-              </Button>
-            )}
-
-          </div>
+         
         </div>
       </div>
     </>

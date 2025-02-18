@@ -216,10 +216,7 @@ export default function Sidebar() {
           transition: "margin-left 0.3s ease-in-out, background-color 0.3s ease",
           flexGrow: 1,
           padding: "10px",
-          backgroundColor: "black",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(22 22 33)")}
-        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
       >
         <button
           className="btn btn-light d-flex align-items-center"
