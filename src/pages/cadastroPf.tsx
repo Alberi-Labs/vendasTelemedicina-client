@@ -18,7 +18,7 @@ export default function CadastroPf() {
   const [erros, setErros] = useState<{ [key: string]: string }>({});
   const [estados, setEstados] = useState<{ sigla: string; nome: string }[]>([]);
   const [cidades, setCidades] = useState<string[]>([]);
-
+  
   useEffect(() => {
     fetch("https://servicodados.ibge.gov.br/api/v1/localidades/estados")
       .then((res) => res.json())
@@ -36,7 +36,7 @@ export default function CadastroPf() {
   }, [formData.uf]);
 
   useEffect(() => {
-    if (formData.cep.length === 9) {
+    if (/^\d{5}-\d{3}$/.test(formData.cep)) {
       fetch(`https://viacep.com.br/ws/${formData.cep.replace("-", "")}/json/`)
         .then((res) => res.json())
         .then((data) => {
@@ -51,40 +51,42 @@ export default function CadastroPf() {
           } else {
             setErros((prev) => ({ ...prev, cep: "CEP inválido!" }));
           }
-        });
+        })
+        .catch(() => setErros((prev) => ({ ...prev, cep: "Erro ao buscar CEP" })));
+    } else {
+      setFormData((prev) => ({ ...prev, endereco: "", uf: "", cidade: "" }));
     }
   }, [formData.cep]);
 
-  const validateField = (name: string, value: string) => {
-    let error = "";
-
-    if (name === "cpf" && !/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(value)) error = "CPF inválido!";
-    if (name === "nascimento" && !/^\d{2}\/\d{2}\/\d{4}$/.test(value)) error = "Data inválida!";
-    if (name === "cep" && !/^\d{5}-\d{3}$/.test(value)) error = "CEP inválido!";
-    if (name === "email" && !/\S+@\S+\.\S+/.test(value)) error = "E-mail inválido!";
-    if (name === "celular" && !/^\(\d{2}\)\d{5}-\d{4}$/.test(value)) error = "Telefone inválido!";
-    
-    setErros((prev) => ({ ...prev, [name]: error }));
-  };
-
-  const formatInput = (name: string, value: string) => {
-    if (name === "cpf") return value.replace(/\D/g, "").replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-    if (name === "cep") return value.replace(/\D/g, "").replace(/(\d{5})(\d{3})/, "$1-$2");
-    if (name === "email") return value.toLowerCase();
-    if (name === "nascimento") return value.replace(/\D/g, "").replace(/(\d{2})(\d{2})(\d{4})/, "$1/$2/$3");
-    if (name === "celular") return value.replace(/\D/g, "").replace(/(\d{2})(\d{5})(\d{4})/, "($1)$2-$3");
-    return value;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChangeFormat = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    const formattedValue = formatInput(name, value);
-    setFormData((prev) => ({ ...prev, [name]: formattedValue }));
-    validateField(name, formattedValue);
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleUfChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFormData({ ...formData, uf: e.target.value, cidade: "" });
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    try {
+      const response = await fetch("/api/cadastro", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao enviar dados");
+      }
+
+      alert("Cadastro realizado com sucesso!");
+    } catch (error) {
+      alert("Erro ao enviar os dados. Tente novamente.");
+    }
   };
 
   return (
@@ -92,36 +94,55 @@ export default function CadastroPf() {
       <div className="p-4 rounded shadow-lg" style={{ backgroundColor: "#FFF", width: "50%" }}>
         <h2 className="text-center mb-4">Venda Individual</h2>
         <p className="text-center">Por favor, preencha os dados do cliente para prosseguir com a venda individual.</p>
-        <form>
+        <form onSubmit={handleSubmit}>
           {[
             { label: "Nome", name: "nome", type: "text" },
             { label: "E-mail", name: "email", type: "email" },
             { label: "CPF", name: "cpf", type: "text" },
-            { label: "Celular", name: "celular", type: "text", placeholder: "(61)99651-2722" },
+            { label: "Celular", name: "celular", type: "text", placeholder: "(61) 99651-2722" },
             { label: "Data de nascimento", name: "nascimento", type: "text", placeholder: "14/12/2003" },
             { label: "CEP", name: "cep", type: "text" },
             { label: "Endereço", name: "endereco", type: "text", disabled: true },
             { label: "Casa", name: "casa", type: "text", placeholder: "Número da casa" },
           ].map(({ label, name, type, placeholder, disabled }) => (
             <div className="mb-3" key={name}>
-              {erros[name] && <div className="text-danger mb-1">{erros[name]}</div>}
               <label className="form-label">{label}</label>
               <input
                 type={type}
-                className={`form-control ${erros[name] ? "is-invalid" : ""}`}
+                className="form-control"
                 name={name}
                 value={formData[name as keyof typeof formData]}
-                onChange={handleChange}
+                onChange={handleChangeFormat}
                 placeholder={placeholder}
                 disabled={disabled}
                 required
               />
             </div>
           ))}
+          
+          <div className="mb-3">
+            <label className="form-label">UF</label>
+            <select className="form-control" name="uf" value={formData.uf} onChange={handleUfChange} required>
+              <option value="">-- Selecione --</option>
+              {estados.map((estado) => (
+                <option key={estado.sigla} value={estado.sigla}>{estado.nome}</option>
+              ))}
+            </select>
+          </div>
 
           <div className="mb-3">
-            <label className="form-label">Sexo</label>
-            <select className="form-control" name="sexo" value={formData.sexo} onChange={handleChange} required>
+            <label className="form-label">Cidade</label>
+            <select className="form-control" name="cidade" value={formData.cidade} onChange={handleChangeFormat} required>
+              <option value="">-- Selecione --</option>
+              {cidades.map((cidade) => (
+                <option key={cidade} value={cidade}>{cidade}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Gênero</label>
+            <select className="form-control" name="sexo" value={formData.sexo} onChange={handleChangeFormat} required>
               <option value="">-- Selecione --</option>
               <option value="masculino">Masculino</option>
               <option value="feminino">Feminino</option>
@@ -129,19 +150,9 @@ export default function CadastroPf() {
             </select>
           </div>
 
-          <div className="mb-3">
-            <label className="form-label">UF</label>
-            <select className="form-control" name="uf" value={formData.uf} onChange={handleUfChange} required>
-              <option value="">-- Selecione --</option>
-              {estados.map((estado) => (
-                <option key={estado.sigla} value={estado.sigla}>
-                  {estado.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button type="submit" className="btn w-100" style={{ backgroundColor: "rgb(181, 205, 0)" }}>Registrar e Prosseguir para pagamento</button>
+          <button type="submit" className="btn w-100" style={{ backgroundColor: "rgb(181, 205, 0)" }}>
+            Registrar e Prosseguir para pagamento
+          </button>
         </form>
       </div>
     </div>
