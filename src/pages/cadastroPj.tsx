@@ -5,6 +5,7 @@ import ConferenciaPopup from "../components/conferencia/ConferenciaPopup";
 import CadastroEmpresa from "../components/cadastroEmpresa/CadastroEmpresa";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 import Loading from "@/components/loading/loading";
+import EscolherClientePopup from "@/components/escolherClientePopup.tsx/EscolherClientePoup";
 
 export default function CadastroPj() {
   const [loading, setLoading] = useState(false);
@@ -19,6 +20,7 @@ export default function CadastroPj() {
   const [erroMensagem, setErroMensagem] = useState("");
   const [mensagemAlerta, setMensagemAlerta] = useState<{ texto: string; tipo: "success" | "danger" | "warning" | "info" | "primary" }>({ texto: "", tipo: "danger" });
   const [clienteSelecionado, setClienteSelecionado] = useState<string | null>(null);
+  const [showEscolherCliente, setShowEscolherCliente] = useState(false);
 
 
   useEffect(() => {
@@ -39,14 +41,21 @@ export default function CadastroPj() {
   const handleEnviarDados = async () => {
     setMensagemAlerta({ texto: "", tipo: "danger" });
     setLoading(true);
+
     if (!empresaSelecionada) {
       setLoading(false);
       setMensagemAlerta({ texto: "⚠️ Você precisa selecionar uma empresa antes de enviar os dados!", tipo: "warning" });
       return;
     }
 
+    if (pessoas.length === 0) {
+      setLoading(false);
+      setMensagemAlerta({ texto: "⚠️ Você precisa adicionar pelo menos uma vida antes de enviar!", tipo: "warning" });
+      return;
+    }
+
     try {
-      const response = await fetch("/api/cadastroVida", {
+      const response = await fetch("/api/cadastroVidaEmpresa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -55,12 +64,14 @@ export default function CadastroPj() {
         }),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
         setLoading(false);
-        const erroData = await response.json();
-        setMensagemAlerta({ texto: erroData.error || "❌ Falha ao cadastrar vidas. Tente novamente!", tipo: "danger" });
+        setMensagemAlerta({ texto: `❌ ${result.error || "Erro ao cadastrar vidas"}`, tipo: "danger" });
         return;
       }
+
       setLoading(false);
       setPessoas([]);
       setEmpresaSelecionada("");
@@ -79,17 +90,52 @@ export default function CadastroPj() {
     setPessoas(pessoas.filter((_, i) => i !== index));
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setNovaPessoa({ ...novaPessoa, [e.target.name]: e.target.value });
+  const formatCPF = (cpf: string) => {
+    return cpf
+      .replace(/\D/g, "")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
   };
+
+  const formatDate = (date: string) => {
+    return date
+      .replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "$1/$2")
+      .replace(/(\d{2})(\d)/, "$1/$2")
+      .slice(0, 10);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let { name, value } = e.target;
+
+    if (name === "cpf") {
+      value = formatCPF(value);
+    }
+
+    if (name === "nascimento") {
+      value = formatDate(value);
+    }
+
+    setNovaPessoa({ ...novaPessoa, [name]: value });
+  };
+
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
-    if (uploadedFile) {
-      setFile(uploadedFile);
-      const reader = new FileReader();
 
-      reader.onload = (event) => {
+    if (!uploadedFile) return;
+
+    if (!uploadedFile.name.endsWith(".xlsx") && !uploadedFile.name.endsWith(".csv")) {
+      setMensagemAlerta({ texto: "❌ Formato inválido. Somente arquivos .xlsx ou .csv são permitidos!", tipo: "danger" });
+      return;
+    }
+
+    setFile(uploadedFile);
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      try {
         const data = new Uint8Array(event.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];
@@ -105,11 +151,12 @@ export default function CadastroPj() {
         }));
 
         setPessoas(formattedData);
-        setShowPopup(true);
-      };
+      } catch (error) {
+        setMensagemAlerta({ texto: "❌ Erro ao processar o arquivo. Verifique se ele está no formato correto.", tipo: "danger" });
+      }
+    };
 
-      reader.readAsArrayBuffer(uploadedFile);
-    }
+    reader.readAsArrayBuffer(uploadedFile);
   };
 
   const convertExcelDate = (excelValue: any) => {
@@ -155,37 +202,39 @@ export default function CadastroPj() {
         <div className="p-4 rounded shadow-lg" style={{ backgroundColor: "#FFF", width: "75%" }}>
           <h2 className="text-center mb-4">Venda Empresarial</h2>
           <p className="text-center">Realize a venda empresarial preenchendo a planilha ou inserindo manualmente.</p>
+          <div className="d-flex justify-content-center gap-3 mt-4">
+            <div
+              className="card p-3 text-center "
+              style={{ width: "200px", cursor: "pointer", transition: "background-color 0.3s ease-in-out", marginBottom: "20px" }}
+              onClick={() => setShowCadastroEmpresa(true)}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
+            >
+              <i className="bi bi-plus-circle fs-1"></i>
+              <h5 className="mt-2">Cadastrar Empresa</h5>
+            </div>
 
-          <Row className="align-items-center mb-4">
-            {/* Dropdown de seleção de cliente */}
-            <Col md="8">
-              <Form.Label>Selecionar Cliente</Form.Label>
-              <Form.Select
-                value={clienteSelecionado || ""}
-                onChange={(e) => setClienteSelecionado(e.target.value)}
-              >
-                <option value="">Escolha um cliente</option>
-                {empresas.map((empresa) => (
-                  <option key={empresa.idEmpresa} value={empresa.idEmpresa}>
-                    {empresa.nomeEmpresa}
-                  </option>
-                ))}
-              </Form.Select>
-            </Col>
+            <div
+              className="card p-3 text-center"
+              style={{ width: "200px", cursor: "pointer", transition: "background-color 0.3s ease-in-out", marginBottom: "20px" }}
+              onClick={() => setShowEscolherCliente(true)}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
+            >
+              <i className="bi bi-person-check fs-1"></i>
+              <h5 className="mt-2">Escolher Empresa para a venda</h5>
+            </div>
 
-            {/* Botão para cadastrar novo cliente */}
-            <Col md="4" className="text-end">
-              <Button variant="primary" onClick={() => setShowCadastroEmpresa(true)}>
-                Cadastrar Cliente
-              </Button>
-            </Col>
-          </Row>
+          </div>
 
           {clienteSelecionado && (
             <>
+              <hr className="my-4" />
+
+              <h4 className="text-center mb-3">Upload de planilha contendo dados</h4>
               <div className="w-75 mx-auto">
                 <div className="mb-3">
-                  <label className="form-label">Upload de Planilha</label>
+                  <label className="form-label">Seleciona uma planilha em formato .csv ou .xlxs contendo dados das vidas a serem adicionadas:</label>
                   <input type="file" className="form-control" accept=".csv, .xlsx" onChange={handleFileUpload} />
                 </div>
               </div>
@@ -211,7 +260,7 @@ export default function CadastroPj() {
                     placeholder="CPF"
                     name="cpf"
                     value={novaPessoa.cpf}
-                    onChange={(e) => setNovaPessoa({ ...novaPessoa, cpf: e.target.value })}
+                    onChange={handleChange}
                   />
                 </Col>
                 <Col>
@@ -221,7 +270,7 @@ export default function CadastroPj() {
                     placeholder="Data de Nascimento"
                     name="nascimento"
                     value={novaPessoa.nascimento}
-                    onChange={(e) => setNovaPessoa({ ...novaPessoa, nascimento: e.target.value })}
+                    onChange={handleChange}
                   />
                 </Col>
                 <Col>
@@ -259,16 +308,55 @@ export default function CadastroPj() {
                 </Col>
               </Row>
               <div className="text-center mt-4">
-            {loading ? (
-              <Loading />
-            ) : (
-              <Button variant="success" className="w-50" onClick={handleEnviarDados}>
-                Enviar Dados
-              </Button>
-            )}
-          </div>
+
+              </div>
             </>
           )}
+          {pessoas.length > 0 && (
+            <>
+              <h4 className="text-center mt-4">Lista de Pessoas Adicionadas</h4>
+              <Table striped bordered hover responsive className="mt-3">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>CPF</th>
+                    <th>Data de Nascimento</th>
+                    <th>UF</th>
+                    <th>Gênero</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pessoas.map((pessoa, index) => (
+                    <tr key={index}>
+                      <td>{pessoa.nome}</td>
+                      <td>{pessoa.cpf}</td>
+                      <td>{pessoa.nascimento}</td>
+                      <td>{pessoa.uf}</td>
+                      <td>{pessoa.genero}</td>
+                      <td>
+                        <Button variant="danger" size="sm" onClick={() => handleRemovePessoa(index)}>
+                          Remover
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+
+              {/* Botão de Enviar Dados Centralizado */}
+              <div className="d-flex justify-content-center mt-4">
+                {loading ? (
+                  <Loading />
+                ) : (
+                  <Button variant="success" className="w-50" onClick={handleEnviarDados}>
+                    Enviar Dados
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+
 
           <CadastroEmpresa
             isOpen={showCadastroEmpresa}
@@ -281,7 +369,14 @@ export default function CadastroPj() {
             }
           />
 
-         
+          <EscolherClientePopup
+            show={showEscolherCliente}
+            onClose={() => setShowEscolherCliente(false)}
+            empresas={empresas}
+            onSelect={(id) => setClienteSelecionado(id)}
+          />
+
+
         </div>
       </div>
     </>

@@ -1,7 +1,6 @@
+import RelatorioEmpresaModal from "@/components/relatorioEmpresaModal/relatorioEmpresaModal";
 import { useEffect, useState } from "react";
-import { Table, Button, Spinner, Form } from "react-bootstrap";
-import { jsPDF } from "jspdf";
-import * as XLSX from "xlsx";
+import { Table, Button, Spinner, OverlayTrigger, Tooltip } from "react-bootstrap";
 
 interface Vida {
     idVida: number;
@@ -19,11 +18,13 @@ interface Empresa {
 
 export default function GestaoEmpresasCadastradas() {
     const [empresas, setEmpresas] = useState<Empresa[]>([]);
-    const [vidas, setVidas] = useState<Vida[]>([]);
-    const [selectedEmpresa, setSelectedEmpresa] = useState<number | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [vidasPorEmpresa, setVidasPorEmpresa] = useState<{ [key: number]: Vida[] }>({});
+    const [empresasAbertas, setEmpresasAbertas] = useState<{ [key: number]: boolean }>({});
+    const [loading, setLoading] = useState<{ [key: number]: boolean }>({});
+    const [showRelatorio, setShowRelatorio] = useState(false);
+    const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(null);
+    const [vidasDaEmpresa, setVidasDaEmpresa] = useState<Vida[]>([]);
 
-    const selectedEmpresaNome = empresas.find(e => e.idEmpresa === selectedEmpresa)?.nomeEmpresa || "Todas as Empresas";
 
     useEffect(() => {
         const fetchEmpresas = async () => {
@@ -39,201 +40,211 @@ export default function GestaoEmpresasCadastradas() {
         fetchEmpresas();
     }, []);
 
+    const toggleEmpresa = async (empresaId: number) => {
+        setEmpresasAbertas(prev => ({
+            ...prev,
+            [empresaId]: !prev[empresaId],
+        }));
 
-    const handleFilterChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedValue = e.target.value;
-
-        if (selectedValue === "") {
-            setSelectedEmpresa(null);
-            setLoading(true);
-
+        if (!vidasPorEmpresa[empresaId]) {
+            setLoading(prev => ({ ...prev, [empresaId]: true }));
             try {
-                const response = await fetch(`/api/buscarVidaEmpresa`);
+                const response = await fetch(`/api/buscarVidaEmpresa?idEmpresa=${empresaId}`);
                 const data: Vida[] = await response.json();
-                setVidas(data);
-            } catch (error) {
-                console.error("Erro ao buscar todas as vidas:", error);
-                setVidas([]);
-            } finally {
-                setLoading(false);
-            }
-        } else {
-            const idEmpresa = parseInt(selectedValue);
-            setSelectedEmpresa(idEmpresa);
-            setLoading(true);
-
-            try {
-                const response = await fetch(`/api/buscarVidaEmpresa?idEmpresa=${idEmpresa}`);
-                const data: Vida[] = await response.json();
-                setVidas(data);
+                setVidasPorEmpresa(prev => ({ ...prev, [empresaId]: Array.isArray(data) ? data : [] }));
             } catch (error) {
                 console.error("Erro ao buscar vidas:", error);
-                setVidas([]);
+                setVidasPorEmpresa(prev => ({ ...prev, [empresaId]: [] }));
             } finally {
-                setLoading(false);
+                setLoading(prev => ({ ...prev, [empresaId]: false }));
             }
         }
     };
 
-    const generatePdf = (empresaNome: string, vidas: Vida[]) => {
-        const doc = new jsPDF();
+    const gerarRelatorio = async (empresa: Empresa) => {
+        setEmpresaSelecionada(empresa);
+        setShowRelatorio(true);
 
-        // Título com o nome da empresa
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text(empresaNome, 10, 20);
-
-        // Adicionar as colunas
-        const columnTitles = ["Nome", "CPF", "Data de Nascimento", "UF", "Gênero"];
-        let yPosition = 30;
-        doc.setFontSize(10);
-
-        // Títulos das colunas
-        columnTitles.forEach((title, index) => {
-            doc.text(title, 10 + index * 40, yPosition);
-        });
-        yPosition += 10;
-
-        // Adicionar as linhas
-        vidas.forEach((vida) => {
-            doc.text(vida.nome, 10, yPosition);
-            doc.text(vida.cpf, 50, yPosition);
-            doc.text(vida.nascimento, 90, yPosition);
-            doc.text(vida.uf, 130, yPosition);
-            doc.text(vida.genero, 170, yPosition);
-            yPosition += 10;
-        });
-
-        // Adicionar a data/hora no final
-        const now = new Date();
-        const footerText = `Gerado em: ${now.toLocaleString()}`;
-        doc.setFontSize(8);
-        doc.text(footerText, 10, 290);
-
-        // Salvar o PDF
-        doc.save("relatorio.pdf");
+        try {
+            const response = await fetch(`/api/buscarVidaEmpresa?idEmpresa=${empresa.idEmpresa}`);
+            const data: Vida[] = await response.json();
+            setVidasDaEmpresa(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error("Erro ao buscar vidas:", error);
+            setVidasDaEmpresa([]);
+        }
     };
 
-    const generateExcel = (empresaNome: string, vidas: Vida[]) => {
-        const data = vidas.map((vida) => ({
-            Nome: vida.nome,
-            CPF: vida.cpf,
-            "Data de Nascimento": vida.nascimento,
-            UF: vida.uf,
-            Gênero: vida.genero,
-        }));
-
-        const worksheet = XLSX.utils.json_to_sheet(data);
-
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, empresaNome);
-
-        XLSX.writeFile(workbook, "relatorio.xlsx");
-    };
 
     return (
         <div style={{ padding: "2rem", minHeight: "100vh" }}>
-            <h2 style={{ textAlign: "center", marginBottom: "2rem", color: "#343a40" }}>
+            <h2 style={{ textAlign: "center", marginBottom: "1rem", color: "#343a40" }}>
                 Gestão de Empresas Cadastradas
             </h2>
 
-            <Form.Group style={{ marginBottom: "1.5rem", maxWidth: "400px", margin: "0 auto" }}>
-                <Form.Label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "bold" }}>
-                    Selecione uma empresa
-                </Form.Label>
-                <Form.Select
-                    onChange={handleFilterChange}
-                    value={selectedEmpresa || ""}
-                    style={{
-                        padding: "0.75rem",
-                        fontSize: "1rem",
-                        border: "1px solid #ced4da",
-                        borderRadius: "0.375rem",
-                    }}
-                >
-                    <option value="">Selecione uma empresa:</option>
-                    {empresas?.map((empresa) => (
-                        <option key={empresa.idEmpresa} value={empresa.idEmpresa}>
-                            {empresa.nomeEmpresa}
-                        </option>
-                    ))}
-
-                </Form.Select>
-            </Form.Group>
-
-            <div style={{ textAlign: "right", marginTop: "1rem" }}>
-                <Button
-                    variant="success"
-                    onClick={() => generatePdf(selectedEmpresaNome, vidas)}
-                    style={{ marginRight: "1rem" }}
-                >
-                    Gerar PDF
-                </Button>
-                <Button
-                    variant="success"
-                    onClick={() => generateExcel(selectedEmpresaNome, vidas)}
-                >
-                    Gerar Excel
-                </Button>
-            </div>
-
-            {loading ? (
+            {empresas.length === 0 ? (
                 <div style={{ textAlign: "center", marginTop: "2rem" }}>
                     <Spinner animation="border" variant="primary" />
                 </div>
             ) : (
-
-                <Table
-                    striped
-                    bordered
-                    hover
-                    style={{
-                        marginTop: "2rem",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "0.375rem",
-                        overflow: "hidden",
-                        borderCollapse: "separate",
-                        borderSpacing: "0",
-                    }}
-                >
-
-                    <thead
-                        style={{
-                            backgroundColor: "#343a40",
-                            color: "#ffffff",
-                            textAlign: "center",
-                            fontWeight: "bold",
-                        }}
-                    >
+                <Table striped bordered hover style={{ marginTop: "2rem", backgroundColor: "#ffffff" }}>
+                    <thead style={{ backgroundColor: "#343a40", color: "#ffffff", textAlign: "center" }}>
                         <tr>
-                            <th>Nome</th>
-                            <th>CPF</th>
-                            <th>Data de Nascimento</th>
-                            <th>UF</th>
-                            <th>Gênero</th>
-                            <th>Ações</th>
+                            <th style={{ width: "50px" }}></th>
+                            <th>Nome da Empresa</th>
+                            <th style={{ textAlign: "center" }}>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {Array.isArray(vidas) &&
-                            vidas.map((vida) => (
-                                <tr key={vida.idVida}>
-                                    <td>{vida.nome}</td>
-                                    <td>{vida.cpf}</td>
-                                    <td>{vida.nascimento}</td>
-                                    <td>{vida.uf}</td>
-                                    <td>{vida.genero}</td>
-                                    <td style={{ textAlign: "center" }}>
-                                        <Button variant="outline-primary" style={{ marginRight: "0.5rem" }}>
-                                            Editar
-                                        </Button>
-                                        <Button variant="outline-danger">Deletar</Button>
+                        {empresas.map((empresa) => (
+                            <>
+                                <tr key={empresa.idEmpresa}>
+                                    <td className="align-middle text-center" style={{ cursor: "pointer" }} onClick={() => toggleEmpresa(empresa.idEmpresa)}>
+                                        <i className={`bi ${empresasAbertas[empresa.idEmpresa] ? "bi-chevron-down" : "bi-chevron-right"}`} style={{ fontSize: "1.2rem" }}></i>
                                     </td>
+
+                                    <td className="align-middle" style={{ cursor: "pointer" }} onClick={() => toggleEmpresa(empresa.idEmpresa)}>
+                                        {empresa.nomeEmpresa}
+                                    </td>
+                                    <td className="align-middle text-center">
+                                        {/* Botão Editar */}
+                                        <OverlayTrigger placement="top" overlay={<Tooltip id="tooltip-editar">Editar Dados</Tooltip>}>
+                                            <Button
+                                                variant="outline-primary"
+                                                className="me-2"
+                                                style={{ backgroundColor: "white", borderColor: "#007BFF", color: "#007BFF" }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "#007BFF";
+                                                    e.currentTarget.style.color = "white";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "white";
+                                                    e.currentTarget.style.color = "#007BFF";
+                                                }}
+                                            >
+                                                <i className="bi bi-pencil-fill"></i>
+                                            </Button>
+                                        </OverlayTrigger>
+
+                                        {/* Botão Inativar */}
+                                        <OverlayTrigger placement="top" overlay={<Tooltip id="tooltip-inativar">Inativar</Tooltip>}>
+                                            <Button
+                                                variant="outline-warning"
+                                                className="me-2"
+                                                style={{ backgroundColor: "white", borderColor: "#FFC107", color: "#FFC107" }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "#FFC107";
+                                                    e.currentTarget.style.color = "black";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "white";
+                                                    e.currentTarget.style.color = "#FFC107";
+                                                }}
+                                            >
+                                                <i className="bi bi-eye-slash-fill"></i>
+                                            </Button>
+                                        </OverlayTrigger>
+
+                                        {/* Botão Gerar Cobrança */}
+                                        <OverlayTrigger placement="top" overlay={<Tooltip id="tooltip-cobranca">Gerar Cobrança</Tooltip>}>
+                                            <Button
+                                                variant="outline-success"
+                                                className="me-2"
+                                                style={{ backgroundColor: "white", borderColor: "#28A745", color: "#28A745" }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "#28A745";
+                                                    e.currentTarget.style.color = "white";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "white";
+                                                    e.currentTarget.style.color = "#28A745";
+                                                }}
+                                            >
+                                                <i className="bi bi-cash-stack"></i>
+                                            </Button>
+                                        </OverlayTrigger>
+
+                                        {/* Botão Gerar Relatório */}
+                                        <OverlayTrigger placement="top" overlay={<Tooltip id="tooltip-relatorio">Gerar Relatório</Tooltip>}>
+                                            <Button
+                                                variant="outline-info"
+                                                style={{ backgroundColor: "white", borderColor: "#17A2B8", color: "#17A2B8" }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "#17A2B8";
+                                                    e.currentTarget.style.color = "white";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "white";
+                                                    e.currentTarget.style.color = "#17A2B8";
+                                                }}
+                                                onClick={() => gerarRelatorio(empresa)}
+                                            >
+                                                <i className="bi bi-file-earmark-bar-graph-fill"></i>
+                                            </Button>
+                                        </OverlayTrigger>
+                                    </td>
+
                                 </tr>
-                            ))}
+
+
+                                {empresasAbertas[empresa.idEmpresa] && (
+                                    <tr>
+                                        <td colSpan={3}>
+                                            <div style={{ padding: "10px" }}>
+                                                <h5>Vidas da Empresa</h5>
+                                                {loading[empresa.idEmpresa] ? (
+                                                    <div style={{ textAlign: "center", padding: "1rem" }}>
+                                                        <Spinner animation="border" variant="primary" />
+                                                    </div>
+                                                ) : vidasPorEmpresa[empresa.idEmpresa]?.length > 0 ? (
+                                                    <Table striped bordered hover>
+                                                        <thead>
+                                                            <tr>
+                                                                <th>#</th>
+                                                                <th>Nome</th>
+                                                                <th>CPF</th>
+                                                                <th>Data de Nascimento</th>
+                                                                <th>UF</th>
+                                                                <th>Gênero</th>
+                                                                <th>Ações</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {vidasPorEmpresa[empresa.idEmpresa].map((vida, index) => (
+                                                                <tr key={vida.idVida}>
+                                                                    <td>{index + 1}</td>
+                                                                    <td>{vida.nome}</td>
+                                                                    <td>{vida.cpf}</td>
+                                                                    <td>{vida.nascimento}</td>
+                                                                    <td>{vida.uf}</td>
+                                                                    <td>{vida.genero}</td>
+                                                                    <td style={{ textAlign: "center" }}>
+                                                                        <Button variant="outline-primary" style={{ marginRight: "0.5rem" }}>Editar</Button>
+                                                                        <Button variant="outline-danger">Deletar</Button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </Table>
+                                                ) : (
+                                                    <p style={{ textAlign: "center", color: "gray" }}>Nenhuma vida encontrada para esta empresa.</p>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </>
+                        ))}
                     </tbody>
                 </Table>
             )}
+            <RelatorioEmpresaModal
+                show={showRelatorio}
+                onClose={() => setShowRelatorio(false)}
+                empresa={empresaSelecionada}
+                vidas={vidasDaEmpresa}
+            />
+
         </div>
     );
 }
