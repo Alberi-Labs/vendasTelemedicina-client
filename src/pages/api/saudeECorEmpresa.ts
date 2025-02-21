@@ -92,7 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await page.keyboard.press("Enter");
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    const selectedValue = await page.evaluate((cidade) => {
+    const selectedValue = await page.evaluate((cidade: string) => {
       const normalize = (str: string) =>
         str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 

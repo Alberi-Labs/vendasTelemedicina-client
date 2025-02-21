@@ -3,6 +3,7 @@ import type { AppProps } from "next/app";
 import { useRouter } from "next/router";
 import Layout from "@/components/layout/layout";
 import useAuth from "@/hook/useAuth";
+import "animate.css";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
