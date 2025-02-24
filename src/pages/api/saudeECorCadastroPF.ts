@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
+import chromium from "chrome-aws-lambda";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "POST") {
@@ -11,8 +12,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { email, cpf, celular, cep, endereco, uf, cidade, nome, sexo, dataNascimento } = req.body;
         const instituicao = "Fernando Card";
 
-        const browser = await puppeteer.launch({ headless: true });
-        const page = await browser.newPage();
+        const browser = await puppeteer.launch({
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath,
+            headless: chromium.headless,
+          });        
+          const page = await browser.newPage();
         page.on('dialog', async (dialog) => {
             console.log(`Alerta detectado: ${dialog.message()}`);
             await dialog.dismiss();
