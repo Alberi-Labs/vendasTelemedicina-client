@@ -209,8 +209,8 @@ export default function CadastroPf() {
                 { label: "Nome", name: "nome", type: "text" },
                 { label: "E-mail", name: "email", type: "email" },
                 { label: "CPF", name: "cpf", type: "text" },
-                { label: "Celular", name: "celular", type: "text", placeholder: "(61) 99651-2722" },
-                { label: "Data de nascimento", name: "nascimento", type: "text", placeholder: "14/12/2003" },
+                { label: "Celular", name: "celular", type: "text", placeholder: "(DD) 12345-1234" },
+                { label: "Data de nascimento", name: "nascimento", type: "text", placeholder: "DD/MM/AAAA" },
               ].map(({ label, name, type, placeholder }) => (
                 <Box className="mb-3" key={name}>
                   <label className="form-label">{label}</label>
