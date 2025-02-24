@@ -7,14 +7,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const { email, cpf, celular, cep, endereco, uf, cidade, instituicao, nome, sexo } = req.body;
+        console.log(req.body)
+        const { email, cpf, celular, cep, endereco, uf, cidade, nome, sexo, dataNascimento } = req.body;
+        const instituicao = "Fernando Card";
 
         const browser = await puppeteer.launch({ headless: false });
         const page = await browser.newPage();
-        // Capturar e fechar qualquer alerta do navegador automaticamente
         page.on('dialog', async (dialog) => {
             console.log(`Alerta detectado: ${dialog.message()}`);
-            await dialog.dismiss(); // Ou use dialog.accept() se precisar confirmar
+            await dialog.dismiss();
         });
 
         await page.goto("https://saudeecor.i9.dev.br/white/login.php", { waitUntil: "networkidle2" });
@@ -98,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await page.type("#num_celular", celular);
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        await page.type("#dat_nascimento", new Date().toLocaleDateString("pt-BR"));
+        await page.type("#dat_nascimento", dataNascimento);
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         await page.type("#num_cep", cep);

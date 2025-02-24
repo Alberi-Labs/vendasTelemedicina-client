@@ -5,13 +5,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido" });
   }
+  const { nomeCliente, formaDePagamento } = req.body;
 
+  console.log(req.body)
   try {
     const instituicao = "Fernando Card";
-    const nomeCliente = "joão da Silva"
+    // const nomeCliente = "joão da Silva"
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
-
+    await page.setViewport({
+      width: 1920,
+      height: 1080,
+    });
+    
     await page.goto("https://saudeecor.i9.dev.br/white/login.php", { waitUntil: "networkidle2" });
     page.on('dialog', async (dialog) => {
       console.log(`Alerta detectado: ${dialog.message()}`);
@@ -144,20 +150,100 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }, instituicao);
 
-    await new Promise((resolve) => setTimeout(resolve, 4000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    const vincularProduto = await page.$('.btn-primary[data-toggle="tooltip"]');
+
+    const vincularProduto = await page.$('button.btn-primary.btn-sm[title="Vincular o produto com a venda"]');
     if (vincularProduto) {
-      await vincularProduto.evaluate(node => {
-        (node as HTMLElement).click();
+      await vincularProduto.click();
+    }
+    await page.evaluate(() => {
+      window.scrollBy(0, window.innerHeight); // Rola uma tela para baixo
+    });
+    
+    await page.waitForSelector('#divPagamentoVinculoHtm .btn', { visible: true });
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const pagamentoButton = await page.$('#divPagamentoVinculoHtm .btn');
+    if (pagamentoButton) {
+      const boundingBox = await pagamentoButton.boundingBox();
+      if (boundingBox) {
+        await page.mouse.click(
+          boundingBox.x + boundingBox.width / 2,
+          boundingBox.y + boundingBox.height / 2
+        );
+      } else {
+        console.error('BoundingBox do botão "Forma de pagamento" não encontrado.');
+      }
+    } else {
+      console.error('Botão "Forma de pagamento" não encontrado.');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+
+    // Selecionar a opção com base no valor de formaDePagamento
+    await page.evaluate((formaDePagamento) => {
+      const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    
+      const normalizedFormaDePagamento = normalize(formaDePagamento);
+      const inputs = Array.from(document.querySelectorAll('input[name="tip_pagamento"]'));
+      const inputToSelect = inputs.find(input => 
+        normalize((input as HTMLInputElement).value) === normalizedFormaDePagamento
+      );
+    
+      if (inputToSelect) {
+        (inputToSelect as HTMLElement).click();
+      } else {
+        console.error(`Opção de forma de pagamento "${formaDePagamento}" não encontrada.`);
+      }
+    }, formaDePagamento);
+    
+    // Aguarde um momento para garantir que a seleção foi feita
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Clique no botão "Iniciar processo de pagamento"
+    await page.evaluate(() => {
+      window.scrollBy(0, window.innerHeight);
+    });
+    
+    await page.waitForSelector('#btn_iniciar_processo', { visible: true });
+    const iniciarPagamentoButton = await page.$('#btn_iniciar_processo');
+    if (iniciarPagamentoButton) {
+      const boundingBox = await iniciarPagamentoButton.boundingBox();
+      if (boundingBox) {
+        await page.mouse.click(
+          boundingBox.x + boundingBox.width / 2,
+          boundingBox.y + boundingBox.height / 2
+        );
+      } else {
+        console.error("BoundingBox do botão 'Iniciar processo de pagamento' não encontrado.");
+      }
+    } else {
+      console.error("Botão 'Iniciar processo de pagamento' não encontrado.");
+    }
+    // Aguarde até que o link de pagamento esteja presente no DOM
+    await page.waitForSelector('p.text-muted.well a', { visible: true });
+
+    // Extraia o URL do atributo 'onclick'
+    const paymentLink = await page.evaluate(() => {
+      const linkElement = document.querySelector('p.text-muted.well a');
+      if (linkElement) {
+        const onclickValue = linkElement.getAttribute('onclick');
+        const match = onclickValue && onclickValue.match(/wiOpen\('([^']+)'/);
+        return match ? match[1] : null;
+      }
+      return null;
+    });
+
+    if (paymentLink) {
+      return res.status(200).json({ 
+        message: "Integração concluída com sucesso!", 
+        paymentLink 
+      });
+    } else {
+      return res.status(500).json({ 
+        error: "Link de pagamento não encontrado." 
       });
     }
-
-
-
-
-
-    return res.status(200).json({ message: "Integração concluída com sucesso!" });
+    
   } catch (error) {
     console.error("Erro ao executar Puppeteer:", error);
     return res.status(500).json({ error: "Erro ao executar integração" });

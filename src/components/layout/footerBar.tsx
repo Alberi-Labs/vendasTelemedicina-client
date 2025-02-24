@@ -5,7 +5,7 @@ export default function FooterBar() {
   return (
     <footer
       style={{
-        backgroundColor: "#edeade",
+        backgroundColor: "white",
         padding: "20px 0",
         textAlign: "center",
         marginTop: "20px",
