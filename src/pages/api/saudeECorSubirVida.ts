@@ -1,7 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import puppeteer from "puppeteer-core";
-import chromium from "chrome-aws-lambda";
-
+import puppeteer from "puppeteer";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -13,12 +11,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const instituicao = "Fernando Card";
     // const nomeCliente = "joão da Silva"
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless,
-    });        const page = await browser.newPage();
+    const browser = await puppeteer.launch({ headless: false });
+    const page = await browser.newPage();
     await page.setViewport({
       width: 1920,
       height: 1080,

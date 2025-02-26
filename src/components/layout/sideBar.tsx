@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { Nav } from "react-bootstrap";
+import Loading from "../loading/loading";
 
 export default function Sidebar() {
   const router = useRouter();
@@ -10,6 +11,7 @@ export default function Sidebar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [bgColor, setBgColor] = useState("#161621");
   const [userName, setUserName] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
 
   useEffect(() => {
@@ -19,7 +21,12 @@ export default function Sidebar() {
     }
   }, []);
 
-  const handleMenuClick = () => {
+  const handleNavigation = (path: string) => {
+    setLoading(true);
+    router.push(path);
+  };
+  
+  const  handleMenuClick = () => {
     setMenuOpen(false);
     setTimeout(() => {
       setBgColor("#edeade");
@@ -34,6 +41,17 @@ export default function Sidebar() {
   };
 
   return (
+    <>
+
+{loading && (
+        <div 
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 1050 }}
+        >
+          <Loading />
+        </div>
+      )}
+      
     <div style={{ display: "flex" }}>
       <div
         style={{
@@ -252,6 +270,8 @@ export default function Sidebar() {
       </div>
 
     </div>
+    </>
+    
   );
 }
 
