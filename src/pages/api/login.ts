@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import pool from "../../lib/db";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs"; // Importa o bcrypt para comparar a senha
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -12,6 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log("🔹 Recebendo requisição de login para:", email);
 
+    // 🔍 Busca o usuário pelo email
     const [rows]: any = await pool.query("SELECT * FROM tb_usuarios WHERE email = ?", [email]);
 
     if (rows.length === 0) {
@@ -22,11 +24,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const user = rows[0];
     console.log("✅ Usuário encontrado:", user.nome);
 
-    if (password !== user.senha) {
+    // 🔒 Verifica a senha com bcrypt
+    const senhaCorreta = await bcrypt.compare(password, user.senha);
+    if (!senhaCorreta) {
       console.error("❌ Senha incorreta para:", email);
       return res.status(401).json({ error: "Senha incorreta" });
     }
 
+    // 🔑 Gera o token JWT
     const token = jwt.sign({ id: user.id, nome: user.nome }, process.env.JWT_SECRET as string, {
       expiresIn: "1d",
     });
