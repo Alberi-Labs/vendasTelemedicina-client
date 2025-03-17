@@ -8,7 +8,6 @@ import Typography from "@mui/material/Typography";
 import Paper from "@mui/material/Paper";
 import Container from "@mui/material/Container";
 import TelaCarregamento from "@/components/telaCarregamento/TelaCarregamento";
-import PaymentLinkPopup from "@/components/paymentLinkPopup/PaymentLinkPopup";
 
 export default function CadastroPf() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -251,15 +250,12 @@ export default function CadastroPf() {
           )}
         </Box>
 
-        {/* BOTÕES DE NAVEGAÇÃO */}
         <Box className="d-flex justify-content-between mt-4">
           {currentStep > 0 && <Button variant="outlined" color="secondary" onClick={prevStep}>Voltar</Button>}
           {currentStep < 1 && <Button variant="contained" sx={{ backgroundColor: "rgb(181, 205, 0)" }} onClick={nextStep}>Avançar</Button>}
         </Box>
       </Paper>
 
-      {loading && <TelaCarregamento />}
-      <PaymentLinkPopup show={showPopup} onClose={() => setShowPopup(false)} paymentLink={paymentLink} />
     </Container>
   );
 }

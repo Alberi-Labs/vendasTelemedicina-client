@@ -13,8 +13,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log("🔹 Recebendo requisição de login para:", email);
 
-    // 🔍 Busca o usuário pelo email
-    const [rows]: any = await pool.query("SELECT * FROM tb_usuarios WHERE email = ?", [email]);
+    // 🔍 Busca o usuário pelo email e inclui a `role`
+    const [rows]: any = await pool.query("SELECT idCliente, nome, senha, role FROM tb_usuarios WHERE email = ?", [email]);
 
     if (rows.length === 0) {
       console.error("❌ Usuário não encontrado:", email);
@@ -31,14 +31,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: "Senha incorreta" });
     }
 
-    // 🔑 Gera o token JWT
-    const token = jwt.sign({ id: user.id, nome: user.nome }, process.env.JWT_SECRET as string, {
+    // 🔑 Gera o token JWT incluindo a `role`
+    const token = jwt.sign({ id: user.id, nome: user.nome, role: user.role }, process.env.JWT_SECRET as string, {
       expiresIn: "1d",
     });
 
     console.log("🔑 Token gerado com sucesso para:", user.nome);
 
-    return res.status(200).json({ token, nome: user.nome });
+    // Retorna a resposta incluindo `role`
+    return res.status(200).json({ token, nome: user.nome, role: user.role });
   } catch (error) {
     console.error("🔥 Erro no servidor:", error);
     return res.status(500).json({ error: "Erro no servidor" });

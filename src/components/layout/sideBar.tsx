@@ -11,20 +11,31 @@ export default function Sidebar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [bgColor, setBgColor] = useState("#161621");
   const [userName, setUserName] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-
   useEffect(() => {
-    const storedUserName = localStorage.getItem("user");
-    if (storedUserName) {
-      setUserName(storedUserName);
+    const storedUser = localStorage.getItem("user");
+
+    try {
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+
+        if (parsedUser?.name && parsedUser?.role) {
+          setUserName(parsedUser.name);
+          setUserRole(parsedUser.role);
+        } else {
+          console.error("Formato inválido para usuário:", parsedUser);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao parsear JSON do usuário:", error);
     }
   }, []);
 
-  const handleNavigation = (path: string) => {
-    setLoading(true);
-    router.push(path);
-  };
+  console.log("userName:", userName);
+  console.log("userRole:", userRole);
+
 
   const handleMenuClick = () => {
     setMenuOpen(false);
@@ -40,9 +51,15 @@ export default function Sidebar() {
     setMenuOpen(!menuOpen);
   };
 
+  const canAccess = {
+    vendas: userRole === "admin" || userRole === "vendedor",
+    relatorios: userRole === "admin",
+    consulta: userRole === "admin" || userRole === "cliente",
+    suporte: true,
+  };
+
   return (
     <>
-
       {loading && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
@@ -67,110 +84,102 @@ export default function Sidebar() {
             overflowX: "hidden",
             display: "flex",
             flexDirection: "column",
-            justifyContent: "space-between"
+            justifyContent: "space-between",
           }}
         >
           <div>
-            <h2 style={{ color: "#FFF", fontSize: "1.5rem", fontWeight: "bold", marginBottom: "20px", textAlign: "center", borderBottom: "2px solid #FFF", paddingBottom: "10px" }}>
+            <h2
+              style={{
+                color: "#FFF",
+                fontSize: "1.5rem",
+                fontWeight: "bold",
+                marginBottom: "20px",
+                textAlign: "center",
+                borderBottom: "2px solid #FFF",
+                paddingBottom: "10px",
+              }}
+            >
               <Link href="/paginaInicial" style={{ textDecoration: "none", color: "#FFF" }} onClick={handleMenuClick}>
                 Farmacia
               </Link>
             </h2>
             <Nav className="flex-column">
-              <Nav.Link as={Link} href="/cadastroPf" onClick={handleMenuClick}
-                style={{
-                  color: router.pathname === "/cadastroPf" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/cadastroPf" ? "#b5cd00" : "transparent",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = router.pathname === "/cadastroPf" ? "#b5cd00" : "transparent"}>
-                <i className="bi bi-cart me-2" style={{ color: router.pathname === "/cadastroPf" ? "#000" : "#FFF" }}></i>Vendas
-              </Nav.Link>
-              <button
-                className="btn btn-link text-start w-100"
-                onClick={() => {
-                  if (vendasOpen) setVendasOpen(false); // Fecha o menu Vendas se estiver aberto
-                  setRelatoriosOpen(!relatoriosOpen); // Abre/fecha o menu Relatórios
-                }}
-                style={{
-                  textDecoration: "none",
-                  color: "#FFF",
-                  backgroundColor: relatoriosOpen ? "#b5cd00" : "transparent",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out",
-                  marginBottom: "5px"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = relatoriosOpen ? "#b5cd00" : "transparent"}
-              >
-                <i className="bi bi-clipboard-data me-2" style={{ color: "#FFF" }}></i>Relatórios e Gestão
-              </button>
-              {relatoriosOpen && (
-                <div className="ps-3">
-                  <Nav.Link as={Link} href="/gestaoDeClientesCadatrados" onClick={handleMenuClick}
-                    style={{
-                      color: router.pathname === "/gestaoDeClientesCadatrados" ? "#000" : "#FFF",
-                      backgroundColor: router.pathname === "/gestaoDeClientesCadatrados" ? "#b5cd00" : "transparent",
-                      borderRadius: "10px",
-                      padding: "10px",
-                      transition: "background-color 0.3s ease-in-out",
-                      marginBottom: "5px"
-
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = router.pathname === "/gestaoDeClientesCadatrados" ? "#b5cd00" : "transparent"}>
-                    <i className="bi bi-house-door me-2" style={{ color: router.pathname === "/gestaoDeClientesCadatrados" ? "#000" : "#FFF" }}></i>Gestão de Clientes Cadastradas
-                  </Nav.Link>
-
-                  <Nav.Link as={Link} href="/relatorioVendas" onClick={handleMenuClick}
-                    style={{
-                      color: router.pathname === "/relatorioVendas" ? "#000" : "#FFF",
-                      backgroundColor: router.pathname === "/relatorioVendas" ? "#b5cd00" : "transparent",
-                      borderRadius: "10px",
-                      padding: "10px",
-                      transition: "background-color 0.3s ease-in-out",
-                      marginBottom: "5px"
-
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = router.pathname === "/relatorioVendas" ? "#b5cd00" : "transparent"}>
-                    <i className="bi bi-file-earmark-bar-graph me-2" style={{ color: router.pathname === "/relatorioVendas" ? "#000" : "#FFF" }}></i>Relatório de Vendas
-                  </Nav.Link>
-                </div>
+              {canAccess.vendas && (
+                <Nav.Link
+                  as={Link}
+                  href="/cadastroPf"
+                  onClick={handleMenuClick}
+                  style={{
+                    color: router.pathname === "/cadastroPf" ? "#000" : "#FFF",
+                    backgroundColor: router.pathname === "/cadastroPf" ? "#b5cd00" : "transparent",
+                    borderRadius: "10px",
+                    padding: "10px",
+                    transition: "background-color 0.3s ease-in-out",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/cadastroPf" ? "#b5cd00" : "transparent")}
+                >
+                  <i className="bi bi-cart me-2"></i>Vendas
+                </Nav.Link>
               )}
 
+              {canAccess.relatorios && (
+                <>
+                  <button
+                    className="btn btn-link text-start w-100"
+                    onClick={() => setRelatoriosOpen(!relatoriosOpen)}
+                    style={{
+                      textDecoration: "none",
+                      color: "#FFF",
+                      backgroundColor: relatoriosOpen ? "#b5cd00" : "transparent",
+                      borderRadius: "10px",
+                      padding: "10px",
+                      transition: "background-color 0.3s ease-in-out",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = relatoriosOpen ? "#b5cd00" : "transparent")}
+                  >
+                    <i className="bi bi-clipboard-data me-2"></i>Relatórios e Gestão
+                  </button>
+                  {relatoriosOpen && (
+                    <div className="ps-3">
+                      <Nav.Link as={Link} href="/relatorioVendas" onClick={handleMenuClick} style={{ color: "#FFF" }}>
+                        <i className="bi bi-file-earmark-bar-graph me-2"></i>Relatório de Vendas
+                      </Nav.Link>
+                    </div>
+                  )}
+                </>
+              )}
 
-              <Nav.Link as={Link} href="/consulta" onClick={handleMenuClick}
-                style={{
-                  color: router.pathname === "/consulta" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/consulta" ? "#b5cd00" : "transparent",
+              {canAccess.consulta && (
+                <Nav.Link as={Link} href="/telemedicina" onClick={handleMenuClick} style={{
+                  color: router.pathname === "/telemedicina" ? "#000" : "#FFF",
+                  backgroundColor: router.pathname === "/telemedicina" ? "#b5cd00" : "transparent",
                   borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = router.pathname === "/consulta" ? "#b5cd00" : "transparent"}>
-                <i className="bi bi-clipboard-heart me-2" style={{ color: router.pathname === "/consulta" ? "#000" : "#FFF" }}></i>Consultar com médico onlline
-              </Nav.Link>
-              <Nav.Link as={Link} href="/suporte" onClick={handleMenuClick}
-                style={{
+                    padding: "10px",
+                    transition: "background-color 0.3s ease-in-out",
+
+                }}>
+                  <i className="bi bi-clipboard-heart me-2"></i>Consultar com médico online
+                </Nav.Link>
+              )}
+
+              {canAccess.suporte && (
+                <Nav.Link as={Link} href="/suporte" onClick={handleMenuClick} style={{
                   color: router.pathname === "/suporte" ? "#000" : "#FFF",
                   backgroundColor: router.pathname === "/suporte" ? "#b5cd00" : "transparent",
                   borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = router.pathname === "/suporte" ? "#b5cd00" : "transparent"}>
-                <i className="bi bi-question-circle me-2" style={{ color: router.pathname === "/suporte" ? "#000" : "#FFF" }}></i>Suporte e Ajuda
-              </Nav.Link>
+                    padding: "10px",
+                    transition: "background-color 0.3s ease-in-out",
+
+                }}>
+                  <i className="bi bi-question-circle me-2"></i>Suporte e Ajuda
+                </Nav.Link>
+              )}
             </Nav>
           </div>
-          <div style={{ textAlign: "center", padding: "20px", borderTop: "1px solid #FFF", width: "100%", position: "absolute", bottom: "0", left: "0" }}>
+
+          <div style={{ textAlign: "center", padding: "20px", borderTop: "1px solid #FFF", width: "100%" }}>
             <p style={{ color: "#FFF", marginBottom: "10px" }}>Usuário: {userName}</p>
             <button
               className="btn btn-danger w-100"
@@ -182,13 +191,13 @@ export default function Sidebar() {
             >
               <i className="bi bi-box-arrow-right me-2"></i>Sair
             </button>
-
           </div>
         </div>
+
         <div
           style={{
             marginLeft: menuOpen ? "250px" : "0",
-            transition: "margin-left 0.3s ease-in-out, background-color 0.3s ease",
+            transition: "margin-left 0.3s ease-in-out",
             flexGrow: 1,
             padding: "10px",
           }}
@@ -201,34 +210,15 @@ export default function Sidebar() {
               top: "10px",
               left: menuOpen ? "260px" : "10px",
               zIndex: 1000,
-              display: "flex",
-              alignItems: "center",
-              transition: "left 0.3s ease-in-out",
               backgroundColor: "rgb(22 22 33)",
               borderColor: "rgb(22 22 33)",
             }}
           >
-            <i className="bi bi-list" style={{
-              fontSize: "1.5rem", color: "white"
-            }}></i>
-            <span
-              style={{
-                marginLeft: "10px",
-                fontSize: "1.2rem",
-                fontWeight: "bold",
-                transition: "color 0.3s ease",
-                color: "white"
-              }}
-
-            >
-              Menu
-            </span>
+            <i className="bi bi-list" style={{ fontSize: "1.5rem", color: "white" }}></i>
+            <span style={{ marginLeft: "10px", fontSize: "1.2rem", fontWeight: "bold", color: "white" }}>Menu</span>
           </button>
         </div>
-
       </div>
     </>
-
   );
 }
-

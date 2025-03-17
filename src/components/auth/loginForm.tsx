@@ -26,9 +26,9 @@ export default function LoginForm() {
       if (!res.ok) {
         throw new Error(data.error);
       }
-
+      console.log(data)
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user", data.nome);
+      localStorage.setItem("user", JSON.stringify({ name: data.nome, role: data.role }));
 
       router.push("/paginaInicial");
     } catch (err) {

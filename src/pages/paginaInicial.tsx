@@ -50,7 +50,7 @@ export default function PaginaInicial() {
         <div 
           className="card p-3 text-center"
           style={{ width: "200px", cursor: "pointer", transition: "background-color 0.3s ease-in-out" }}
-          onClick={() => handleNavigation("/consulta")}
+          onClick={() => handleNavigation("/telemedicina")}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""} 
         >
