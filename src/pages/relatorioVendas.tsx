@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Container, Form, Row, Col, Card, Button } from "react-bootstrap";
+import { Container, Form, Row, Col, Card, Button, Table } from "react-bootstrap";
 import { useReactToPrint } from "react-to-print";
 import { BsFileEarmarkPdf } from "react-icons/bs";
+import { Bar, Pie } from "react-chartjs-2";
+import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
+
+Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 export default function RelatorioVendas() {
   type Venda = {
@@ -15,92 +19,69 @@ export default function RelatorioVendas() {
     status_pagamento: string;
     data_pagamento: string | null;
   };
-  
 
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [filtro, setFiltro] = useState("mes");
   const [mesSelecionado, setMesSelecionado] = useState("02");
   const [quinzenaSelecionada, setQuinzenaSelecionada] = useState("1");
 
-  // Ref para exportação em PDF
   const relatorioRef = useRef<HTMLDivElement>(null);
-
   const gerarPDF = useReactToPrint({
     content: () => relatorioRef.current!,
     documentTitle: "Relatorio de Vendas",
     print: (target: any) => new Promise((resolve) => resolve(target)),
   } as unknown as any);
 
-  
 
   useEffect(() => {
     async function fetchVendas() {
       try {
         const response = await fetch("/api/venda/consultar", {
           method: "GET",
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-            Expires: "0",
-          },
+          headers: { "Cache-Control": "no-cache, no-store, must-revalidate", Pragma: "no-cache", Expires: "0" },
         });
         const data = await response.json();
-        if (data.success) {
-          setVendas(data?.vendas);
-        } else {
-          console.error("Erro ao buscar vendas:", data.error);
-        }
+        if (data.success) setVendas(data.vendas);
       } catch (error) {
         console.error("Erro ao conectar com API:", error);
       }
     }
-  
     fetchVendas();
   }, []);
-  
 
-  // 🔹 Filtrar vendas por mês ou quinzena
   const vendasFiltradas = vendas.filter((venda) => {
     const dataPagamento = venda.data_pagamento ? new Date(venda.data_pagamento) : null;
     if (!dataPagamento) return false;
-  
     const mesPagamento = (dataPagamento.getMonth() + 1).toString().padStart(2, "0");
     const diaPagamento = dataPagamento.getDate();
-  
-    if (filtro === "mes") {
-      return mesPagamento === mesSelecionado;
-    }
-  
-    if (filtro === "quinzenal") {
-      const quinzena = diaPagamento <= 15 ? "1" : "2";
-      return mesPagamento === mesSelecionado && quinzena === quinzenaSelecionada;
-    }
-  
+
+    if (filtro === "mes") return mesPagamento === mesSelecionado;
+    if (filtro === "quinzenal") return mesPagamento === mesSelecionado && (diaPagamento <= 15 ? "1" : "2") === quinzenaSelecionada;
+
     return false;
   });
-  
 
-  // 🔹 Filtrar apenas vendas confirmadas
-  const vendasConfirmadas = vendasFiltradas.filter((venda) => venda.status_pagamento === "confirmado");
+  const vendasPorDia = vendasFiltradas.reduce((acc, venda) => {
+    acc[venda.data] = (acc[venda.data] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
-  // 🔹 Cálculo do total de vendas e valor
-  const totalVendas = vendasFiltradas.length;
-const totalValor = vendasFiltradas.reduce((acc, venda) => acc + parseFloat(venda.valor), 0);
-
+  const vendasPorPagamento = vendasFiltradas.reduce((acc, venda) => {
+    acc[venda.forma_pagamento] = (acc[venda.forma_pagamento] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <Container className="mt-5">
-      {/* Botão para Gerar PDF */}
       <div className="d-flex justify-content-end">
         <Button variant="danger" onClick={() => gerarPDF()}>
-          <BsFileEarmarkPdf  size={20} />
+          <BsFileEarmarkPdf size={20} />
         </Button>
       </div>
 
       <div ref={relatorioRef}>
-        <h2 className="text-center mb-4">Relatório de Vendas Confirmadas</h2>
+        <h2 className="text-center mb-4">Relatório de Vendas</h2>
 
-        {/* Filtros */}
         <Row className="mb-4">
           <Col md={6}>
             <Form.Label>Filtro</Form.Label>
@@ -135,21 +116,53 @@ const totalValor = vendasFiltradas.reduce((acc, venda) => acc + parseFloat(venda
           )}
         </Row>
 
-        {/* Totais */}
         <Row className="mb-4">
           <Col md={6}>
-            <Card className="p-3 text-center shadow-sm">
-              <h5>Total de Vendas</h5>
-              <h3>{totalVendas}</h3>
+            <Card className="p-3">
+              <Bar
+                data={{
+                  labels: Object.keys(vendasPorDia),
+                  datasets: [{ label: "Vendas por Dia", data: Object.values(vendasPorDia), backgroundColor: "#4CAF50" }],
+                }}
+                options={{ maintainAspectRatio: false, responsive: true }}
+              />
             </Card>
           </Col>
           <Col md={6}>
-            <Card className="p-3 text-center shadow-sm">
-              <h5>Valor Total</h5>
-              <h3>R$ {totalValor.toFixed(2)}</h3>
+            <Card className="p-3">
+              <Pie
+                data={{
+                  labels: Object.keys(vendasPorPagamento),
+                  datasets: [{
+                    data: Object.values(vendasPorPagamento),
+                    backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56"],
+                  }],
+                }}
+                options={{ maintainAspectRatio: false, responsive: true }}
+              />
             </Card>
           </Col>
         </Row>
+        <Table striped bordered hover>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Forma de Pagamento</th>
+              <th>Valor</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {vendasFiltradas.map((venda) => (
+              <tr key={venda.idVenda}>
+                <td>{venda.data}</td>
+                <td>{venda.forma_pagamento}</td>
+                <td>R$ {parseFloat(venda.valor).toFixed(2)}</td>
+                <td>{venda.status_pagamento}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       </div>
     </Container>
   );

@@ -63,6 +63,7 @@ export default function CadastroPf() {
   const [clienteExiste, setClienteExiste] = useState<boolean | null>(null);
   const [loadingPix, setLoadingPix] = useState(false);
   const [originalData, setOriginalData] = useState<Cliente | null>(null);
+  const [qrCodeImage, setQrCodeImage] = useState<string | null>(null);
 
   // 🔹 Função para limpar formatação do CPF (deixa só números)
   const limparCpf = (cpf: string) => cpf.replace(/\D/g, "");
@@ -163,20 +164,29 @@ export default function CadastroPf() {
   const gerarPix = async () => {
     setLoadingPix(true);
     try {
-      const response = await fetch(`/api/pix/gerarQrCode`, {
+      const response = await fetch(`/api/cobranca/gerarQrCode`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome: formData.nome, valor: 100.00 }), // Ajustar valor conforme necessário
+        body: JSON.stringify({}),
       });
-
+  
       const data = await response.json();
-      setPixQrCode(data.qrCodeUrl);
+  
+      if (response.ok) {
+        // Armazena os dados para exibição
+        setPixQrCode(data.payload);
+        setQrCodeImage(`data:image/png;base64,${data.encodedImage}`);
+      } else {
+        console.error("Erro ao gerar QR Code PIX:", data.error);
+      }
     } catch (error) {
       console.error("Erro ao gerar QR Code PIX:", error);
     } finally {
       setLoadingPix(false);
     }
   };
+  
+
 
   // 🔹 Função para confirmar pagamento em loja
   const confirmarPagamento = () => {
@@ -322,7 +332,7 @@ export default function CadastroPf() {
                           <TableRow key={index}>
                             <TableCell>{venda.data}</TableCell>
                             <TableCell>R$ {venda.valor ? parseFloat(venda.valor.toString()).toFixed(2) : "0.00"}</TableCell>
-                            </TableRow>
+                          </TableRow>
                         ))}
                       </TableBody>
                     </Table>
@@ -339,7 +349,7 @@ export default function CadastroPf() {
                 style={{ width: "100%", padding: "8px", margin: "10px 0" }}
               />
               <Typography><strong>Valor Total:</strong> R$ {(quantidadeCreditos * valorUnitario).toFixed(2)}</Typography>
-              
+
               <Box className="d-flex justify-content-between mt-3">
                 {currentStep > 0 && (
                   <Button variant="outlined" color="secondary" onClick={prevStep}>
@@ -395,11 +405,26 @@ export default function CadastroPf() {
                   </Button>
 
                   {pixQrCode && (
-                    <Box mt={3}>
+                    <Box mt={3} textAlign="center">
                       <Typography variant="subtitle1">Escaneie o QR Code para pagar:</Typography>
-                      <img src={pixQrCode} alt="QR Code PIX" width={200} />
+
+                      {/* Se a API retornar uma imagem base64, exibe */}
+                      {/* Replace 'data.encodedImage' with a valid variable or remove this block if unnecessary */}
+                      {qrCodeImage && (
+      <img src={qrCodeImage} alt="QR Code PIX" width={200} height={200} style={{ border: "1px solid #ddd" }} />
+    )}
+                      {/* Sempre exibe o código 'Copia e Cola' */}
+                      <Typography variant="subtitle1" sx={{ mt: 2 }}>
+                        Copia e Cola:
+                      </Typography>
+                      <Box sx={{ p: 2, backgroundColor: "#f5f5f5", borderRadius: 2 }}>
+                        <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                          {pixQrCode}
+                        </Typography>
+                      </Box>
                     </Box>
                   )}
+
                 </>
               )}
             </>

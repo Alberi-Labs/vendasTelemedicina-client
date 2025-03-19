@@ -40,12 +40,22 @@ export default function PaginaInicial() {
         <div 
           className="card p-3 text-center"
           style={{ width: "200px", cursor: "pointer", transition: "background-color 0.3s ease-in-out" }}
-          onClick={() => handleNavigation("/consultarRelatorios")}
+          onClick={() => handleNavigation("/relatorioVendas")}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""} 
         >
-          <i className="bi bi-clipboard-data fs-1"></i>
-          <h5 className="mt-2">Consultar Relatórios</h5>
+          <i className="bi bi-file-earmark-bar-graph fs-1"></i>
+          <h5 className="mt-2">Relatório de Vendas</h5>
+        </div>
+        <div 
+          className="card p-3 text-center"
+          style={{ width: "200px", cursor: "pointer", transition: "background-color 0.3s ease-in-out" }}
+          onClick={() => handleNavigation("/gestaoClientes")}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""} 
+        >
+          <i className="bi bi-people fs-1"></i>
+          <h5 className="mt-2">Gestão de Clientes</h5>
         </div>
         <div 
           className="card p-3 text-center"

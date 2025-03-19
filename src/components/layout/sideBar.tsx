@@ -158,7 +158,7 @@ export default function Sidebar() {
             backgroundColor: router.pathname === "/relatorioVendas" ? "#b5cd00" : "transparent"
           }}
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/relatorioVendas" || "/gestaoClientes" ? "#b5cd00" : "transparent")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/relatorioVendas" ? "#b5cd00" : "transparent")}
         >
           <i className="bi bi-file-earmark-bar-graph me-2"></i>Relatório de Vendas
         </Nav.Link>
