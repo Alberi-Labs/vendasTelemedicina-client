@@ -7,119 +7,188 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Paper from "@mui/material/Paper";
 import Container from "@mui/material/Container";
-import TelaCarregamento from "@/components/telaCarregamento/TelaCarregamento";
+import CircularProgress from "@mui/material/CircularProgress";
+import Radio from "@mui/material/Radio";
+import RadioGroup from "@mui/material/RadioGroup";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+
+// 🔹 Interface para Cliente
+interface Cliente {
+  nome: string;
+  email: string;
+  cpf: string;
+  telefone: string;
+  creditos: number;
+}
+
+// 🔹 Interface para Venda
+interface Venda {
+  idVenda: number;
+  data: string;
+  valor: number;
+}
+
+// 🔹 Interface para Pagamento
+interface Pagamento {
+  forma_pagamento: string;
+  tipo_pagamento_loja?: string;
+}
 
 export default function CadastroPf() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Cliente>({
     nome: "",
     email: "",
     cpf: "",
-    celular: "",
-    nascimento: "",
-    cep: "",
-    endereco: "",
-    casa: "",
-    sexo: "",
-    uf: "",
-    cidade: "",
-    formaPagamento: "",
-    tipoPagamentoLoja: "",
+    telefone: "",
+    creditos: 0,
   });
 
-  const [erros, setErros] = useState<{ [key: string]: string }>({});
-  const [estados, setEstados] = useState<{ sigla: string; nome: string }[]>([]);
-  const [cidades, setCidades] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
-  const [paymentLink, setPaymentLink] = useState("");
+  const [vendas, setVendas] = useState<Venda[]>([]);
+  const [quantidadeCreditos, setQuantidadeCreditos] = useState(1);
+  const [valorUnitario] = useState(29.90);
+  const [pagamento, setPagamento] = useState<Pagamento>({
+    forma_pagamento: "",
+    tipo_pagamento_loja: "",
+  });
+  console.log(vendas)
+  const [pixQrCode, setPixQrCode] = useState<string | null>(null);
+  const [loadingCpf, setLoadingCpf] = useState(false);
+  const [clienteExiste, setClienteExiste] = useState<boolean | null>(null);
+  const [loadingPix, setLoadingPix] = useState(false);
+  const [originalData, setOriginalData] = useState<Cliente | null>(null);
 
-  useEffect(() => {
-    fetch("https://servicodados.ibge.gov.br/api/v1/localidades/estados")
-      .then((res) => res.json())
-      .then((data) => {
-        setEstados(data.map((estado: any) => ({ sigla: estado.sigla, nome: estado.nome })));
-      });
-  }, []);
+  // 🔹 Função para limpar formatação do CPF (deixa só números)
+  const limparCpf = (cpf: string) => cpf.replace(/\D/g, "");
 
-  useEffect(() => {
-    if (formData.uf) {
-      fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${formData.uf}/municipios`)
-        .then((res) => res.json())
-        .then((data) => setCidades(data.map((cidade: any) => cidade.nome)));
-    }
-  }, [formData.uf]);
-
-  useEffect(() => {
-    if (/^\d{5}-\d{3}$/.test(formData.cep)) {
-      fetch(`https://viacep.com.br/ws/${formData.cep.replace("-", "")}/json/`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data.erro) {
-            setFormData((prev) => ({
-              ...prev,
-              endereco: data.logradouro,
-              uf: data.uf,
-              cidade: data.localidade,
-            }));
-            setErros((prev) => ({ ...prev, cep: "" }));
-          } else {
-            setErros((prev) => ({ ...prev, cep: "CEP inválido!" }));
-          }
-        })
-        .catch(() => setErros((prev) => ({ ...prev, cep: "Erro ao buscar CEP" })));
-    } else {
-      setFormData((prev) => ({ ...prev, endereco: "", uf: "", cidade: "" }));
-    }
-  }, [formData.cep]);
-
-  // Função para formatar CPF
+  // 🔹 Função para formatar CPF na interface
   const formatCpf = (value: string) => {
     return value
-      .replace(/\D/g, "") // Remove tudo que não é número
+      .replace(/\D/g, "")
       .replace(/(\d{3})(\d)/, "$1.$2")
       .replace(/(\d{3})(\d)/, "$1.$2")
       .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
   };
 
-  // Função para formatar Telefone
-  const formatTelefone = (value: string) => {
-    return value
-      .replace(/\D/g, "") // Remove tudo que não é número
-      .replace(/(\d{2})(\d)/, "($1) $2")
-      .replace(/(\d{5})(\d)/, "$1-$2")
-      .slice(0, 15);
-  };
-
-  // Função para formatar Data de Nascimento
-  const formatNascimento = (value: string) => {
-    return value
-      .replace(/\D/g, "") // Remove tudo que não é número
-      .replace(/(\d{2})(\d)/, "$1/$2")
-      .replace(/(\d{2})(\d)/, "$1/$2")
-      .slice(0, 10);
-  };
-
-
-  const handleChangeFormat = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let { name, value } = e.target;
-
     if (name === "cpf") value = formatCpf(value);
-    if (name === "celular") value = formatTelefone(value);
-    if (name === "nascimento") value = formatNascimento(value);
 
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "cpf" && limparCpf(value).length === 11) {
+      verificarCpf(value);
+    }
   };
 
-  const handleUfChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFormData({ ...formData, uf: e.target.value, cidade: "" });
+  const handlePagamentoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPagamento((prev) => ({ ...prev, [name]: value }));
   };
 
-  
+  // 🔹 Buscar CPF no banco e verificar últimas 5 vendas
+  const verificarCpf = async (cpf: string) => {
+    setLoadingCpf(true);
+    try {
+      const cpfLimpo = limparCpf(cpf);
+      const response = await fetch(`/api/cliente/consultar?cpf=${cpfLimpo}`);
+      const data = await response.json();
+
+      if (response.ok && data.clientes.length > 0) {
+        setClienteExiste(true);
+        setFormData(data.clientes[0]);
+
+        // 🔹 Buscar as últimas 5 vendas do cliente
+        const vendasResponse = await fetch(`/api/venda/consultar?id_cliente=${data.clientes[0].idCliente}`);
+        const vendasData = await vendasResponse.json();
+        setVendas(vendasData?.vendas?.slice(0, 5));
+      } else {
+        setClienteExiste(false);
+        setFormData({ nome: "", email: "", cpf, telefone: "", creditos: 0 });
+        setVendas([]);
+      }
+    } catch (error) {
+      console.error("Erro ao consultar CPF:", error);
+    } finally {
+      setLoadingCpf(false);
+    }
+  };
+  const dadosAlterados = () => {
+    return (
+      originalData &&
+      (formData.nome !== originalData.nome ||
+        formData.email !== originalData.email ||
+        formData.telefone !== originalData.telefone)
+    );
+  };
+
+  // 🔹 Função para atualizar os dados do cliente
+  const atualizarCliente = async () => {
+    try {
+      const response = await fetch(`/api/cliente/editar?cpf=${limparCpf(formData.cpf)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: formData.nome,
+          telefone: formData.telefone,
+          email: formData.email,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert("Cliente atualizado com sucesso!");
+        setOriginalData(formData); // Atualiza os dados originais para refletir as mudanças
+        nextStep();
+      } else {
+        alert("Erro ao atualizar cliente.");
+      }
+    } catch (error) {
+      alert("Erro ao atualizar cliente.");
+    }
+  };
+
+  const pesquisarOutroCpf = () => {
+    setClienteExiste(null);
+    setOriginalData(null);
+    setFormData({ nome: "", email: "", cpf: "", telefone: "", creditos: 0 }); // Reseta o formulário
+  };
+
+  const gerarPix = async () => {
+    setLoadingPix(true);
+    try {
+      const response = await fetch(`/api/pix/gerarQrCode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: formData.nome, valor: 100.00 }), // Ajustar valor conforme necessário
+      });
+
+      const data = await response.json();
+      setPixQrCode(data.qrCodeUrl);
+    } catch (error) {
+      console.error("Erro ao gerar QR Code PIX:", error);
+    } finally {
+      setLoadingPix(false);
+    }
+  };
+
+  // 🔹 Função para confirmar pagamento em loja
+  const confirmarPagamento = () => {
+    if (pagamento.forma_pagamento === "loja" && !pagamento.tipo_pagamento_loja) {
+      alert("Selecione o tipo de pagamento (crédito, débito ou dinheiro).");
+      return;
+    }
+
+    alert(`Pagamento confirmado! Forma: ${pagamento.forma_pagamento} ${pagamento.tipo_pagamento_loja ? " - " + pagamento.tipo_pagamento_loja : ""}`);
+  };
   const nextStep = () => setCurrentStep((prev) => prev + 1);
-  const prevStep = () => setCurrentStep((prev) => prev - 1);
-
-  const steps = ["Dados Pessoais", "Pagamento"];
+  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 0));
 
   return (
     <Container maxWidth="md">
@@ -129,7 +198,7 @@ export default function CadastroPf() {
         </Typography>
 
         <Stepper activeStep={currentStep} alternativeLabel>
-          {steps.map((label, index) => (
+          {["Verificar Cliente", "Revisar Venda", "Pagamento"].map((label, index) => (
             <Step key={index}>
               <StepLabel>{label}</StepLabel>
             </Step>
@@ -140,122 +209,203 @@ export default function CadastroPf() {
           {currentStep === 0 && (
             <>
               <Typography variant="h6" align="center" gutterBottom>
-                Preencha as informações pessoais
+                Digite o CPF para verificar se o cliente já está cadastrado:
               </Typography>
-              {[{ label: "Nome", name: "nome", type: "text" }, { label: "E-mail", name: "email", type: "email" }, { label: "CPF", name: "cpf", type: "text" }, { label: "Celular", name: "celular", type: "text", placeholder: "(DD) 12345-1234" }, { label: "Data de nascimento", name: "nascimento", type: "text", placeholder: "DD/MM/AAAA" }].map(({ label, name, type, placeholder }) => (
-                <Box className="mb-3" key={name}>
-                  <label className="form-label">{label}</label>
-                  <input type={type} className="form-control" name={name} value={formData[name as keyof typeof formData]} onChange={handleChangeFormat} placeholder={placeholder} required />
-                </Box>
-              ))}
+
+              <Box className="mb-3">
+                <label className="form-label">CPF</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  name="cpf"
+                  value={formData.cpf}
+                  onChange={handleChange}
+                  placeholder="000.000.000-00"
+                  required
+                />
+              </Box>
+
+              {loadingCpf && <CircularProgress size={24} />}
+
+              {clienteExiste === true && (
+                <>
+                  <Typography color="green">
+                    Cliente encontrado! Você pode editar os dados.
+                  </Typography>
+
+                  {["Nome", "Email", "Telefone"].map((label, index) => {
+                    const name = label.toLowerCase();
+                    return (
+                      <Box className="mb-3" key={index}>
+                        <label className="form-label">{label}</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          name={name}
+                          value={formData[name as keyof typeof formData]}
+                          onChange={handleChange}
+                          required
+                        />
+                      </Box>
+                    );
+                  })}
+
+                  <Box className="d-flex justify-content-between mt-3">
+                    <Button variant="outlined" color="secondary" onClick={pesquisarOutroCpf}>
+                      Pesquisar outro CPF
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={dadosAlterados() ? atualizarCliente : nextStep}
+                    >
+                      {dadosAlterados() ? "Salvar Alterações e Prosseguir" : "Prosseguir"}
+                    </Button>
+                  </Box>
+                </>
+              )}
+
+              {clienteExiste === false && (
+                <>
+                  <Typography color="red">
+                    Cliente não encontrado! Preencha os dados para cadastrar.
+                  </Typography>
+
+                  {["Nome", "E-mail", "Telefone"].map((label, index) => {
+                    const name = label.toLowerCase();
+                    return (
+                      <Box className="mb-3" key={index}>
+                        <label className="form-label">{label}</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          name={name}
+                          value={formData[name as keyof typeof formData]}
+                          onChange={handleChange}
+                          required
+                        />
+                      </Box>
+                    );
+                  })}
+
+                  <Button variant="contained" color="success">
+                    Cadastrar Cliente e Prosseguir
+                  </Button>
+                </>
+              )}
             </>
           )}
 
           {currentStep === 1 && (
             <>
               <Typography variant="h6" align="center" gutterBottom>
-                Pagamento
+                {clienteExiste ? "Resumo do Cliente" : "Resumo da Compra"}
               </Typography>
-              <Typography align="center">Selecione uma forma de pagamento:</Typography>
-              <Box className="text-center mt-3">
-                <Box className="mb-3">
-                  <div>
-                    <input type="radio" id="loja" name="formaPagamento" value="loja" onChange={handleChangeFormat} checked={formData.formaPagamento === "loja"} />
-                    <label htmlFor="loja">Pagamento em loja</label>
-                  </div>
-                  <div>
-                    <input type="radio" id="pix" name="formaPagamento" value="pix" onChange={handleChangeFormat} checked={formData.formaPagamento === "pix"} />
-                    <label htmlFor="pix">Pix</label>
-                  </div>
-                </Box>
-              </Box>
 
-              {/* Se o pagamento for em loja, mostrar opções */}
-              {formData.formaPagamento === "loja" && (
-                <Box className="mb-3 text-center">
-                  <Typography variant="h6">Escolha o método:</Typography>
-                  <Box className="d-flex justify-content-center gap-3 mt-2">
-                    <input type="radio" id="credito" name="tipoPagamentoLoja" value="credito" onChange={handleChangeFormat} checked={formData.tipoPagamentoLoja === "credito"} />
-                    <label htmlFor="credito">Cartão de Crédito</label>
+              {clienteExiste && (
+                <Paper sx={{ p: 2, mb: 2 }}>
+                  <Typography><strong>Nome:</strong> {formData.nome}</Typography>
+                  <Typography><strong>CPF:</strong> {formData.cpf}</Typography>
+                  <Typography><strong>Créditos:</strong> {formData.creditos}</Typography>
 
-                    <input type="radio" id="debito" name="tipoPagamentoLoja" value="debito" onChange={handleChangeFormat} checked={formData.tipoPagamentoLoja === "debito"} />
-                    <label htmlFor="debito">Cartão de Débito</label>
-
-                    <input type="radio" id="dinheiro" name="tipoPagamentoLoja" value="dinheiro" onChange={handleChangeFormat} checked={formData.tipoPagamentoLoja === "dinheiro"} />
-                    <label htmlFor="dinheiro">Dinheiro</label>
-                  </Box>
-                </Box>
+                  <Typography variant="h6" sx={{ mt: 2 }}>Últimas 5 Vendas</Typography>
+                  <TableContainer component={Paper}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Data</TableCell>
+                          <TableCell>Valor</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {vendas?.map((venda, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{venda.data}</TableCell>
+                            <TableCell>R$ {venda.valor ? parseFloat(venda.valor.toString()).toFixed(2) : "0.00"}</TableCell>
+                            </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Paper>
               )}
 
-              {/* Botão dinâmico baseado na escolha do pagamento */}
-              <Box className="text-center mt-4">
-                {formData.formaPagamento === "pix" ? (
-                  <Button variant="contained" color="success" onClick={async () => {
-                    setLoading(true);
-                    try {
-                      const response = await fetch('/api/gerarQrCodePix', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ nomeCliente: formData.nome }),
-                      });
-
-                      if (!response.ok) throw new Error("Erro ao gerar QR Code");
-
-                      const data = await response.json();
-                      setPaymentLink(data.paymentLink);
-                      setShowPopup(true);
-                    } catch (error) {
-                      alert("Erro ao gerar QR Code.");
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}>
-                    Gerar QR Code
+              <Typography variant="h6">Quantidade de Créditos</Typography>
+              <input
+                type="number"
+                min="1"
+                value={quantidadeCreditos}
+                onChange={(e) => setQuantidadeCreditos(Number(e.target.value))}
+                style={{ width: "100%", padding: "8px", margin: "10px 0" }}
+              />
+              <Typography><strong>Valor Total:</strong> R$ {(quantidadeCreditos * valorUnitario).toFixed(2)}</Typography>
+              
+              <Box className="d-flex justify-content-between mt-3">
+                {currentStep > 0 && (
+                  <Button variant="outlined" color="secondary" onClick={prevStep}>
+                    Voltar
                   </Button>
-                ) : (
-                  <Button
-  variant="contained"
-  color="primary"
-  onClick={async () => {
-    if (formData.formaPagamento === "loja" && !formData.tipoPagamentoLoja) {
-      alert("Por favor, selecione se o pagamento foi feito com dinheiro, débito ou crédito.");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/pagamento", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        alert(data.message);
-      } else {
-        alert("Erro ao processar pagamento.");
-      }
-    } catch (error) {
-      alert("Erro ao confirmar pagamento.");
-    }
-  }}
->
-  Confirmar Pagamento
-</Button>
-
                 )}
+
+                <Button variant="contained" color="primary" onClick={nextStep}>
+                  Prosseguir para Pagamento
+                </Button>
               </Box>
+
+            </>
+          )}
+
+          {currentStep === 2 && (
+            <>
+              <Typography variant="h6" align="center" gutterBottom>
+                Escolha a forma de pagamento:
+              </Typography>
+
+              <RadioGroup name="forma_pagamento" value={pagamento.forma_pagamento} onChange={handlePagamentoChange}>
+                <FormControlLabel value="loja" control={<Radio />} label="Pagamento em Loja" />
+                <FormControlLabel value="pix" control={<Radio />} label="PIX" />
+              </RadioGroup>
+
+              {pagamento.forma_pagamento === "loja" && (
+                <>
+                  <Typography variant="subtitle1">Escolha o método de pagamento:</Typography>
+                  <RadioGroup name="tipo_pagamento_loja" value={pagamento.tipo_pagamento_loja} onChange={handlePagamentoChange}>
+                    <FormControlLabel value="credito" control={<Radio />} label="Cartão de Crédito" />
+                    <FormControlLabel value="debito" control={<Radio />} label="Cartão de Débito" />
+                    <FormControlLabel value="dinheiro" control={<Radio />} label="Dinheiro" />
+                  </RadioGroup>
+
+                  <Box className="d-flex justify-content-between mt-3">
+                    <Button variant="outlined" color="secondary" onClick={prevStep}>
+                      Voltar
+                    </Button>
+
+                    <Button variant="contained" color="success" onClick={confirmarPagamento}>
+                      Confirmar Pagamento
+                    </Button>
+                  </Box>
+
+                </>
+              )}
+
+              {pagamento.forma_pagamento === "pix" && (
+                <>
+                  <Button variant="contained" color="primary" onClick={gerarPix} disabled={loadingPix}>
+                    {loadingPix ? "Gerando QR Code..." : "Gerar QR Code PIX"}
+                  </Button>
+
+                  {pixQrCode && (
+                    <Box mt={3}>
+                      <Typography variant="subtitle1">Escaneie o QR Code para pagar:</Typography>
+                      <img src={pixQrCode} alt="QR Code PIX" width={200} />
+                    </Box>
+                  )}
+                </>
+              )}
             </>
           )}
         </Box>
-
-        <Box className="d-flex justify-content-between mt-4">
-          {currentStep > 0 && <Button variant="outlined" color="secondary" onClick={prevStep}>Voltar</Button>}
-          {currentStep < 1 && <Button variant="contained" sx={{ backgroundColor: "rgb(181, 205, 0)" }} onClick={nextStep}>Avançar</Button>}
-        </Box>
       </Paper>
-
     </Container>
   );
 }

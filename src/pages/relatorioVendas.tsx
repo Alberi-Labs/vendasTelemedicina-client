@@ -1,34 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Container, Table, Form, Row, Col, Card } from "react-bootstrap";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
+import { useEffect, useState, useRef } from "react";
+import { Container, Form, Row, Col, Card, Button } from "react-bootstrap";
+import { useReactToPrint } from "react-to-print";
+import { BsFileEarmarkPdf } from "react-icons/bs";
 
 export default function RelatorioVendas() {
   type Venda = {
-    id: number;
-    nome: string;
-    cpf: string;
+    idVenda: number;
+    id_cliente: number;
+    data: string;
+    valor: string;
     forma_pagamento: string;
-    tipo_pagamento_loja: string | null;
-    data_venda: string;
-    data_confirmacao_pagamento: string | null;
     status_pagamento: string;
+    data_pagamento: string | null;
   };
+  
 
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [filtro, setFiltro] = useState("mes");
   const [mesSelecionado, setMesSelecionado] = useState("02");
-  const [anoSelecionado, setAnoSelecionado] = useState("2025");
+  const [quinzenaSelecionada, setQuinzenaSelecionada] = useState("1");
+
+  // Ref para exportação em PDF
+  const relatorioRef = useRef<HTMLDivElement>(null);
+
+  const gerarPDF = useReactToPrint({
+    content: () => relatorioRef.current!,
+    documentTitle: "Relatorio de Vendas",
+    print: (target: any) => new Promise((resolve) => resolve(target)),
+  } as unknown as any);
+
+  
 
   useEffect(() => {
     async function fetchVendas() {
       try {
-        const response = await fetch("/api/consultarClientes");
+        const response = await fetch("/api/venda/consultar", {
+          method: "GET",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        });
         const data = await response.json();
-        console.log(data);
         if (data.success) {
-          setVendas(data.vendas);
+          setVendas(data?.vendas);
         } else {
           console.error("Erro ao buscar vendas:", data.error);
         }
@@ -36,171 +54,103 @@ export default function RelatorioVendas() {
         console.error("Erro ao conectar com API:", error);
       }
     }
-
+  
     fetchVendas();
   }, []);
-  console.log(vendas);
+  
 
+  // 🔹 Filtrar vendas por mês ou quinzena
   const vendasFiltradas = vendas.filter((venda) => {
-    const dataVenda = new Date(venda.data_venda);
-    const anoVenda = dataVenda.getFullYear().toString();
-    const mesVenda = (dataVenda.getMonth() + 1).toString().padStart(2, "0");
-
-    return (
-      (filtro === "mes" && mesVenda === mesSelecionado && anoVenda === anoSelecionado) ||
-      (filtro === "ano" && anoVenda === anoSelecionado)
-    );
+    const dataPagamento = venda.data_pagamento ? new Date(venda.data_pagamento) : null;
+    if (!dataPagamento) return false;
+  
+    const mesPagamento = (dataPagamento.getMonth() + 1).toString().padStart(2, "0");
+    const diaPagamento = dataPagamento.getDate();
+  
+    if (filtro === "mes") {
+      return mesPagamento === mesSelecionado;
+    }
+  
+    if (filtro === "quinzenal") {
+      const quinzena = diaPagamento <= 15 ? "1" : "2";
+      return mesPagamento === mesSelecionado && quinzena === quinzenaSelecionada;
+    }
+  
+    return false;
   });
+  
 
-  // 🔹 Filtrar apenas as vendas confirmadas para cálculos e gráficos
+  // 🔹 Filtrar apenas vendas confirmadas
   const vendasConfirmadas = vendasFiltradas.filter((venda) => venda.status_pagamento === "confirmado");
 
-  // 🔹 Cálculo do total de vidas e valor de vendas confirmadas
-  const totalVidas = vendasConfirmadas.length;
-  const totalValor = totalVidas * 30;
+  // 🔹 Cálculo do total de vendas e valor
+  const totalVendas = vendasFiltradas.length;
+const totalValor = vendasFiltradas.reduce((acc, venda) => acc + parseFloat(venda.valor), 0);
 
-  // 🔹 Agrupar vendas confirmadas por data de CONFIRMAÇÃO para o gráfico
-  const vendasPorData = Object.entries(
-    vendasConfirmadas.reduce((acc, venda) => {
-      if (!venda.data_confirmacao_pagamento) return acc; // Ignorar se não tiver confirmação
-      const dataConfirmacao = new Date(venda.data_confirmacao_pagamento).toLocaleDateString("pt-BR");
-      acc[dataConfirmacao] = (acc[dataConfirmacao] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>)
-  ).map(([data, quantidade]) => ({ data, quantidade }));
 
-  // 🔹 Agrupamento por forma de pagamento
-  const formasDePagamento = ["loja", "pix"];
-  const vendasPorFormaPagamento = formasDePagamento.map((forma) => ({
-    name: forma === "loja" ? "Loja" : "Pix",
-    value: vendasConfirmadas.filter((venda) => venda.forma_pagamento === forma).length,
-  }));
-
-  const COLORS = ["#28a745", "#007bff"];
   return (
     <Container className="mt-5">
-      <h2 className="text-center mb-4">Relatório de Vendas Confirmadas</h2>
+      {/* Botão para Gerar PDF */}
+      <div className="d-flex justify-content-end">
+        <Button variant="danger" onClick={() => gerarPDF()}>
+          <BsFileEarmarkPdf  size={20} />
+        </Button>
+      </div>
 
-      {/* Filtros */}
-      <Row className="mb-4">
-        <Col md={4}>
-          <Form.Label>Filtro</Form.Label>
-          <Form.Select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-            <option value="mes">Mês</option>
-            <option value="ano">Ano</option>
-          </Form.Select>
-        </Col>
-        {filtro === "mes" && (
-          <>
-            <Col md={4}>
-              <Form.Label>Mês</Form.Label>
-              <Form.Select value={mesSelecionado} onChange={(e) => setMesSelecionado(e.target.value)}>
-                {Array.from({ length: 12 }, (_, i) => {
-                  const mes = (i + 1).toString().padStart(2, "0");
-                  return (
-                    <option key={mes} value={mes}>
-                      {new Date(2025, i).toLocaleString("pt-BR", { month: "long" })}
-                    </option>
-                  );
-                })}
-              </Form.Select>
-            </Col>
-            <Col md={4}>
-              <Form.Label>Ano</Form.Label>
-              <Form.Select value={anoSelecionado} onChange={(e) => setAnoSelecionado(e.target.value)}>
-                {[2023, 2024, 2025].map((ano) => (
-                  <option key={ano} value={ano}>
-                    {ano}
-                  </option>
-                ))}
-              </Form.Select>
-            </Col>
-          </>
-        )}
-        {filtro === "ano" && (
-          <Col md={4}>
-            <Form.Label>Ano</Form.Label>
-            <Form.Select value={anoSelecionado} onChange={(e) => setAnoSelecionado(e.target.value)}>
-              {[2023, 2024, 2025].map((ano) => (
-                <option key={ano} value={ano}>
-                  {ano}
-                </option>
-              ))}
+      <div ref={relatorioRef}>
+        <h2 className="text-center mb-4">Relatório de Vendas Confirmadas</h2>
+
+        {/* Filtros */}
+        <Row className="mb-4">
+          <Col md={6}>
+            <Form.Label>Filtro</Form.Label>
+            <Form.Select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+              <option value="mes">Mês</option>
+              <option value="quinzenal">Quinzenal</option>
             </Form.Select>
           </Col>
-        )}
-      </Row>
 
-      {/* Totais */}
-      <Row className="mb-4">
-        <Col md={6}>
-          <Card className="p-3 text-center shadow-sm">
-            <h5>Total de Consultas Vendidas</h5>
-            <h3>{totalVidas}</h3>
-          </Card>
-        </Col>
-        <Col md={6}>
-          <Card className="p-3 text-center shadow-sm">
-            <h5>Valor Total de Vendas</h5>
-            <h3>R$ {totalValor.toFixed(2)}</h3>
-          </Card>
-        </Col>
-      </Row>
+          <Col md={6}>
+            <Form.Label>Mês</Form.Label>
+            <Form.Select value={mesSelecionado} onChange={(e) => setMesSelecionado(e.target.value)}>
+              {Array.from({ length: 12 }, (_, i) => {
+                const mes = (i + 1).toString().padStart(2, "0");
+                return (
+                  <option key={mes} value={mes}>
+                    {new Date(2025, i).toLocaleString("pt-BR", { month: "long" })}
+                  </option>
+                );
+              })}
+            </Form.Select>
+          </Col>
 
-      {/* Gráficos */}
-      <Row>
-        <Col md={6}>
-          <Card className="p-4 mb-4 shadow-sm">
-            <h5 className="text-center mb-3">Vendas por Forma de Pagamento</h5>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={vendasPorFormaPagamento} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                  {vendasPorFormaPagamento.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                </Pie>
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </Card>
-        </Col>
-        <Col md={6}>
-          <Card className="p-4 mb-4 shadow-sm">
-            <h5 className="text-center mb-3">Vendas por Data de Confirmação</h5>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={vendasPorData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
-                <XAxis dataKey="data" />
-                <YAxis />
-                <Tooltip />
-                <CartesianGrid strokeDasharray="3 3" />
-                <Bar dataKey="quantidade" fill="#17a2b8" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        </Col>
-      </Row>
+          {filtro === "quinzenal" && (
+            <Col md={6} className="mt-3">
+              <Form.Label>Quinzena</Form.Label>
+              <Form.Select value={quinzenaSelecionada} onChange={(e) => setQuinzenaSelecionada(e.target.value)}>
+                <option value="1">1ª Quinzena</option>
+                <option value="2">2ª Quinzena</option>
+              </Form.Select>
+            </Col>
+          )}
+        </Row>
 
-      {/* Tabela de Vendas */}
-      <Table striped bordered hover>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Cliente</th>
-            <th>Forma de Pagamento</th>
-            <th>Data da Venda</th>
-            <th>Data de Confirmação</th>
-          </tr>
-        </thead>
-        <tbody>
-          {vendasConfirmadas.map((venda) => (
-            <tr key={venda.id}>
-              <td>{venda.id}</td>
-              <td>{venda.nome}</td>
-              <td>{venda.forma_pagamento === "loja" ? "Loja" : "Pix"}</td>
-              <td>{new Date(venda.data_venda).toLocaleDateString("pt-BR")}</td>
-              <td>{venda.data_confirmacao_pagamento ? new Date(venda.data_confirmacao_pagamento).toLocaleDateString("pt-BR") : ""}</td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+        {/* Totais */}
+        <Row className="mb-4">
+          <Col md={6}>
+            <Card className="p-3 text-center shadow-sm">
+              <h5>Total de Vendas</h5>
+              <h3>{totalVendas}</h3>
+            </Card>
+          </Col>
+          <Col md={6}>
+            <Card className="p-3 text-center shadow-sm">
+              <h5>Valor Total</h5>
+              <h3>R$ {totalValor.toFixed(2)}</h3>
+            </Card>
+          </Col>
+        </Row>
+      </div>
     </Container>
   );
 }

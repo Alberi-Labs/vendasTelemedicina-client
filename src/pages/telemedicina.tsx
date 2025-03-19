@@ -25,14 +25,14 @@ export default function Consulta() {
     useEffect(() => {
         async function fetchClientes() {
             try {
-                const res = await fetch("/api/consultarClientes");
+                const res = await fetch("/api/cliente/consultar");
                 const data = await res.json();
 
                 if (data.success) {
                     setClientes(data.clientes);
                 } else {
                     console.error("Erro ao carregar clientes:", data.error);
-                }
+                } 
             } catch (error) {
                 console.error("Erro ao conectar com a API:", error);
             } finally {

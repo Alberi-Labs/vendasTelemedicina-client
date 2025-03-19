@@ -115,6 +115,7 @@ export default function Sidebar() {
                     borderRadius: "10px",
                     padding: "10px",
                     transition: "background-color 0.3s ease-in-out",
+                    marginBottom: "5px"
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/cadastroPf" ? "#b5cd00" : "transparent")}
@@ -123,43 +124,79 @@ export default function Sidebar() {
                 </Nav.Link>
               )}
 
-              {canAccess.relatorios && (
-                <>
-                  <button
-                    className="btn btn-link text-start w-100"
-                    onClick={() => setRelatoriosOpen(!relatoriosOpen)}
-                    style={{
-                      textDecoration: "none",
-                      color: "#FFF",
-                      backgroundColor: relatoriosOpen ? "#b5cd00" : "transparent",
-                      borderRadius: "10px",
-                      padding: "10px",
-                      transition: "background-color 0.3s ease-in-out",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = relatoriosOpen ? "#b5cd00" : "transparent")}
-                  >
-                    <i className="bi bi-clipboard-data me-2"></i>Relatórios e Gestão
-                  </button>
-                  {relatoriosOpen && (
-                    <div className="ps-3">
-                      <Nav.Link as={Link} href="/relatorioVendas" onClick={handleMenuClick} style={{ color: "#FFF" }}>
-                        <i className="bi bi-file-earmark-bar-graph me-2"></i>Relatório de Vendas
-                      </Nav.Link>
-                    </div>
-                  )}
-                </>
-              )}
+{canAccess.relatorios && (
+  <>
+    <button
+      className="btn btn-link text-start w-100"
+      onClick={() => setRelatoriosOpen(!relatoriosOpen)}
+      style={{
+        textDecoration: "none",
+        color: "#FFF",
+        backgroundColor: relatoriosOpen ? "#b5cd00" : "transparent",
+        borderRadius: "10px",
+        padding: "10px",
+        transition: "background-color 0.3s ease-in-out",
+        marginBottom: "5px"
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/relatorioVendas" || router.pathname === "/gestaoClientes" ? "#b5cd00" : "transparent")}
+    >
+      <i className="bi bi-clipboard-data me-2"></i>Relatórios e Gestão
+    </button>
+
+    {relatoriosOpen && (
+      <div className="ps-3">
+        {/* 🔹 Link para Relatório de Vendas */}
+        <Nav.Link 
+          as={Link} 
+          href="/relatorioVendas" 
+          onClick={handleMenuClick} 
+          style={{
+            color: "#FFF", 
+            borderRadius: "10px", 
+            marginBottom: "5px", 
+            backgroundColor: router.pathname === "/relatorioVendas" ? "#b5cd00" : "transparent"
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/relatorioVendas" || "/gestaoClientes" ? "#b5cd00" : "transparent")}
+        >
+          <i className="bi bi-file-earmark-bar-graph me-2"></i>Relatório de Vendas
+        </Nav.Link>
+
+        {/* 🔹 Link para Gestão de Clientes */}
+        <Nav.Link 
+          as={Link} 
+          href="/gestaoClientes" 
+          onClick={handleMenuClick} 
+          style={{
+            color: "#FFF", 
+            borderRadius: "10px", 
+            marginBottom: "5px", 
+            backgroundColor: router.pathname === "/gestaoClientes" ? "#b5cd00" : "transparent"
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/gestaoClientes" ? "#b5cd00" : "transparent")}
+        >
+          <i className="bi bi-people me-2"></i>Gestão de Clientes
+        </Nav.Link>
+      </div>
+    )}
+  </>
+)}
+
 
               {canAccess.consulta && (
                 <Nav.Link as={Link} href="/telemedicina" onClick={handleMenuClick} style={{
                   color: router.pathname === "/telemedicina" ? "#000" : "#FFF",
                   backgroundColor: router.pathname === "/telemedicina" ? "#b5cd00" : "transparent",
                   borderRadius: "10px",
-                    padding: "10px",
-                    transition: "background-color 0.3s ease-in-out",
+                  padding: "10px",
+                  transition: "background-color 0.3s ease-in-out",
+                  marginBottom: "5px"
 
-                }}>
+                }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/cadastroPf" ? "#b5cd00" : "transparent")}>
                   <i className="bi bi-clipboard-heart me-2"></i>Consultar com médico online
                 </Nav.Link>
               )}
@@ -169,10 +206,13 @@ export default function Sidebar() {
                   color: router.pathname === "/suporte" ? "#000" : "#FFF",
                   backgroundColor: router.pathname === "/suporte" ? "#b5cd00" : "transparent",
                   borderRadius: "10px",
-                    padding: "10px",
-                    transition: "background-color 0.3s ease-in-out",
+                  padding: "10px",
+                  transition: "background-color 0.3s ease-in-out",
+                  marginBottom: "5px"
 
-                }}>
+                }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/cadastroPf" ? "#b5cd00" : "transparent")}>
                   <i className="bi bi-question-circle me-2"></i>Suporte e Ajuda
                 </Nav.Link>
               )}
