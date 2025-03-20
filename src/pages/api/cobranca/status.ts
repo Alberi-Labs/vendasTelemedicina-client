@@ -7,14 +7,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const { id } = req.query;
+    const { pixQrCodeId } = req.query;
 
-    if (!id) {
+    if (!pixQrCodeId) {
       return res.status(400).json({ error: "ID do pagamento não informado" });
     }
 
     // Verifica se o pagamento está na lista de confirmados
-    const confirmado = pagamentosConfirmados.has(id as string);
+    const confirmado = pagamentosConfirmados.has(pixQrCodeId as string);
 
     return res.status(200).json({ confirmado });
 

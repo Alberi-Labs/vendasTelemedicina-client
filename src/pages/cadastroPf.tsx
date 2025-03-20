@@ -59,7 +59,6 @@ export default function CadastroPf() {
     forma_pagamento: "",
     tipo_pagamento_loja: "",
   });
-  console.log(vendas)
   const [pixQrCode, setPixQrCode] = useState<string | null>(null);
   const [loadingCpf, setLoadingCpf] = useState(false);
   const [clienteExiste, setClienteExiste] = useState<boolean | null>(null);
@@ -205,7 +204,7 @@ export default function CadastroPf() {
 
       if (response.ok) {
         // Armazena os dados para exibição
-        setPixQrCode(data.payload);
+        setPixQrCode(data.id);
         setQrCodeImage(`data:image/png;base64,${data.encodedImage}`);
       } else {
         console.error("Erro ao gerar QR Code PIX:", data.error);
@@ -229,11 +228,11 @@ export default function CadastroPf() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id_cliente: formData.idCliente,
-          data: new Date().toISOString().split("T")[0], 
+          data: new Date().toISOString().split("T")[0],
           valor: quantidadeCreditos * valorUnitario,
           forma_pagamento: pagamento.tipo_pagamento_loja,
-          status_pagamento: "PAGO", 
-          data_pagamento: new Date().toISOString().split("T")[0], 
+          status_pagamento: "PAGO",
+          data_pagamento: new Date().toISOString().split("T")[0],
         }),
       });
 
@@ -253,14 +252,15 @@ export default function CadastroPf() {
 
   const nextStep = () => setCurrentStep((prev) => prev + 1);
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 0));
+
   useEffect(() => {
     if (!pixQrCode) return;
-  
+
     const checkPagamento = async () => {
       try {
-        const response = await fetch(`/api/cobranca/status?id=${pixQrCode}`);
+        const response = await fetch(`/api/cobranca/status?pixQrCodeId=${pixQrCode}`);
         const data = await response.json();
-  
+
         if (data.confirmado) {
           setPagamentoConfirmado(true);
         }
@@ -268,12 +268,12 @@ export default function CadastroPf() {
         console.error("Erro ao verificar pagamento:", error);
       }
     };
-  
+
     const interval = setInterval(checkPagamento, 5000); // Verifica a cada 5 segundos
-  
+
     return () => clearInterval(interval);
   }, [pixQrCode]);
-  
+
   return (
     <Container maxWidth="md">
       <motion.div
@@ -489,49 +489,53 @@ export default function CadastroPf() {
                     </>
                   )}
 
-{pagamento.forma_pagamento === "pix" && (
-  <>
-    <Button variant="contained" color="primary" onClick={gerarPix} disabled={loadingPix}>
-      {loadingPix ? "Gerando QR Code..." : "Gerar QR Code PIX"}
-    </Button>
+                  {pagamento.forma_pagamento === "pix" && (
+                    <>
+                      <Button variant="contained" color="primary" onClick={gerarPix} disabled={loadingPix}>
+                        {loadingPix ? "Gerando QR Code..." : "Gerar QR Code PIX"}
+                      </Button>
 
-    {pagamentoConfirmado ? (
-      // ✅ Exibe a mensagem de pagamento confirmado
-      <Box mt={3} textAlign="center">
-        <Typography variant="h6" color="green">
-          ✅ Pagamento confirmado! <br /> 
-          Acesse o <a href="https://telemedicina.com" target="_blank" rel="noopener noreferrer">Telemedicina</a>.
-        </Typography>
-      </Box>
-    ) : (
-      // 🔹 Exibe o QR Code e o código 'Copia e Cola' enquanto o pagamento não é confirmado
-      pixQrCode && (
-        <Box mt={3} textAlign="center">
-          <Typography variant="subtitle1">Escaneie o QR Code para pagar:</Typography>
+                      {pagamentoConfirmado ? (
+                        // ✅ Exibe a mensagem de pagamento confirmado
+                        <Box mt={3} textAlign="center">
+                          <Button
+                            variant="contained"
+                            color="success"
+                            onClick={() => window.location.href = "/telemedicina"}
+                            sx={{ mt: 2 }}
+                          >
+                            ✅ Pagamento confirmado! Acesse o Telemedicina
+                          </Button>
+                        </Box>
+                      ) : (
+                        // 🔹 Exibe o QR Code e o código 'Copia e Cola' enquanto o pagamento não é confirmado
+                        pixQrCode && (
+                          <Box mt={3} textAlign="center">
+                            <Typography variant="subtitle1">Escaneie o QR Code para pagar:</Typography>
 
-          {qrCodeImage && (
-            <img 
-              src={qrCodeImage} 
-              alt="QR Code PIX" 
-              width={200} 
-              height={200} 
-              style={{ border: "1px solid #ddd" }} 
-            />
-          )}
+                            {qrCodeImage && (
+                              <img
+                                src={qrCodeImage}
+                                alt="QR Code PIX"
+                                width={200}
+                                height={200}
+                                style={{ border: "1px solid #ddd" }}
+                              />
+                            )}
 
-          <Typography variant="subtitle1" sx={{ mt: 2 }}>
-            Copia e Cola:
-          </Typography>
-          <Box sx={{ p: 2, backgroundColor: "#f5f5f5", borderRadius: 2 }}>
-            <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
-              {pixQrCode}
-            </Typography>
-          </Box>
-        </Box>
-      )
-    )}
-  </>
-)}
+                            <Typography variant="subtitle1" sx={{ mt: 2 }}>
+                              Copia e Cola:
+                            </Typography>
+                            <Box sx={{ p: 2, backgroundColor: "#f5f5f5", borderRadius: 2 }}>
+                              <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                                {pixQrCode}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        )
+                      )}
+                    </>
+                  )}
 
                 </>
               )}
