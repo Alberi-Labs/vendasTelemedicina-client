@@ -51,16 +51,17 @@ export default function RelatorioVendas() {
   }, []);
 
   const vendasFiltradas = vendas.filter((venda) => {
-    const dataPagamento = venda.data_pagamento ? new Date(venda.data_pagamento) : null;
+    const dataPagamento = venda.data_pagamento; // ✅ Usa diretamente a string formatada da API
     if (!dataPagamento) return false;
-    const mesPagamento = (dataPagamento.getMonth() + 1).toString().padStart(2, "0");
-    const diaPagamento = dataPagamento.getDate();
+    const mesPagamento = dataPagamento.split("/")[1]; // ✅ Extrai o mês da string "DD/MM/YYYY"
+    const diaPagamento = parseInt(dataPagamento.split("/")[0]); // ✅ Extrai o dia
 
     if (filtro === "mes") return mesPagamento === mesSelecionado;
     if (filtro === "quinzenal") return mesPagamento === mesSelecionado && (diaPagamento <= 15 ? "1" : "2") === quinzenaSelecionada;
 
     return false;
-  });
+});
+
 
   const vendasPorDia = vendasFiltradas.reduce((acc, venda) => {
     acc[venda.data] = (acc[venda.data] || 0) + 1;

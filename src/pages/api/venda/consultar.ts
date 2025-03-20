@@ -6,15 +6,23 @@ interface Venda {
     idVenda: number;
     id_cliente: number;
     data: string;
-    valor: number;
+    valor: string;
     forma_pagamento: string;
     status_pagamento: string;
     data_pagamento: string | null;
 }
 
 // 🔹 Função para converter a data para o formato brasileiro (DD/MM/YYYY)
-const formatarDataParaBrasileiro = (data: string | null) => {
+const formatarDataParaBrasileiro = (data: string | Date | null) => {
     if (!data) return null;
+
+    // Se a data for string no formato YYYY-MM-DD, apenas troca a ordem
+    if (typeof data === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data)) {
+        const [ano, mes, dia] = data.split("-");
+        return `${dia}/${mes}/${ano}`;
+    }
+
+    // Se for uma data em formato Date (ISO), converte corretamente
     const dataObj = new Date(data);
     return dataObj.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 };
@@ -44,11 +52,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const vendasFormatadas: Venda[] = rows.map((venda: any) => ({
             idVenda: venda.idVenda,
             id_cliente: venda.id_cliente,
-            data: formatarDataParaBrasileiro(venda.data), // ✅ Converte para DD/MM/YYYY
+            data: formatarDataParaBrasileiro(venda.data), // ✅ Mantém ou converte para DD/MM/YYYY
             valor: venda.valor,
             forma_pagamento: venda.forma_pagamento,
             status_pagamento: venda.status_pagamento,
-            data_pagamento: formatarDataParaBrasileiro(venda.data_pagamento), // ✅ Converte para DD/MM/YYYY
+            data_pagamento: formatarDataParaBrasileiro(venda.data_pagamento), // ✅ Converte corretamente
         }));
 
         console.log(vendasFormatadas);
