@@ -16,13 +16,14 @@ export default function Sidebar() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-
+  
     try {
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-
-        if (parsedUser?.name && parsedUser?.role) {
-          setUserName(parsedUser.name);
+  
+        // ✅ Verifica se o objeto contém 'nome' e 'role' corretamente
+        if (parsedUser?.nome && parsedUser?.role) {
+          setUserName(parsedUser.nome); // 🔹 Corrigido de 'name' para 'nome'
           setUserRole(parsedUser.role);
         } else {
           console.error("Formato inválido para usuário:", parsedUser);
@@ -32,6 +33,7 @@ export default function Sidebar() {
       console.error("Erro ao parsear JSON do usuário:", error);
     }
   }, []);
+  
 
   console.log("userName:", userName);
   console.log("userRole:", userRole);

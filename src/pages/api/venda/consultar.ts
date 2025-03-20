@@ -12,6 +12,13 @@ interface Venda {
     data_pagamento: string | null;
 }
 
+// 🔹 Função para converter a data para o formato brasileiro (DD/MM/YYYY)
+const formatarDataParaBrasileiro = (data: string | null) => {
+    if (!data) return null;
+    const dataObj = new Date(data);
+    return dataObj.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+};
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "GET") {
         return res.status(405).json({ error: "Método não permitido" });
@@ -37,13 +44,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const vendasFormatadas: Venda[] = rows.map((venda: any) => ({
             idVenda: venda.idVenda,
             id_cliente: venda.id_cliente,
-            data: venda.data.toISOString().split("T")[0], // Formato YYYY-MM-DD
+            data: formatarDataParaBrasileiro(venda.data), // ✅ Converte para DD/MM/YYYY
             valor: venda.valor,
             forma_pagamento: venda.forma_pagamento,
             status_pagamento: venda.status_pagamento,
-            data_pagamento: venda.data_pagamento ? venda.data_pagamento.toISOString().split("T")[0] : null,
+            data_pagamento: formatarDataParaBrasileiro(venda.data_pagamento), // ✅ Converte para DD/MM/YYYY
         }));
-        console.log(vendasFormatadas)
+
+        console.log(vendasFormatadas);
         return res.status(200).json({ success: true, vendas: vendasFormatadas });
     } catch (error) {
         console.error("🔥 Erro ao consultar vendas:", error);

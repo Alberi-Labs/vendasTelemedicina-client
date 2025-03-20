@@ -6,9 +6,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ error: "Método não permitido" });
     }
 
-    const { nome, cpf, telefone, email } = req.body;
+    const { nome, cpf, telefone, email, data_nascimento } = req.body;
+    console.log("🔹 Recebendo requisição de cadastro de cliente:", nome, telefone, email,data_nascimento);
     const idEmpresaFixa = 1; 
-    console.log(req.body);
     if (!nome || !cpf || !telefone || !email) {
         return res.status(400).json({ error: "Todos os campos são obrigatórios." });
     }
@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         const [result]: any = await pool.query(
             "INSERT INTO tb_clientes (nome, cpf, telefone, email, data_nascimento) VALUES (?, ?, ?, ?, ?)",
-            [nome, cpf, telefone, email]
+            [nome, cpf, telefone, email, data_nascimento]
         );
 
         const idCliente = result.insertId;

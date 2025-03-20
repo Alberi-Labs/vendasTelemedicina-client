@@ -28,7 +28,9 @@ interface Cliente {
   cpf: string;
   telefone: string;
   creditos: number;
-  data_nascimento?: string;
+  data_de_nascimento?: string;
+  data_vinculo?: string; // Added data_vinculo to the interface
+  idClienteDependente?: number | null; // Added idClienteDependente to the interface
 }
 
 // 🔹 Interface para Venda
@@ -82,23 +84,41 @@ export default function CadastroPf() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let { name, value } = e.target;
-    if (name === "cpf") value = formatCpf(value);
+    let { name, value, type } = e.target;
 
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Formatar CPF caso esteja no campo CPF
+    if (name === "cpf") {
+      value = formatCpf(value);
+    }
 
+    // Se for um campo do tipo "date", converter para o formato esperado no estado (YYYY-MM-DD)
+    if (type === "date") {
+      const [ano, mes, dia] = value.split("-");
+      value = `${ano}-${mes}-${dia}`;
+    }
+
+    // Atualizar o estado do formData corretamente
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    console.log("Novo formData:", { ...formData, [name]: value });
+
+    // Se o CPF for digitado completamente, dispara a verificação no banco
     if (name === "cpf" && limparCpf(value).length === 11) {
       verificarCpf(value);
     }
   };
+
 
   const handlePagamentoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPagamento((prev) => ({ ...prev, [name]: value }));
   };
   const formatarDataParaSenha = (data: string) => {
-    const [ano, mes, dia] = data.split("-"); 
-    return `${dia}${mes}${ano}`; 
+    const [ano, mes, dia] = data.split("-");
+    return `${dia}${mes}${ano}`;
   };
   // 🔹 Buscar CPF no banco e verificar últimas 5 vendas
   const verificarCpf = async (cpf: string) => {
@@ -110,25 +130,24 @@ export default function CadastroPf() {
 
       if (response.ok && data.clientes.length > 0) {
         setClienteExiste(true);
-
-        // ✅ Converte a data de nascimento para o formato adequado (YYYY-MM-DD)
-        const dataNascimentoOriginal = data.clientes[0].data_nascimento;
-        const dataNascimentoFormatada = dataNascimentoOriginal
-          ? new Date(dataNascimentoOriginal).toISOString().split("T")[0] // Mantém YYYY-MM-DD para input date
-          : "";
-
+        console.log(data.clientes[0].data_nascimento)
         setFormData({
           ...data.clientes[0],
-          data_nascimento: dataNascimentoFormatada, // ✅ Usa o formato adequado
+          data_de_nascimento: data.clientes[0].data_nascimento || "",
+          email: data.clientes[0].email || "",
+          telefone: data.clientes[0].telefone || "",
+          creditos: data.clientes[0].creditos || 0,
         });
-
-        const vendasResponse = await fetch(`/api/venda/consultar?id_cliente=${data.clientes[0].idCliente}`);
-        const vendasData = await vendasResponse.json();
-        setVendas(vendasData?.vendas?.slice(0, 5));
       } else {
         setClienteExiste(false);
-        setFormData({ nome: "", email: "", cpf, telefone: "", creditos: 0, data_nascimento: "" });
-        setVendas([]);
+        setFormData((prev) => ({
+          ...prev, // 🔹 Mantém o CPF já digitado
+          nome: "",
+          email: "",
+          telefone: "",
+          data_nascimento: "",
+          creditos: 0,
+        }));
       }
     } catch (error) {
       console.error("Erro ao consultar CPF:", error);
@@ -136,6 +155,7 @@ export default function CadastroPf() {
       setLoadingCpf(false);
     }
   };
+
 
   const dadosAlterados = () => {
     return (
@@ -147,7 +167,7 @@ export default function CadastroPf() {
   };
   const cadastrarCliente = async () => {
     try {
-    console.log(formData);
+      console.log(formData);
       const response = await fetch(`/api/cliente/cadastrar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -156,7 +176,7 @@ export default function CadastroPf() {
           cpf: limparCpf(formData.cpf),
           telefone: formData.telefone,
           email: formData.email,
-          data_nascimento: formData.data_nascimento,
+          data_nascimento: formData.data_de_nascimento,
         }),
       });
 
@@ -239,7 +259,7 @@ export default function CadastroPf() {
     }
 
     try {
-      const response = await fetch(`/api/venda/cadastrar`, {
+      const response = await fetch(`/api/venda/criar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -261,10 +281,10 @@ export default function CadastroPf() {
           nome: formData.nome,
           cpf: formData.cpf,
           email: formData.email,
-          senha: formData.data_nascimento ? formatarDataParaSenha(formData.data_nascimento) : "",
+          senha: formData.data_de_nascimento ? formatarDataParaSenha(formData.data_de_nascimento) : "",
           telefone: formData.telefone,
           creditos: quantidadeCreditos,
-          data_nascimento: formData.data_nascimento || "",
+          data_nascimento: formData.data_de_nascimento || "",
         });
 
       } else {
@@ -294,10 +314,10 @@ export default function CadastroPf() {
             nome: formData.nome,
             cpf: formData.cpf,
             email: formData.email,
-            senha: formData.data_nascimento ? formatarDataParaSenha(formData.data_nascimento) : "",
+            senha: formData.data_de_nascimento ? formatarDataParaSenha(formData.data_de_nascimento) : "",
             telefone: formData.telefone,
             creditos: quantidadeCreditos,
-            data_nascimento: formData.data_nascimento || "", 
+            data_nascimento: formData.data_de_nascimento || "",
           });
 
         }
@@ -306,7 +326,7 @@ export default function CadastroPf() {
       }
     };
 
-    const interval = setInterval(checkPagamento, 5000); 
+    const interval = setInterval(checkPagamento, 5000);
 
     return () => clearInterval(interval);
   }, [pixQrCode, formData, quantidadeCreditos]);
@@ -371,22 +391,39 @@ export default function CadastroPf() {
                       </Typography>
 
                       {["Nome", "Email", "Telefone", "Data de Nascimento"].map((label, index) => {
-                        const name = label === "Data de Nascimento" ? "data_nascimento" : label.toLowerCase(); // ✅ Corrigindo a chave do formData
+                        let name = label.toLowerCase().replace(/\s/g, "_");
+
+                        // Correção para garantir que "E-mail" fique como "email"
+                        if (name === "e-mail") {
+                          name = "email";
+                        }
+
+                        // Se for Data de Nascimento, precisa converter para YYYY-MM-DD para o input date
+                        const isDateField = label === "Data de Nascimento";
+                        let value = formData[name as keyof typeof formData] || "";
+
+                        if (isDateField && String(value).includes("/")) {
+                          // Converte DD/MM/AAAA para YYYY-MM-DD
+                          const [dia, mes, ano] = String(value).split("/");
+                          value = `${ano}-${mes}-${dia}`;
+                        }
 
                         return (
                           <Box className="mb-3" key={index}>
                             <label className="form-label">{label}</label>
                             <input
-                              type={label === "Data de Nascimento" ? "date" : "text"}
+                              type={isDateField ? "date" : "text"}
                               className="form-control"
                               name={name}
-                              value={formData[name as keyof typeof formData] || ""}
+                              value={value}
                               onChange={handleChange}
                               required
                             />
                           </Box>
                         );
                       })}
+
+
 
 
                       <Box className="d-flex justify-content-between mt-3">
@@ -411,27 +448,26 @@ export default function CadastroPf() {
                       </Typography>
 
                       {["Nome", "E-mail", "Telefone", "Data de Nascimento"].map((label, index) => {
-  let name = label.toLowerCase().replace(/\s/g, "_");
+                        let name = label.toLowerCase().replace(/\s/g, "_");
 
-  // Correção para garantir que "E-mail" se torne "email"
-  if (name === "e-mail") {
-    name = "email";
-  }
+                        if (name === "e-mail") {
+                          name = "email";
+                        }
 
-  return (
-    <Box className="mb-3" key={index}>
-      <label className="form-label">{label}</label>
-      <input
-        type={label === "Data de Nascimento" ? "date" : "text"} // Campo "date" para nascimento
-        className="form-control"
-        name={name}
-        value={formData[name as keyof typeof formData] || ""}
-        onChange={handleChange}
-        required
-      />
-    </Box>
-  );
-})}
+                        return (
+                          <Box className="mb-3" key={index}>
+                            <label className="form-label">{label}</label>
+                            <input
+                              type={label === "Data de Nascimento" ? "date" : "text"} // Campo "date" para nascimento
+                              className="form-control"
+                              name={name}
+                              value={formData[name as keyof typeof formData] || ""}
+                              onChange={handleChange}
+                              required
+                            />
+                          </Box>
+                        );
+                      })}
 
 
                       <Button variant="contained" color="success" onClick={cadastrarCliente}>
@@ -515,24 +551,38 @@ export default function CadastroPf() {
 
                   {pagamento.forma_pagamento === "loja" && (
                     <>
-                      <Typography variant="subtitle1">Escolha o método de pagamento:</Typography>
-                      <RadioGroup name="tipo_pagamento_loja" value={pagamento.tipo_pagamento_loja} onChange={handlePagamentoChange}>
-                        <FormControlLabel value="credito" control={<Radio />} label="Cartão de Crédito" />
-                        <FormControlLabel value="debito" control={<Radio />} label="Cartão de Débito" />
-                        <FormControlLabel value="dinheiro" control={<Radio />} label="Dinheiro" />
-                      </RadioGroup>
+                      {pagamentoConfirmado ? (
+                        // ✅ Exibe a mensagem de pagamento confirmado
+                        <Box mt={3} textAlign="center">
+                          <Button
+                            variant="contained"
+                            color="success"
+                            onClick={() => window.location.href = "/telemedicina"}
+                            sx={{ mt: 2 }}
+                          >
+                            ✅ Pagamento confirmado! Acesse o Telemedicina
+                          </Button>
+                        </Box>
+                      ) : (
+                        <>
+                          <Typography variant="subtitle1">Escolha o método de pagamento:</Typography>
+                          <RadioGroup name="tipo_pagamento_loja" value={pagamento.tipo_pagamento_loja} onChange={handlePagamentoChange}>
+                            <FormControlLabel value="credito" control={<Radio />} label="Cartão de Crédito" />
+                            <FormControlLabel value="debito" control={<Radio />} label="Cartão de Débito" />
+                            <FormControlLabel value="dinheiro" control={<Radio />} label="Dinheiro" />
+                          </RadioGroup>
 
-                      <Box className="d-flex justify-content-between mt-3">
-                        <Button variant="outlined" color="secondary" onClick={prevStep}>
-                          Voltar
-                        </Button>
+                          <Box className="d-flex justify-content-between mt-3">
+                            <Button variant="outlined" color="secondary" onClick={prevStep}>
+                              Voltar
+                            </Button>
 
-                        <Button variant="contained" color="success" onClick={criarVenda}>
-                          Confirmar Pagamento
-                        </Button>
-
-                      </Box>
-
+                            <Button variant="contained" color="success" onClick={criarVenda}>
+                              Confirmar Pagamento
+                            </Button>
+                          </Box>
+                        </>
+                      )}
                     </>
                   )}
 
