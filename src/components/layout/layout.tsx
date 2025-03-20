@@ -10,21 +10,23 @@ import { useAuth } from "@/app/context/AuthContext";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, isAuthLoaded } = useAuth(); // Obtém usuário e status de carregamento
-
-  if (!isAuthLoaded) {
-    return <div style={{ textAlign: "center", paddingTop: "50px" }}>Carregando...</div>;
-  }
+  const { user, isAuthLoaded } = useAuth(); 
 
   useEffect(() => {
     if (isAuthLoaded && !user) {
+      console.log("Usuário não autenticado, redirecionando...");
       router.push("/");
     }
   }, [user, isAuthLoaded, router]);
-
-  if (!isAuthLoaded || !user) {
-    return null;
+  
+  if (!isAuthLoaded) {
+    return <div style={{ textAlign: "center", paddingTop: "50px" }}>Carregando...</div>;
   }
+  
+  if (!user) {
+    return <div style={{ textAlign: "center", paddingTop: "50px" }}>Redirecionando...</div>;
+  }
+  
 
   return (
     <AtendimentoProvider>
