@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { nome, cpf, telefone, email } = req.body;
     const idEmpresaFixa = 1; 
-
+    console.log(req.body);
     if (!nome || !cpf || !telefone || !email) {
         return res.status(400).json({ error: "Todos os campos são obrigatórios." });
     }

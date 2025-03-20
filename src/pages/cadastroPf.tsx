@@ -18,6 +18,7 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import { motion } from "framer-motion";
+import { cadastrarOuAtualizarUsuario } from "./utils/cadastrarUsuario";
 
 // 🔹 Interface para Cliente
 interface Cliente {
@@ -27,6 +28,7 @@ interface Cliente {
   cpf: string;
   telefone: string;
   creditos: number;
+  data_nascimento?: string;
 }
 
 // 🔹 Interface para Venda
@@ -65,7 +67,7 @@ export default function CadastroPf() {
   const [loadingPix, setLoadingPix] = useState(false);
   const [originalData, setOriginalData] = useState<Cliente | null>(null);
   const [qrCodeImage, setQrCodeImage] = useState<string | null>(null);
-  const [pagamentoConfirmado, setPagamentoConfirmado] = useState(false);
+  const [pagamentoConfirmado, setPagamentoConfirmado] = useState(true);
 
   // 🔹 Função para limpar formatação do CPF (deixa só números)
   const limparCpf = (cpf: string) => cpf.replace(/\D/g, "");
@@ -94,7 +96,10 @@ export default function CadastroPf() {
     const { name, value } = e.target;
     setPagamento((prev) => ({ ...prev, [name]: value }));
   };
-
+  const formatarDataParaSenha = (data: string) => {
+    const [ano, mes, dia] = data.split("-"); 
+    return `${dia}${mes}${ano}`; 
+  };
   // 🔹 Buscar CPF no banco e verificar últimas 5 vendas
   const verificarCpf = async (cpf: string) => {
     setLoadingCpf(true);
@@ -105,15 +110,24 @@ export default function CadastroPf() {
 
       if (response.ok && data.clientes.length > 0) {
         setClienteExiste(true);
-        setFormData(data.clientes[0]);
 
-        // 🔹 Buscar as últimas 5 vendas do cliente
+        // ✅ Converte a data de nascimento para o formato adequado (YYYY-MM-DD)
+        const dataNascimentoOriginal = data.clientes[0].data_nascimento;
+        const dataNascimentoFormatada = dataNascimentoOriginal
+          ? new Date(dataNascimentoOriginal).toISOString().split("T")[0] // Mantém YYYY-MM-DD para input date
+          : "";
+
+        setFormData({
+          ...data.clientes[0],
+          data_nascimento: dataNascimentoFormatada, // ✅ Usa o formato adequado
+        });
+
         const vendasResponse = await fetch(`/api/venda/consultar?id_cliente=${data.clientes[0].idCliente}`);
         const vendasData = await vendasResponse.json();
         setVendas(vendasData?.vendas?.slice(0, 5));
       } else {
         setClienteExiste(false);
-        setFormData({ nome: "", email: "", cpf, telefone: "", creditos: 0 });
+        setFormData({ nome: "", email: "", cpf, telefone: "", creditos: 0, data_nascimento: "" });
         setVendas([]);
       }
     } catch (error) {
@@ -122,6 +136,7 @@ export default function CadastroPf() {
       setLoadingCpf(false);
     }
   };
+
   const dadosAlterados = () => {
     return (
       originalData &&
@@ -132,6 +147,7 @@ export default function CadastroPf() {
   };
   const cadastrarCliente = async () => {
     try {
+    console.log(formData);
       const response = await fetch(`/api/cliente/cadastrar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -146,7 +162,6 @@ export default function CadastroPf() {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Cliente cadastrado com sucesso!");
         setClienteExiste(true);
         setOriginalData(formData); // Atualiza os dados originais
         nextStep(); // Avança para a próxima etapa
@@ -239,8 +254,18 @@ export default function CadastroPf() {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Venda registrada com sucesso!");
-        nextStep(); // Avança para a próxima etapa
+        setPagamentoConfirmado(true);
+
+        await cadastrarOuAtualizarUsuario({
+          nome: formData.nome,
+          cpf: formData.cpf,
+          email: formData.email,
+          senha: formData.data_nascimento ? formatarDataParaSenha(formData.data_nascimento) : "",
+          telefone: formData.telefone,
+          creditos: quantidadeCreditos,
+          data_nascimento: formData.data_nascimento || "",
+        });
+
       } else {
         alert(data.error || "Erro ao criar venda.");
       }
@@ -263,16 +288,27 @@ export default function CadastroPf() {
 
         if (data.confirmado) {
           setPagamentoConfirmado(true);
+
+          await cadastrarOuAtualizarUsuario({
+            nome: formData.nome,
+            cpf: formData.cpf,
+            email: formData.email,
+            senha: formData.data_nascimento ? formatarDataParaSenha(formData.data_nascimento) : "",
+            telefone: formData.telefone,
+            creditos: quantidadeCreditos,
+            data_nascimento: formData.data_nascimento || "", 
+          });
+
         }
       } catch (error) {
-        console.error("Erro ao verificar pagamento:", error);
+        console.error("Erro ao verificar pagamento ou cadastrar usuário:", error);
       }
     };
 
-    const interval = setInterval(checkPagamento, 5000); // Verifica a cada 5 segundos
+    const interval = setInterval(checkPagamento, 5000); 
 
     return () => clearInterval(interval);
-  }, [pixQrCode]);
+  }, [pixQrCode, formData, quantidadeCreditos]);
 
   return (
     <Container maxWidth="md">
@@ -305,96 +341,106 @@ export default function CadastroPf() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-            >{currentStep === 0 && (
-              <>
-                <Typography variant="h6" align="center" gutterBottom>
-                  Digite o CPF para verificar se o cliente já está cadastrado:
-                </Typography>
+            >
+              {currentStep === 0 && (
+                <>
+                  <Typography variant="h6" align="center" gutterBottom>
+                    Digite o CPF para verificar se o cliente já está cadastrado:
+                  </Typography>
 
-                <Box className="mb-3">
-                  <label className="form-label">CPF</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="cpf"
-                    value={formData.cpf}
-                    onChange={handleChange}
-                    placeholder="000.000.000-00"
-                    required
-                  />
-                </Box>
+                  <Box className="mb-3">
+                    <label className="form-label">CPF</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="cpf"
+                      value={formData.cpf}
+                      onChange={handleChange}
+                      placeholder="000.000.000-00"
+                      required
+                    />
+                  </Box>
 
-                {loadingCpf && <CircularProgress size={24} />}
+                  {loadingCpf && <CircularProgress size={24} />}
 
-                {clienteExiste === true && (
-                  <>
-                    <Typography color="green">
-                      Cliente encontrado! Você pode editar os dados.
-                    </Typography>
+                  {clienteExiste === true && (
+                    <>
+                      <Typography color="green">
+                        Cliente encontrado! Você pode editar os dados.
+                      </Typography>
 
-                    {["Nome", "Email", "Telefone"].map((label, index) => {
-                      const name = label.toLowerCase();
-                      return (
-                        <Box className="mb-3" key={index}>
-                          <label className="form-label">{label}</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name={name}
-                            value={formData[name as keyof typeof formData]}
-                            onChange={handleChange}
-                            required
-                          />
-                        </Box>
-                      );
-                    })}
+                      {["Nome", "Email", "Telefone", "Data de Nascimento"].map((label, index) => {
+                        const name = label === "Data de Nascimento" ? "data_nascimento" : label.toLowerCase(); // ✅ Corrigindo a chave do formData
 
-                    <Box className="d-flex justify-content-between mt-3">
-                      <Button variant="outlined" color="secondary" onClick={pesquisarOutroCpf}>
-                        Pesquisar outro CPF
+                        return (
+                          <Box className="mb-3" key={index}>
+                            <label className="form-label">{label}</label>
+                            <input
+                              type={label === "Data de Nascimento" ? "date" : "text"}
+                              className="form-control"
+                              name={name}
+                              value={formData[name as keyof typeof formData] || ""}
+                              onChange={handleChange}
+                              required
+                            />
+                          </Box>
+                        );
+                      })}
+
+
+                      <Box className="d-flex justify-content-between mt-3">
+                        <Button variant="outlined" color="secondary" onClick={pesquisarOutroCpf}>
+                          Pesquisar outro CPF
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={dadosAlterados() ? atualizarCliente : nextStep}
+                        >
+                          {dadosAlterados() ? "Salvar Alterações e Prosseguir" : "Prosseguir"}
+                        </Button>
+                      </Box>
+                    </>
+                  )}
+
+                  {clienteExiste === false && (
+                    <>
+                      <Typography color="red">
+                        Cliente não encontrado! Preencha os dados para cadastrar.
+                      </Typography>
+
+                      {["Nome", "E-mail", "Telefone", "Data de Nascimento"].map((label, index) => {
+  let name = label.toLowerCase().replace(/\s/g, "_");
+
+  // Correção para garantir que "E-mail" se torne "email"
+  if (name === "e-mail") {
+    name = "email";
+  }
+
+  return (
+    <Box className="mb-3" key={index}>
+      <label className="form-label">{label}</label>
+      <input
+        type={label === "Data de Nascimento" ? "date" : "text"} // Campo "date" para nascimento
+        className="form-control"
+        name={name}
+        value={formData[name as keyof typeof formData] || ""}
+        onChange={handleChange}
+        required
+      />
+    </Box>
+  );
+})}
+
+
+                      <Button variant="contained" color="success" onClick={cadastrarCliente}>
+                        Cadastrar Cliente e Prosseguir
                       </Button>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={dadosAlterados() ? atualizarCliente : nextStep}
-                      >
-                        {dadosAlterados() ? "Salvar Alterações e Prosseguir" : "Prosseguir"}
-                      </Button>
-                    </Box>
-                  </>
-                )}
+                    </>
+                  )}
+                </>
+              )}
 
-                {clienteExiste === false && (
-                  <>
-                    <Typography color="red">
-                      Cliente não encontrado! Preencha os dados para cadastrar.
-                    </Typography>
-
-                    {["Nome", "E-mail", "Telefone"].map((label, index) => {
-                      const name = label.toLowerCase();
-                      return (
-                        <Box className="mb-3" key={index}>
-                          <label className="form-label">{label}</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name={name}
-                            value={formData[name as keyof typeof formData]}
-                            onChange={handleChange}
-                            required
-                          />
-                        </Box>
-                      );
-                    })}
-
-                    <Button variant="contained" color="success" onClick={cadastrarCliente}>
-                      Cadastrar Cliente e Prosseguir
-                    </Button>
-
-                  </>
-                )}
-              </>
-            )}
 
               {currentStep === 1 && (
                 <>
@@ -508,7 +554,6 @@ export default function CadastroPf() {
                           </Button>
                         </Box>
                       ) : (
-                        // 🔹 Exibe o QR Code e o código 'Copia e Cola' enquanto o pagamento não é confirmado
                         pixQrCode && (
                           <Box mt={3} textAlign="center">
                             <Typography variant="subtitle1">Escaneie o QR Code para pagar:</Typography>

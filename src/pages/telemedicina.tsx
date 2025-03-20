@@ -2,25 +2,26 @@
 
 import { useEffect, useState } from "react";
 import { useAtendimento } from "@/app/context/AtendimentoContex";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Select from "react-select";
 
 export default function Consulta() {
     const { setDados } = useAtendimento();
     const router = useRouter();
+    const searchParams = useSearchParams(); 
 
     const [clientes, setClientes] = useState<Cliente[]>([]);
+    const [clienteSelecionado, setClienteSelecionado] = useState<any>(null); // ✅ Agora suporta `react-select`
+    const [loading, setLoading] = useState(true);
+
     interface Cliente {
         id: number;
         nome: string;
         cpf: string;
         telefone?: string;
         email?: string;
-        nascimento?: string;
+        data_nascimento?: string; // ✅ Ajustado para o formato correto
     }
-    
-    const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function fetchClientes() {
@@ -30,9 +31,24 @@ export default function Consulta() {
 
                 if (data.success) {
                     setClientes(data.clientes);
+
+                    // ✅ Verifica se existe CPF na URL e seleciona o cliente no dropdown
+                    const cpfNaUrl = searchParams?.get("cpf");
+                    if (cpfNaUrl) {
+                        const clienteEncontrado = data.clientes.find((cliente: Cliente) => cliente.cpf === cpfNaUrl);
+                        if (clienteEncontrado) {
+                            const option = {
+                                value: clienteEncontrado.id,
+                                label: `${clienteEncontrado.nome} - ${clienteEncontrado.cpf}`,
+                                ...clienteEncontrado,
+                            };
+                            setClienteSelecionado(option);
+                            preencherDados(clienteEncontrado);
+                        }
+                    }
                 } else {
                     console.error("Erro ao carregar clientes:", data.error);
-                } 
+                }
             } catch (error) {
                 console.error("Erro ao conectar com a API:", error);
             } finally {
@@ -40,20 +56,30 @@ export default function Consulta() {
             }
         }
         fetchClientes();
-    }, []);
+    }, [searchParams]); // ✅ Se a URL mudar, ele verifica novamente
 
+    // ✅ Formata a data de nascimento de "YYYY-MM-DD" para "DD/MM/YYYY"
+    const formatarData = (data: string | undefined) => {
+        if (!data) return "";
+        const [ano, mes, dia] = data.split("-");
+        return `${dia}/${mes}/${ano}`;
+    };
+
+    // ✅ Preenche os dados do cliente automaticamente
+    const preencherDados = (cliente: Cliente) => {
+        setDados({
+            nome: cliente.nome,
+            cpf: cliente.cpf,
+            telefone: cliente.telefone || "",
+            email: cliente.email || "",
+            nascimento: cliente.data_nascimento ? formatarData(cliente.data_nascimento) : "",
+        });
+    };
+
+    // ✅ Atualiza quando o usuário seleciona um cliente manualmente
     const handleClienteChange = (selectedOption: any) => {
         setClienteSelecionado(selectedOption);
-
-        if (selectedOption) {
-            setDados({
-                nome: selectedOption.nome,
-                cpf: selectedOption.cpf,
-                telefone: selectedOption.telefone || "",
-                email: selectedOption.email || "",
-                nascimento: selectedOption.nascimento || "",
-            });
-        }
+        if (selectedOption) preencherDados(selectedOption);
     };
 
     const handleSubmit = () => {
@@ -87,22 +113,26 @@ export default function Consulta() {
                                         placeholder="Buscar cliente..."
                                         onChange={handleClienteChange}
                                         isLoading={loading}
+                                        value={clienteSelecionado} // ✅ Mantém a seleção do CPF corretamente
                                     />
                                 </div>
 
                                 {clienteSelecionado && (
                                     <>
-                                        {[
+                                        {[ 
                                             { label: "Nome", value: clienteSelecionado.nome },
                                             { label: "CPF", value: clienteSelecionado.cpf },
                                             { label: "Telefone", value: clienteSelecionado.telefone },
                                             { label: "Email", value: clienteSelecionado.email },
-                                            { label: "Data de Nascimento", value: clienteSelecionado.nascimento, type: "date" },
+                                            { 
+                                                label: "Data de Nascimento", 
+                                                value: formatarData(clienteSelecionado.data_nascimento) // ✅ Exibe a data formatada
+                                            },
                                         ].map((field, index) => (
                                             <div key={index} className="mb-3">
                                                 <label className="form-label">{field.label}:</label>
                                                 <input
-                                                    type={field.type || "text"}
+                                                    type="text"
                                                     className="form-control"
                                                     value={field.value || ""}
                                                     readOnly
