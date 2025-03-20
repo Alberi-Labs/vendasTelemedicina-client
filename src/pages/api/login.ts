@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log("🔹 Recebendo requisição de login para:", email);
 
     // 🔍 Busca o usuário pelo email e inclui a `role`
-    const [rows]: any = await pool.query("SELECT idCliente, nome, senha, role FROM tb_usuarios WHERE email = ?", [email]);
+    const [rows]: any = await pool.query("SELECT idUsuario, nome, senha, role FROM tb_usuarios WHERE email = ?", [email]);
 
     if (rows.length === 0) {
       console.error("❌ Usuário não encontrado:", email);

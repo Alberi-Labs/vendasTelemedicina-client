@@ -6,6 +6,7 @@ import { useReactToPrint } from "react-to-print";
 import { BsFileEarmarkPdf } from "react-icons/bs";
 import { Bar, Pie } from "react-chartjs-2";
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
+import { motion } from "framer-motion";
 
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
@@ -73,7 +74,8 @@ export default function RelatorioVendas() {
 
   return (
     <Container className="mt-5">
-      <div className="d-flex justify-content-end">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
+            <div className="d-flex justify-content-end">
         <Button variant="danger" onClick={() => gerarPDF()}>
           <BsFileEarmarkPdf size={20} />
         </Button>
@@ -115,7 +117,7 @@ export default function RelatorioVendas() {
             </Col>
           )}
         </Row>
-
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Row className="mb-4">
           <Col md={6}>
             <Card className="p-3">
@@ -143,6 +145,9 @@ export default function RelatorioVendas() {
             </Card>
           </Col>
         </Row>
+        </motion.div>
+
+        
         <Table striped bordered hover>
           <thead>
             <tr>
@@ -164,6 +169,9 @@ export default function RelatorioVendas() {
           </tbody>
         </Table>
       </div>
+            </motion.div>
+
+      
     </Container>
   );
 }

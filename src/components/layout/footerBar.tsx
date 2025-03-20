@@ -1,35 +1,17 @@
 import React from 'react';
 import Link from "next/link";
+import { motion } from 'framer-motion';
 
 export default function FooterBar() {
   return (
-    <footer
-      style={{
-        backgroundColor: "white",
-        padding: "20px 0",
-        textAlign: "center",
-        marginTop: "20px",
-        position: "relative",
-        bottom: "0",
-        width: "100vw",
-        boxShadow: "0 0 4px 6px rgba(0, 0, 0, 0.1)",
-        marginLeft: "-20px"
-      }}
-    >
-      <p className="mb-2">
-        <Link href="/politica-privacidade" passHref>
-          <span style={{ marginRight: "15px", color: "#9453a2", textDecoration: "none", cursor: "pointer" }}>
-            Política de Privacidade
-          </span>
-        </Link>
-        |
-        <Link href="/termos-uso" passHref>
-          <span style={{ marginLeft: "15px", color: "#9453a2", textDecoration: "none", cursor: "pointer" }}>
-            Termos de Uso
-          </span>
-        </Link>
-      </p>
-      <p style={{ color: "#666" }}>Desenvolvido por Extra Software para a modernização da saúde municipal.</p>
-    </footer>
+    <motion.button
+    className="btn btn-warning position-fixed bottom-0 end-0 mb-4 me-4 shadow-lg"
+    style={{ borderRadius: "50px", padding: "10px 20px" }}
+    initial={{ opacity: 0, y: 50 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay: 1 }}
+  >
+    <i className="bi bi-chat-dots me-2"></i> Suporte
+  </motion.button>
   );
 }

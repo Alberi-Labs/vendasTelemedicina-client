@@ -16,6 +16,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
+import { motion } from "framer-motion";
 
 // 🔹 Interface para Cliente
 interface Cliente {
@@ -77,50 +78,45 @@ export default function GestaoClientes() {
 
   return (
     <Container maxWidth="lg">
-      <Paper elevation={3} sx={{ p: 4, mt: 5 }}>
-        <Typography variant="h4" align="center" gutterBottom>
-          Gestão de Clientes
-        </Typography>
-
-        {loading ? (
-          <Box display="flex" justifyContent="center">
-            <CircularProgress />
-          </Box>
-        ) : (
-          <TableContainer component={Paper} sx={{ mt: 3 }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell><strong>Nome</strong></TableCell>
-                  <TableCell><strong>CPF</strong></TableCell>
-                  <TableCell><strong>Email</strong></TableCell>
-                  <TableCell><strong>Ações</strong></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {clientes?.map((cliente) => (
-                  <TableRow key={cliente.idCliente}>
-                    <TableCell>{cliente.nome}</TableCell>
-                    <TableCell>{cliente.cpf}</TableCell>
-                    <TableCell>{cliente.email}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => handleClienteClick(cliente)}
-                      >
-                        Ver Detalhes
-                      </Button>
-                    </TableCell>
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+        <Paper elevation={3} sx={{ p: 4, mt: 5 }}>
+          <Typography variant="h4" align="center" gutterBottom>
+            Gestão de Clientes
+          </Typography>
+          {loading ? (
+            <Box display="flex" justifyContent="center">
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer component={Paper} sx={{ mt: 3 }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Nome</strong></TableCell>
+                    <TableCell><strong>CPF</strong></TableCell>
+                    <TableCell><strong>Email</strong></TableCell>
+                    <TableCell><strong>Ações</strong></TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </Paper>
-
-      {/* 🔹 Modal de Detalhes do Cliente */}
+                </TableHead>
+                <TableBody>
+                  {clientes?.map((cliente) => (
+                    <TableRow key={cliente.idCliente}>
+                      <TableCell>{cliente.nome}</TableCell>
+                      <TableCell>{cliente.cpf}</TableCell>
+                      <TableCell>{cliente.email}</TableCell>
+                      <TableCell>
+                        <Button variant="contained" color="primary" onClick={() => handleClienteClick(cliente)}>
+                          Ver Detalhes
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Paper>
+      </motion.div>
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Detalhes do Cliente</DialogTitle>
         <DialogContent>
@@ -130,7 +126,6 @@ export default function GestaoClientes() {
               <Typography><strong>CPF:</strong> {selectedCliente.cpf}</Typography>
               <Typography><strong>Email:</strong> {selectedCliente.email}</Typography>
               <Typography><strong>Créditos:</strong> {selectedCliente.creditos}</Typography>
-
               <Typography variant="h6" sx={{ mt: 2 }}>Últimas 5 Vendas</Typography>
               {loadingVendas ? (
                 <CircularProgress size={24} />
@@ -148,7 +143,7 @@ export default function GestaoClientes() {
                         vendas.map((venda) => (
                           <TableRow key={venda.idVenda}>
                             <TableCell>{new Date(venda.data).toLocaleDateString()}</TableCell>
-                            <TableCell>R$ {venda.valor ? parseFloat(venda.valor.toString()).toFixed(2) : "0.00"}</TableCell>
+                            <TableCell>R$ {venda.valor}</TableCell>
                             </TableRow>
                         ))
                       ) : (
@@ -167,11 +162,7 @@ export default function GestaoClientes() {
           <Button onClick={() => setModalOpen(false)} color="secondary">
             Fechar
           </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => router.push(`/novaVenda?cliente=${selectedCliente?.idCliente}`)}
-          >
+          <Button variant="contained" color="primary" onClick={() => router.push(`/novaVenda?cliente=${selectedCliente?.idCliente}`)}>
             Nova Venda
           </Button>
         </DialogActions>
