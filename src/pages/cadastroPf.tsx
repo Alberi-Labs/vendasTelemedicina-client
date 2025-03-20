@@ -67,7 +67,7 @@ export default function CadastroPf() {
   const [loadingPix, setLoadingPix] = useState(false);
   const [originalData, setOriginalData] = useState<Cliente | null>(null);
   const [qrCodeImage, setQrCodeImage] = useState<string | null>(null);
-  const [pagamentoConfirmado, setPagamentoConfirmado] = useState(true);
+  const [pagamentoConfirmado, setPagamentoConfirmado] = useState(false);
 
   // 🔹 Função para limpar formatação do CPF (deixa só números)
   const limparCpf = (cpf: string) => cpf.replace(/\D/g, "");
@@ -156,6 +156,7 @@ export default function CadastroPf() {
           cpf: limparCpf(formData.cpf),
           telefone: formData.telefone,
           email: formData.email,
+          data_nascimento: formData.data_nascimento,
         }),
       });
 

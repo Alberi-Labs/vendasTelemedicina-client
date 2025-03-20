@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const [usuarioExistente] = await pool.query(
-      "SELECT id FROM tb_usuarios WHERE cpf = ? OR email = ?",
+      "SELECT idUsuario FROM tb_usuarios WHERE cpf = ? OR email = ?",
       [cpf, email]
     );
 

@@ -11,7 +11,7 @@ export default function Consulta() {
     const searchParams = useSearchParams(); 
 
     const [clientes, setClientes] = useState<Cliente[]>([]);
-    const [clienteSelecionado, setClienteSelecionado] = useState<any>(null); // ✅ Agora suporta `react-select`
+    const [clienteSelecionado, setClienteSelecionado] = useState<any>(null); 
     const [loading, setLoading] = useState(true);
 
     interface Cliente {
@@ -20,7 +20,7 @@ export default function Consulta() {
         cpf: string;
         telefone?: string;
         email?: string;
-        data_nascimento?: string; // ✅ Ajustado para o formato correto
+        data_nascimento?: string; 
     }
 
     useEffect(() => {
@@ -32,7 +32,6 @@ export default function Consulta() {
                 if (data.success) {
                     setClientes(data.clientes);
 
-                    // ✅ Verifica se existe CPF na URL e seleciona o cliente no dropdown
                     const cpfNaUrl = searchParams?.get("cpf");
                     if (cpfNaUrl) {
                         const clienteEncontrado = data.clientes.find((cliente: Cliente) => cliente.cpf === cpfNaUrl);
@@ -56,9 +55,8 @@ export default function Consulta() {
             }
         }
         fetchClientes();
-    }, [searchParams]); // ✅ Se a URL mudar, ele verifica novamente
+    }, [searchParams]); 
 
-    // ✅ Formata a data de nascimento de "YYYY-MM-DD" para "DD/MM/YYYY"
     const formatarData = (data: string | undefined) => {
         if (!data) return "";
         const [ano, mes, dia] = data.split("-");

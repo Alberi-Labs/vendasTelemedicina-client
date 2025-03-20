@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
         const [result]: any = await pool.query(
-            "INSERT INTO tb_clientes (nome, cpf, telefone, email) VALUES (?, ?, ?, ?)",
+            "INSERT INTO tb_clientes (nome, cpf, telefone, email, data_nascimento) VALUES (?, ?, ?, ?, ?)",
             [nome, cpf, telefone, email]
         );
 
