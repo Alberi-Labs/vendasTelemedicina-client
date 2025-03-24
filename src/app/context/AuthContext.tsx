@@ -1,35 +1,34 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { jwtDecode } from "jwt-decode";
 
-// 🔹 Interface para os dados do usuário logado
 interface User {
   id: number;
   nome: string;
   role: string;
+  id_empresa: number;
 }
 
-// 🔹 Interface do contexto de autenticação
+
 interface AuthContextType {
   user: User | null;
   login: (token: string) => void;
   logout: () => void;
-  isAuthLoaded: boolean; // Novo estado para saber se a autenticação foi carregada
+  isAuthLoaded: boolean;
 }
 
-// 🔹 Criando o contexto de autenticação
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoaded, setIsAuthLoaded] = useState(false); // Estado para verificar se a autenticação foi carregada
+  const [isAuthLoaded, setIsAuthLoaded] = useState(false); 
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user"); // ✅ Busca os dados do usuário no localStorage
+    const storedUser = localStorage.getItem("user"); 
 
     if (token && storedUser) {
       try {
-        const decodedUser = JSON.parse(storedUser); // ✅ Recupera os dados salvos
+        const decodedUser = JSON.parse(storedUser); 
         setUser(decodedUser);
       } catch (error) {
         console.error("Erro ao recuperar usuário do localStorage:", error);
@@ -37,25 +36,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    setIsAuthLoaded(true); // Marca que a autenticação foi carregada
+    setIsAuthLoaded(true); 
   }, []);
 
   const login = (token: string) => {
     try {
       localStorage.setItem("token", token);
       const decodedUser = jwtDecode<User>(token);
-      console.log("✅ Usuário logado:", decodedUser.nome);
-      localStorage.setItem("user", JSON.stringify(decodedUser)); // ✅ Salva os dados completos no localStorage
+      localStorage.setItem("user", JSON.stringify(decodedUser)); 
       setUser(decodedUser);
     } catch (error) {
       console.error("Erro ao salvar usuário:", error);
     }
   };
 
-  // 🚪 Função para logout
   const logout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("user"); // ✅ Remove os dados do usuário ao deslogar
+    localStorage.removeItem("user"); 
     setUser(null);
   };
 
@@ -66,7 +63,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// 🔹 Hook para acessar o contexto de autenticação
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
