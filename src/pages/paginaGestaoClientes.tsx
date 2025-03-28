@@ -27,14 +27,13 @@ interface Cliente {
   creditos: number;
 }
 
-// 🔹 Interface para Venda
 interface Venda {
   idVenda: number;
   data: string;
   valor: number;
 }
 
-export default function GestaoClientes() {
+export default function PaginaGestaoClientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);

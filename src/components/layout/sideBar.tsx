@@ -14,13 +14,14 @@ export default function Sidebar() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-  
+
     try {
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-  
+
         // ✅ Verifica se o objeto contém 'nome' e 'role' corretamente
         if (parsedUser?.nome && parsedUser?.role) {
           setUserName(parsedUser.nome); // 🔹 Corrigido de 'name' para 'nome'
@@ -33,7 +34,7 @@ export default function Sidebar() {
       console.error("Erro ao parsear JSON do usuário:", error);
     }
   }, []);
-  
+
 
   console.log("userName:", userName);
   console.log("userRole:", userRole);
@@ -57,6 +58,10 @@ export default function Sidebar() {
     vendas: userRole === "admin" || userRole === "vendedor",
     relatorios: userRole === "admin",
     consulta: userRole === "admin" || userRole === "cliente",
+    apolice: userRole === "admin" || userRole === "cliente",
+    controleDependentes: userRole === "admin" || userRole === "cliente",
+    controleDePagamento: userRole === "admin" || userRole === "cliente",
+    cancelamento: userRole === "admin" || userRole === "cliente",
     suporte: true,
   };
 
@@ -204,6 +209,67 @@ export default function Sidebar() {
                 </Nav.Link>
               )}
 
+              {canAccess.apolice && (
+                <Nav.Link as={Link} href="/paginaApolice" onClick={handleMenuClick} style={{
+                  color: router.pathname === "/paginaApolice" ? "#000" : "#FFF",
+                  backgroundColor: router.pathname === "/paginaApolice" ? "#b5cd00" : "transparent",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  transition: "background-color 0.3s ease-in-out",
+                  marginBottom: "5px"
+
+                }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaApolice" ? "#b5cd00" : "transparent")}>
+                  <i className="bi-download me-2"></i>Baixar Apólice
+                </Nav.Link>
+              )}
+
+              {canAccess.controleDependentes && (
+                <Nav.Link as={Link} href="/paginaControleDependentes" onClick={handleMenuClick} style={{
+                  color: router.pathname === "/paginaControleDependentes" ? "#000" : "#FFF",
+                  backgroundColor: router.pathname === "/paginaControleDependentes" ? "#b5cd00" : "transparent",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  transition: "background-color 0.3s ease-in-out",
+                  marginBottom: "5px"
+
+                }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaControleDependentes" ? "#b5cd00" : "transparent")}>
+                  <i className="bi-people-fill me-2"></i>Controle de Dependentes
+                </Nav.Link>
+              )}
+              {canAccess.suporte && (
+                <Nav.Link as={Link} href="/paginaControlePagamento" onClick={handleMenuClick} style={{
+                  color: router.pathname === "/paginaControlePagamento" ? "#000" : "#FFF",
+                  backgroundColor: router.pathname === "/paginaControlePagamento" ? "#b5cd00" : "transparent",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  transition: "background-color 0.3s ease-in-out",
+                  marginBottom: "5px"
+
+                }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaControlePagamento" ? "#b5cd00" : "transparent")}>
+                  <i className="bi-credit-card me-2"></i>Controle de Pagamento
+                </Nav.Link>
+              )}
+              {canAccess.cancelamento && (
+                <Nav.Link as={Link} href="/paginaCancelamento" onClick={handleMenuClick} style={{
+                  color: router.pathname === "/paginaCancelamento" ? "#000" : "#FFF",
+                  backgroundColor: router.pathname === "/paginaCancelamento" ? "#b5cd00" : "transparent",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  transition: "background-color 0.3s ease-in-out",
+                  marginBottom: "5px"
+
+                }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaCancelamento" ? "#b5cd00" : "transparent")}>
+                  <i className="bi-x-circle me-2"></i>Cancelamento
+                </Nav.Link>
+              )}
               {canAccess.suporte && (
                 <Nav.Link as={Link} href="/suporte" onClick={handleMenuClick} style={{
                   color: router.pathname === "/suporte" ? "#000" : "#FFF",
@@ -238,28 +304,28 @@ export default function Sidebar() {
         </div>
 
         <div
-    style={{
-      position: "fixed",
-      top: "10px",
-      left: menuOpen ? "260px" : "10px", // Move junto com a Sidebar
-      transition: "left 0.3s ease-in-out",
-      zIndex: 1000,
-    }}
-  >
-    <button
-      className="btn btn-light d-flex align-items-center"
-      onClick={handleToggleMenu}
-      style={{
-        backgroundColor: "rgb(22 22 33)",
-        borderColor: "rgb(22 22 33)",
-      }}
-    >
-      <i className="bi bi-list" style={{ fontSize: "1.5rem", color: "white" }}></i>
-      <span style={{ marginLeft: "10px", fontSize: "1.2rem", fontWeight: "bold", color: "white" }}>
-        Menu
-      </span>
-    </button>
-  </div>
+          style={{
+            position: "fixed",
+            top: "10px",
+            left: menuOpen ? "260px" : "10px", // Move junto com a Sidebar
+            transition: "left 0.3s ease-in-out",
+            zIndex: 1000,
+          }}
+        >
+          <button
+            className="btn btn-light d-flex align-items-center"
+            onClick={handleToggleMenu}
+            style={{
+              backgroundColor: "rgb(22 22 33)",
+              borderColor: "rgb(22 22 33)",
+            }}
+          >
+            <i className="bi bi-list" style={{ fontSize: "1.5rem", color: "white" }}></i>
+            <span style={{ marginLeft: "10px", fontSize: "1.2rem", fontWeight: "bold", color: "white" }}>
+              Menu
+            </span>
+          </button>
+        </div>
       </div>
     </>
   );

@@ -46,7 +46,7 @@ interface Pagamento {
   tipo_pagamento_loja?: string;
 }
 
-export default function CadastroPf() {
+export default function PaginaCadastroPf() {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Cliente>({
     nome: "",
