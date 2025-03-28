@@ -5,12 +5,14 @@ import pool from "@/lib/db";
 interface Venda {
     idVenda: number;
     id_cliente: number;
+    nome_cliente: string; // <- aqui
     data: string;
     valor: string;
     forma_pagamento: string;
     status_pagamento: string;
     data_pagamento: string | null;
-}
+  }
+  
 
 // 🔹 Função para converter a data para o formato brasileiro (DD/MM/YYYY)
 const formatarDataParaBrasileiro = (data: string | Date | null) => {
@@ -34,8 +36,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
         const { id_cliente } = req.query;
-        let query = "SELECT * FROM tb_vendas";
-        let params: any[] = [];
+        let query = `
+        SELECT v.*, c.nome AS nome_cliente 
+        FROM tb_vendas v 
+        JOIN tb_clientes c ON v.id_cliente = c.idCliente
+      `;
+              let params: any[] = [];
 
         if (id_cliente) {
             query += " WHERE id_cliente = ?";
@@ -48,16 +54,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(404).json({ error: "Nenhuma venda encontrada para este cliente." });
         }
 
-        // 🔹 Formatar os dados antes de enviar
         const vendasFormatadas: Venda[] = rows.map((venda: any) => ({
             idVenda: venda.idVenda,
             id_cliente: venda.id_cliente,
-            data: formatarDataParaBrasileiro(venda.data), // ✅ Mantém ou converte para DD/MM/YYYY
+            nome_cliente: venda.nome_cliente, // <- aqui
+            data: formatarDataParaBrasileiro(venda.data),
             valor: venda.valor,
             forma_pagamento: venda.forma_pagamento,
             status_pagamento: venda.status_pagamento,
-            data_pagamento: formatarDataParaBrasileiro(venda.data_pagamento), // ✅ Converte corretamente
-        }));
+            data_pagamento: formatarDataParaBrasileiro(venda.data_pagamento),
+          }));
+          
 
         console.log(vendasFormatadas);
         return res.status(200).json({ success: true, vendas: vendasFormatadas });

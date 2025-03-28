@@ -14,12 +14,14 @@ export default function RelatorioVendas() {
   type Venda = {
     idVenda: number;
     id_cliente: number;
+    nome_cliente: string;
     data: string;
     valor: string;
     forma_pagamento: string;
     status_pagamento: string;
     data_pagamento: string | null;
   };
+
 
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [filtro, setFiltro] = useState("mes");
@@ -60,7 +62,7 @@ export default function RelatorioVendas() {
     if (filtro === "quinzenal") return mesPagamento === mesSelecionado && (diaPagamento <= 15 ? "1" : "2") === quinzenaSelecionada;
 
     return false;
-});
+  });
 
 
   const vendasPorDia = vendasFiltradas.reduce((acc, venda) => {
@@ -75,104 +77,107 @@ export default function RelatorioVendas() {
 
   return (
     <Container className="mt-5">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
-            <div className="d-flex justify-content-end">
-        <Button variant="danger" onClick={() => gerarPDF()}>
-          <BsFileEarmarkPdf size={20} />
-        </Button>
-      </div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
+        <div className="d-flex justify-content-end">
+          <Button variant="danger" onClick={() => gerarPDF()}>
+            <BsFileEarmarkPdf size={20} />
+          </Button>
+        </div>
 
-      <div ref={relatorioRef}>
-        <h2 className="text-center mb-4">Relatório de Vendas</h2>
+        <div ref={relatorioRef}>
+          <h2 className="text-center mb-4">Relatório de Vendas</h2>
 
-        <Row className="mb-4">
-          <Col md={6}>
-            <Form.Label>Filtro</Form.Label>
-            <Form.Select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-              <option value="mes">Mês</option>
-              <option value="quinzenal">Quinzenal</option>
-            </Form.Select>
-          </Col>
-
-          <Col md={6}>
-            <Form.Label>Mês</Form.Label>
-            <Form.Select value={mesSelecionado} onChange={(e) => setMesSelecionado(e.target.value)}>
-              {Array.from({ length: 12 }, (_, i) => {
-                const mes = (i + 1).toString().padStart(2, "0");
-                return (
-                  <option key={mes} value={mes}>
-                    {new Date(2025, i).toLocaleString("pt-BR", { month: "long" })}
-                  </option>
-                );
-              })}
-            </Form.Select>
-          </Col>
-
-          {filtro === "quinzenal" && (
-            <Col md={6} className="mt-3">
-              <Form.Label>Quinzena</Form.Label>
-              <Form.Select value={quinzenaSelecionada} onChange={(e) => setQuinzenaSelecionada(e.target.value)}>
-                <option value="1">1ª Quinzena</option>
-                <option value="2">2ª Quinzena</option>
+          <Row className="mb-4">
+            <Col md={6}>
+              <Form.Label>Filtro</Form.Label>
+              <Form.Select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+                <option value="mes">Mês</option>
+                <option value="quinzenal">Quinzenal</option>
               </Form.Select>
             </Col>
-          )}
-        </Row>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <Row className="mb-4">
-          <Col md={6}>
-            <Card className="p-3">
-              <Bar
-                data={{
-                  labels: Object.keys(vendasPorDia),
-                  datasets: [{ label: "Vendas por Dia", data: Object.values(vendasPorDia), backgroundColor: "#4CAF50" }],
-                }}
-                options={{ maintainAspectRatio: false, responsive: true }}
-              />
-            </Card>
-          </Col>
-          <Col md={6}>
-            <Card className="p-3">
-              <Pie
-                data={{
-                  labels: Object.keys(vendasPorPagamento),
-                  datasets: [{
-                    data: Object.values(vendasPorPagamento),
-                    backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56"],
-                  }],
-                }}
-                options={{ maintainAspectRatio: false, responsive: true }}
-              />
-            </Card>
-          </Col>
-        </Row>
-        </motion.div>
 
-        
-        <Table striped bordered hover>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Forma de Pagamento</th>
-              <th>Valor</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {vendasFiltradas.map((venda) => (
-              <tr key={venda.idVenda}>
-                <td>{venda.data}</td>
-                <td>{venda.forma_pagamento}</td>
-                <td>R$ {parseFloat(venda.valor).toFixed(2)}</td>
-                <td>{venda.status_pagamento}</td>
+            <Col md={6}>
+              <Form.Label>Mês</Form.Label>
+              <Form.Select value={mesSelecionado} onChange={(e) => setMesSelecionado(e.target.value)}>
+                {Array.from({ length: 12 }, (_, i) => {
+                  const mes = (i + 1).toString().padStart(2, "0");
+                  return (
+                    <option key={mes} value={mes}>
+                      {new Date(2025, i).toLocaleString("pt-BR", { month: "long" })}
+                    </option>
+                  );
+                })}
+              </Form.Select>
+            </Col>
+
+            {filtro === "quinzenal" && (
+              <Col md={6} className="mt-3">
+                <Form.Label>Quinzena</Form.Label>
+                <Form.Select value={quinzenaSelecionada} onChange={(e) => setQuinzenaSelecionada(e.target.value)}>
+                  <option value="1">1ª Quinzena</option>
+                  <option value="2">2ª Quinzena</option>
+                </Form.Select>
+              </Col>
+            )}
+          </Row>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <Row className="mb-4">
+              <Col md={6}>
+                <Card className="p-3">
+                  <Bar
+                    data={{
+                      labels: Object.keys(vendasPorDia),
+                      datasets: [{ label: "Vendas por Dia", data: Object.values(vendasPorDia), backgroundColor: "#4CAF50" }],
+                    }}
+                    options={{ maintainAspectRatio: false, responsive: true }}
+                  />
+                </Card>
+              </Col>
+              <Col md={6}>
+                <Card className="p-3">
+                  <Pie
+                    data={{
+                      labels: Object.keys(vendasPorPagamento),
+                      datasets: [{
+                        data: Object.values(vendasPorPagamento),
+                        backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56"],
+                      }],
+                    }}
+                    options={{ maintainAspectRatio: false, responsive: true }}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          </motion.div>
+
+
+          <Table striped bordered hover>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Forma de Pagamento</th>
+                <th>Valor</th>
+                <th>Status</th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </div>
-            </motion.div>
+            </thead>
 
-      
+            <tbody>
+              {vendasFiltradas.map((venda) => (
+                <tr key={venda.idVenda}>
+                  <td>{venda.data}</td>
+                  <td>{venda.nome_cliente}</td>
+                  <td>{venda.forma_pagamento}</td>
+                  <td>R$ {parseFloat(venda.valor).toFixed(2)}</td>
+                  <td>{venda.status_pagamento}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+      </motion.div>
+
+
     </Container>
   );
 }

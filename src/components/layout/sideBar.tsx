@@ -14,7 +14,7 @@ export default function Sidebar() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  
+
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
 
@@ -115,18 +115,18 @@ export default function Sidebar() {
               {canAccess.vendas && (
                 <Nav.Link
                   as={Link}
-                  href="/cadastroPf"
+                  href="/paginaCadastroPf"
                   onClick={handleMenuClick}
                   style={{
-                    color: router.pathname === "/cadastroPf" ? "#000" : "#FFF",
-                    backgroundColor: router.pathname === "/cadastroPf" ? "#b5cd00" : "transparent",
+                    color: router.pathname === "/paginaCadastroPf" ? "#000" : "#FFF",
+                    backgroundColor: router.pathname === "/paginaCadastroPf" ? "#b5cd00" : "transparent",
                     borderRadius: "10px",
                     padding: "10px",
                     transition: "background-color 0.3s ease-in-out",
                     marginBottom: "5px"
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/cadastroPf" ? "#b5cd00" : "transparent")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaCadastroPf" ? "#b5cd00" : "transparent")}
                 >
                   <i className="bi bi-cart me-2"></i>Vendas
                 </Nav.Link>
@@ -147,7 +147,7 @@ export default function Sidebar() {
                       marginBottom: "5px"
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/relatorioVendas" || router.pathname === "/gestaoClientes" ? "#b5cd00" : "transparent")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaRelatorioVendas" || router.pathname === "/paginaGestaoClientes" ? "#b5cd00" : "transparent")}
                   >
                     <i className="bi bi-clipboard-data me-2"></i>Relatórios e Gestão
                   </button>
@@ -157,16 +157,16 @@ export default function Sidebar() {
                       {/* 🔹 Link para Relatório de Vendas */}
                       <Nav.Link
                         as={Link}
-                        href="/relatorioVendas"
+                        href="/paginaRelatorioVendas"
                         onClick={handleMenuClick}
                         style={{
                           color: "#FFF",
                           borderRadius: "10px",
                           marginBottom: "5px",
-                          backgroundColor: router.pathname === "/relatorioVendas" ? "#b5cd00" : "transparent"
+                          backgroundColor: router.pathname === "/paginaRelatorioVendas" ? "#b5cd00" : "transparent"
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/relatorioVendas" ? "#b5cd00" : "transparent")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaRelatorioVendas" ? "#b5cd00" : "transparent")}
                       >
                         <i className="bi bi-file-earmark-bar-graph me-2"></i>Relatório de Vendas
                       </Nav.Link>
@@ -174,16 +174,16 @@ export default function Sidebar() {
                       {/* 🔹 Link para Gestão de Clientes */}
                       <Nav.Link
                         as={Link}
-                        href="/gestaoClientes"
+                        href="/paginaGestaoClientes"
                         onClick={handleMenuClick}
                         style={{
                           color: "#FFF",
                           borderRadius: "10px",
                           marginBottom: "5px",
-                          backgroundColor: router.pathname === "/gestaoClientes" ? "#b5cd00" : "transparent"
+                          backgroundColor: router.pathname === "/paginaGestaoClientes" ? "#b5cd00" : "transparent"
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/gestaoClientes" ? "#b5cd00" : "transparent")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaGestaoClientes" ? "#b5cd00" : "transparent")}
                       >
                         <i className="bi bi-people me-2"></i>Gestão de Clientes
                       </Nav.Link>
@@ -194,9 +194,9 @@ export default function Sidebar() {
 
 
               {canAccess.consulta && (
-                <Nav.Link as={Link} href="/telemedicina" onClick={handleMenuClick} style={{
-                  color: router.pathname === "/telemedicina" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/telemedicina" ? "#b5cd00" : "transparent",
+                <Nav.Link as={Link} href="/paginaTelemedicina" onClick={handleMenuClick} style={{
+                  color: router.pathname === "/paginaTelemedicina" ? "#000" : "#FFF",
+                  backgroundColor: router.pathname === "/paginaTelemedicina" ? "#b5cd00" : "transparent",
                   borderRadius: "10px",
                   padding: "10px",
                   transition: "background-color 0.3s ease-in-out",
@@ -204,7 +204,7 @@ export default function Sidebar() {
 
                 }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/cadastroPf" ? "#b5cd00" : "transparent")}>
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaTelemedicina" ? "#b5cd00" : "transparent")}>
                   <i className="bi bi-clipboard-heart me-2"></i>Consultar com médico online
                 </Nav.Link>
               )}
@@ -271,19 +271,25 @@ export default function Sidebar() {
                 </Nav.Link>
               )}
               {canAccess.suporte && (
-                <Nav.Link as={Link} href="/suporte" onClick={handleMenuClick} style={{
-                  color: router.pathname === "/suporte" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/suporte" ? "#b5cd00" : "transparent",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out",
-                  marginBottom: "5px"
-
-                }}
+                <Nav.Link
+                  as="a"
+                  href="https://wa.me/5561998565628"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "#FFF",
+                    backgroundColor: "transparent",
+                    borderRadius: "10px",
+                    padding: "10px",
+                    transition: "background-color 0.3s ease-in-out",
+                    marginBottom: "5px"
+                  }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/cadastroPf" ? "#b5cd00" : "transparent")}>
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
                   <i className="bi bi-question-circle me-2"></i>Suporte e Ajuda
                 </Nav.Link>
+
               )}
             </Nav>
           </div>
