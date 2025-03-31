@@ -30,7 +30,9 @@ export default function PaginaInicial() {
     { path: "/paginaControleDependentes", icon: "bi-people-fill", text: "Controle de Dependentes", allowedRoles: ["admin", "cliente"] },
     { path: "/paginaControlePagamento", icon: "bi-credit-card", text: "Controle de Pagamento", allowedRoles: ["admin", "gerente", "vendedor"] },
     { path: "/paginaCancelamento", icon: "bi-x-circle", text: "Cancelamento", allowedRoles: ["admin", "gerente"] },
+    { path: "/paginaGestaoUsuarios", icon: "bi-person-gear", text: "Gestão de Usuários", allowedRoles: ["admin"] }
   ];
+  
   
 
   const visibleCards = cards.filter(card => card.allowedRoles.includes(user?.role || ""));

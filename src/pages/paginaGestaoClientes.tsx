@@ -49,7 +49,6 @@ export default function PaginaGestaoClientes() {
   const [modalEditarOpen, setModalEditarOpen] = useState(false);
   const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
   
-  // 🔹 Buscar todos os clientes
   useEffect(() => {
     const fetchClientes = async () => {
       try {
@@ -65,7 +64,6 @@ export default function PaginaGestaoClientes() {
     fetchClientes();
   }, []);
 
-  // 🔹 Buscar informações detalhadas do cliente selecionado
   const handleClienteClick = async (cliente: Cliente) => {
     setSelectedCliente(cliente);
     setModalOpen(true);
