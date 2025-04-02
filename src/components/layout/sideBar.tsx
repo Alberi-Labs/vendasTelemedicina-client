@@ -62,6 +62,7 @@ export default function Sidebar() {
     controleDependentes: userRole === "admin" || userRole === "cliente",
     controleDePagamento: userRole === "admin" || userRole === "cliente",
     cancelamento: userRole === "admin" || userRole === "cliente",
+    dashboard: userRole === "admin" || userRole === "gerente",
     suporte: true,
   };
 
@@ -187,6 +188,16 @@ export default function Sidebar() {
                       >
                         <i className="bi bi-people me-2"></i>Gestão de Clientes
                       </Nav.Link>
+                      <Nav.Link as={Link} href="/paginaDashboardFinanceiro" onClick={handleMenuClick} style={{
+                        color: "#FFF",
+                        borderRadius: "10px",
+                        marginBottom: "5px",
+                        backgroundColor: router.pathname === "/paginaDashboardFinanceiro" ? "#b5cd00" : "transparent"
+                      }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaDashboardFinanceiro" ? "#b5cd00" : "transparent")}>
+                        <i className="bi-bar-chart-line me-2"></i>Dashboard Financeiro
+                      </Nav.Link>
                     </div>
                   )}
                 </>
@@ -270,6 +281,7 @@ export default function Sidebar() {
                   <i className="bi-x-circle me-2"></i>Cancelamento
                 </Nav.Link>
               )}
+
               {canAccess.suporte && (
                 <Nav.Link
                   as="a"
