@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import pool from "@/lib/db";
 
 // Interface do usuário
-interface Usuario {
+export interface Usuario {
   id: number;
   nome: string;
   email: string;
@@ -15,7 +15,14 @@ interface Usuario {
   data_nascimento: string | null;
   id_empresa: number;
   criado_em: string;
+  plano_telemedicina: boolean | number;
+  cep: string | null;
+  endereco: string | null;
+  uf: string | null;
+  cidade: string | null;
+  sexo: string | null;
 }
+
 
 const formatarDataParaBrasileiro = (data: string | null) => {
   if (!data) return null;
@@ -34,8 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const params: any[] = [];
 
     if (idUsuario) {
-      query += " WHERE id = ?";
-      params.push(Number(idUsuario));
+      query += " WHERE idUsuario = ?";
     }
 
     const [rows]: any = await pool.query(query, params);
@@ -45,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const usuarios: Usuario[] = rows.map((u: any) => ({
-      id: u.id,
+      id: u.idUsuario,
       nome: u.nome,
       email: u.email,
       telefone: u.telefone,
@@ -56,8 +62,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       data_nascimento: formatarDataParaBrasileiro(u.data_nascimento),
       id_empresa: u.id_empresa,
       criado_em: formatarDataParaBrasileiro(u.criado_em),
+      plano_telemedicina: !!u.plano_telemedicina,
+      cep: u.cep,
+      endereco: u.endereco,
+      uf: u.uf,
+      cidade: u.cidade,
+      sexo: u.sexo
     }));
-
+    
     return res.status(200).json({ success: true, usuarios });
   } catch (error) {
     console.error("Erro ao buscar usuários:", error);

@@ -43,9 +43,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       dataConfirmacaoPagamento = new Date();
     }
 
-    // 🔹 Inserir a venda na tabela `tb_vendas`
+    // 🔹 Inserir a venda na tabela `tb_vendas_consulta`
     const query = `
-      INSERT INTO tb_vendas 
+      INSERT INTO tb_vendas_consulta 
       (nome, email, cpf, celular, nascimento, cep, endereco, casa, sexo, uf, cidade, forma_pagamento, tipo_pagamento_loja, status_pagamento, data_confirmacao_pagamento) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;

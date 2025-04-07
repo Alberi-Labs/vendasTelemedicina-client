@@ -63,6 +63,7 @@ export default function Sidebar() {
     controleDePagamento: userRole === "admin" || userRole === "cliente",
     cancelamento: userRole === "admin" || userRole === "cliente",
     dashboard: userRole === "admin" || userRole === "gerente",
+    gestaoUsuarios: userRole === "admin" || userRole === "gerente",
     suporte: true,
   };
 
@@ -266,6 +267,23 @@ export default function Sidebar() {
                   <i className="bi-credit-card me-2"></i>Controle de Pagamento
                 </Nav.Link>
               )}
+
+              {canAccess.gestaoUsuarios && (
+                <Nav.Link as={Link} href="/paginaGestaoUsuarios" onClick={handleMenuClick} style={{
+                  color: router.pathname === "/paginaGestaoUsuarios" ? "#000" : "#FFF",
+                  backgroundColor: router.pathname === "/paginaGestaoUsuarios" ? "#b5cd00" : "transparent",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  transition: "background-color 0.3s ease-in-out",
+                  marginBottom: "5px"
+
+                }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaGestaoUsuarios" ? "#b5cd00" : "transparent")}>
+                  <i className="bi-person-gear me-2"></i> Gestão de Usuários
+                </Nav.Link>
+              )}
+
               {canAccess.cancelamento && (
                 <Nav.Link as={Link} href="/paginaCancelamento" onClick={handleMenuClick} style={{
                   color: router.pathname === "/paginaCancelamento" ? "#000" : "#FFF",
@@ -281,7 +299,6 @@ export default function Sidebar() {
                   <i className="bi-x-circle me-2"></i>Cancelamento
                 </Nav.Link>
               )}
-
               {canAccess.suporte && (
                 <Nav.Link
                   as="a"
@@ -303,6 +320,7 @@ export default function Sidebar() {
                 </Nav.Link>
 
               )}
+
             </Nav>
           </div>
 

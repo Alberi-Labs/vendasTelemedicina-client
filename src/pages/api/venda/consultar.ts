@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { id_cliente } = req.query;
         let query = `
         SELECT v.*, c.nome AS nome_cliente 
-        FROM tb_vendas v 
+        FROM tb_vendas_consulta v 
         JOIN tb_clientes c ON v.id_cliente = c.idCliente
       `;
               let params: any[] = [];

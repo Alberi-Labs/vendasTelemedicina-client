@@ -31,7 +31,9 @@ export default function PaginaInicial() {
     { path: "/paginaControlePagamento", icon: "bi-credit-card", text: "Controle de Pagamento", allowedRoles: ["admin", "gerente", "vendedor"] },
     { path: "/paginaCancelamento", icon: "bi-x-circle", text: "Cancelamento", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoUsuarios", icon: "bi-person-gear", text: "Gestão de Usuários", allowedRoles: ["admin"] },
-    { path: "/paginaDashboardFinanceiro", icon: "bi-bar-chart-line", text: "Dashboard Financeiro", allowedRoles: ["admin", "gerente"] }
+    { path: "/paginaDashboardFinanceiro", icon: "bi-bar-chart-line", text: "Dashboard Financeiro", allowedRoles: ["admin", "gerente"] },
+    { path: "/paginaVendaPf", icon: "bi-bar-chart-line", text: "Pagina Venda Plano Telemedicina", allowedRoles: ["admin", "gerente"] }
+
   ];
   
   

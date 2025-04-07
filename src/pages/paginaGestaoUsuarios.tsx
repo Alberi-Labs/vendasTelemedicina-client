@@ -1,14 +1,8 @@
 import { useEffect, useState } from "react";
 import { Button, Modal, Form, Table } from "react-bootstrap";
 import { motion } from "framer-motion";
+import { Usuario } from "./api/usuario/buscarUsuario";
 
-interface Usuario {
-  id: number;
-  nome: string;
-  email: string;
-  cpf:string;
-  role: string;
-}
 
 export default function PaginaGestaoUsuario() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -30,7 +24,7 @@ export default function PaginaGestaoUsuario() {
           nome: u.nome,
           email: u.email,
           cpf:u.cpf,
-          role: u.perfil,
+          perfil: u.perfil,
         }));
         setUsuarios(adaptado);
       }
@@ -52,7 +46,7 @@ export default function PaginaGestaoUsuario() {
         nome: usuario.nome,
         email: usuario.email,
         cpf:usuario.cpf,
-        role: usuario.role.toLowerCase(),
+        role: usuario.perfil.toLowerCase(),
       });
     } else {
       setFormData({ nome: "", email: "", cpf: "", role: "" });
@@ -153,7 +147,7 @@ export default function PaginaGestaoUsuario() {
                 <td>{user.nome}</td>
                 <td>{user.email}</td>
                 <td>{user.cpf}</td>
-                <td>{user.role}</td>
+                <td>{user.perfil}</td>
                 <td>
                   <Button
                     variant="outline-primary"

@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const [result]: any = await pool.query("DELETE FROM tb_vendas WHERE idVenda = ?", [idVenda]);
+        const [result]: any = await pool.query("DELETE FROM tb_vendas_consulta WHERE idVenda = ?", [idVenda]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: "Venda não encontrada." });

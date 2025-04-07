@@ -8,11 +8,10 @@ export default function GestaoDeClientesCadastrados() {
   const [clienteEditado, setClienteEditado] = useState<{ [key: string]: any }>({});
   const [loading, setLoading] = useState(false);
 
-  // 🚀 Busca os clientes ao carregar a página
   useEffect(() => {
     async function fetchClientes() {
       try {
-        const response = await fetch("/api/consultarClientes");
+        const response = await fetch("/api/cliente/consultar");
         const data = await response.json();
         if (data.success) {
           setClientes(data.clientes);

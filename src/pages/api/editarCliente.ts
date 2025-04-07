@@ -30,9 +30,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "O ID da venda é obrigatório." });
     }
 
-    // 🔹 Atualiza todas as informações na `tb_vendas`
+    // 🔹 Atualiza todas as informações na `tb_vendas_consulta`
     const query = `
-      UPDATE tb_vendas 
+      UPDATE tb_vendas_consulta 
       SET 
         nome = ?, email = ?, cpf = ?, celular = ?, nascimento = ?, cep = ?, endereco = ?, 
         casa = ?, sexo = ?, uf = ?, cidade = ?, forma_pagamento = ?, tipo_pagamento_loja = ?, 
