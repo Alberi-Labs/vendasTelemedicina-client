@@ -25,10 +25,18 @@ export interface Usuario {
 
 
 const formatarDataParaBrasileiro = (data: string | null) => {
-  if (!data) return null;
+  if (!data || data === "0000-00-00") return null;
+
   const dataObj = new Date(data);
+
+  // Verifica se a data é inválida ou virou 30/11/1899
+  if (isNaN(dataObj.getTime()) || dataObj.toISOString().startsWith("1899")) {
+    return null;
+  }
+
   return dataObj.toLocaleDateString("pt-BR");
 };
+
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {

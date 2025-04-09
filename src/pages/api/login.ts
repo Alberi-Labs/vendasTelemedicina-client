@@ -8,56 +8,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: "Método não permitido" });
   }
 
-  const { email, password } = req.body;
+  const { cpf, password } = req.body;
 
   try {
-    console.log("🔹 Recebendo requisição de login para:", email);
+    console.log("🔹 Recebendo requisição de login para CPF:", cpf);
 
-    // 1. Tenta buscar na tb_usuarios
+    // Busca o usuário apenas na tabela tb_usuarios usando CPF
     const [usuarios]: any = await pool.query(
-      `SELECT idUsuario AS id, nome, senha, perfil AS role, id_empresa FROM tb_usuarios WHERE email = ?`,
-      [email]
+      `SELECT idUsuario AS id, nome, senha, perfil AS role, id_empresa FROM tb_usuarios WHERE cpf = ?`,
+      [cpf]
     );
 
-    let user: any = null;
-
-    if (usuarios.length > 0) {
-      user = usuarios[0];
-      console.log("✅ Usuário encontrado em tb_usuarios:", user.nome);
-    } else {
-      console.warn("⚠️ Usuário não encontrado em tb_usuarios, tentando em tb_clientes...");
-
-      const [clientes]: any = await pool.query(
-        `SELECT idCliente AS id, nome, senha, perfil AS role FROM tb_clientes WHERE cpf = ?`,
-        [email]
-      );
-
-      if (clientes.length === 0) {
-        console.error("❌ Usuário não encontrado em nenhuma tabela:", email);
-        return res.status(401).json({ error: "Usuário não encontrado" });
-      }
-
-      user = clientes[0];
-
-      // 🔍 Busca o id_empresa da relação com cliente
-      const [relacoes]: any = await pool.query(
-        `SELECT id_empresa FROM tb_relacao_cliente_empresa WHERE id_cliente = ? LIMIT 1`,
-        [user.id]
-      );
-
-      if (relacoes.length === 0) {
-        console.error("❌ Cliente sem empresa vinculada:", email);
-        return res.status(401).json({ error: "Cliente sem empresa vinculada" });
-      }
-
-      user.id_empresa = relacoes[0].id_empresa;
-
-      console.log("✅ Cliente encontrado em tb_clientes:", user.nome);
+    if (usuarios.length === 0) {
+      console.error("❌ Usuário não encontrado na tabela tb_usuarios:", cpf);
+      return res.status(401).json({ error: "Usuário não encontrado" });
     }
+
+    const user = usuarios[0];
+    console.log("✅ Usuário encontrado:", user.nome);
 
     const senhaCorreta = await bcrypt.compare(password, user.senha);
     if (!senhaCorreta) {
-      console.error("❌ Senha incorreta para:", email);
+      console.error("❌ Senha incorreta para CPF:", cpf);
       return res.status(401).json({ error: "Senha incorreta" });
     }
 

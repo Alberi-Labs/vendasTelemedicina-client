@@ -7,7 +7,7 @@ import AvisoAlerta from "../avisoAlerta/avisoAlerta";
 export default function LoginForm() {
   const router = useRouter();
   const { login } = useAuth(); // ✅ Usa o login do contexto
-  const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,24 +21,21 @@ export default function LoginForm() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ cpf, password }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      login(data.token); // ✅ Usa o contexto para definir o usuário autenticado
-
-      setTimeout(() => { // ✅ Garante que o estado seja atualizado antes da navegação
+      login(data.token);
+      setTimeout(() => {
         router.push("/paginaInicial");
-      }, 100); 
-      
+      }, 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ocorreu um erro inesperado.");
       setLoading(false);
     }
   };
-
 
   return (
     <div className="container d-flex justify-content-center align-items-center vh-100">
@@ -49,17 +46,18 @@ export default function LoginForm() {
           <h2 className="mb-5">Login</h2>
           <form onSubmit={handleLogin}>
             <div className="mb-3">
-              <label htmlFor="email" className="form-label">E-mail</label>
+              <label htmlFor="cpf" className="form-label">CPF</label>
               <input
-                type="email"
-                id="email"
+                type="text"
+                id="cpf"
                 className="form-control"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value)}
                 required
-                placeholder="Digite seu e-mail"
+                placeholder="Digite seu CPF"
               />
             </div>
+
 
             <div className="mb-3">
               <label htmlFor="password" className="form-label">Senha</label>

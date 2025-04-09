@@ -73,6 +73,7 @@ export default function PaginaCadastroPf() {
   const [pagamentoConfirmado, setPagamentoConfirmado] = useState(false);
   const [aviso, setAviso] = useState("");
   const [bloquearCadastro, setBloquearCadastro] = useState(false);
+  const [cadastroSulamerica, setCadastroSulamerica] = useState(false);
 
   const calcularIdade = (data: string) => {
     const hoje = new Date();
@@ -104,7 +105,7 @@ export default function PaginaCadastroPf() {
       // Só calcula a idade se a data estiver completa (YYYY-MM-DD tem 10 caracteres)
       if (value.length === 10) {
         const idade = calcularIdade(value);
-    
+
         if (idade > 70) {
           setAviso("Não é possível realizar a compra para pessoas com mais de 70 anos.");
           setBloquearCadastro(true);
@@ -118,8 +119,8 @@ export default function PaginaCadastroPf() {
         setBloquearCadastro(false);
       }
     }
-    
-    
+
+
     // Formatar CPF caso esteja no campo CPF
     if (name === "cpf") {
       value = formatCpf(value);
@@ -337,16 +338,17 @@ export default function PaginaCadastroPf() {
 
   useEffect(() => {
     if (!pixQrCode) return;
-
+  
     const checkPagamento = async () => {
       try {
         const response = await fetch(`/api/cobranca/status?pixQrCodeId=${pixQrCode}`);
         const data = await response.json();
-
+  
         if (data.confirmado) {
           setPagamentoConfirmado(true);
-
-          await cadastrarOuAtualizarUsuario({
+  
+          // 🔹 Cadastrar ou atualizar usuário e obter ID
+          const usuarioResponse = await cadastrarOuAtualizarUsuario({
             nome: formData.nome,
             cpf: formData.cpf,
             email: formData.email,
@@ -355,17 +357,59 @@ export default function PaginaCadastroPf() {
             creditos: quantidadeCreditos,
             data_nascimento: formData.data_de_nascimento || "",
           });
-
+  
+          const id_cliente = usuarioResponse?.idUsuario;
+          if (!id_cliente) {
+            throw new Error("ID do cliente não retornado no cadastro.");
+          }
+  
+          // 🔹 Criar venda
+          const vendaResponse = await fetch("/api/venda/criar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id_cliente,
+              data: new Date().toISOString().split("T")[0],
+              valor: quantidadeCreditos * valorUnitario, // ✅ valor total calculado
+              forma_pagamento: pagamento.forma_pagamento,
+              status_pagamento: "confirmado",
+              data_pagamento: new Date().toISOString().split("T")[0],
+            }),
+          });
+  
+          const vendaResultado = await vendaResponse.json();
+          if (!vendaResultado.success) {
+            console.warn("⚠️ Erro ao criar venda:", vendaResultado.error);
+          }
+  
+          // 🔹 Chamada para API SulAmérica
+          const respostaSulamerica = await fetch("/api/dependente/consultarSulamerica", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              nomeDependente: formData.nome,
+              cpfDependente: formData.cpf,
+              nascimentoDependente: formData.data_de_nascimento,
+            }),
+          });
+  
+          const resultado = await respostaSulamerica.json();
+          if (resultado.success) {
+            setCadastroSulamerica(true);
+          } else {
+            console.warn("Falha no cadastro da Sulamérica:", resultado.error);
+          }
         }
       } catch (error) {
-        console.error("Erro ao verificar pagamento ou cadastrar usuário:", error);
+        console.error("Erro ao verificar pagamento ou cadastrar usuário/venda:", error);
       }
     };
-
+  
     const interval = setInterval(checkPagamento, 5000);
-
     return () => clearInterval(interval);
-  }, [pixQrCode, formData, quantidadeCreditos]);
+  }, [pixQrCode, formData, quantidadeCreditos, pagamento.forma_pagamento]);
+  
+
 
   return (
     <>
@@ -512,14 +556,14 @@ export default function PaginaCadastroPf() {
                         })}
 
 
-<Button
-  variant="contained"
-  color="success"
-  onClick={cadastrarCliente}
-  disabled={bloquearCadastro}
->
-  Cadastrar Cliente e Prosseguir
-</Button>
+                        <Button
+                          variant="contained"
+                          color="success"
+                          onClick={cadastrarCliente}
+                          disabled={bloquearCadastro}
+                        >
+                          Cadastrar Cliente e Prosseguir
+                        </Button>
 
                       </>
                     )}
@@ -600,7 +644,6 @@ export default function PaginaCadastroPf() {
                     {pagamento.forma_pagamento === "loja" && (
                       <>
                         {pagamentoConfirmado ? (
-                          // ✅ Exibe a mensagem de pagamento confirmado
                           <Box mt={3} textAlign="center">
                             <Button
                               variant="contained"
@@ -608,7 +651,9 @@ export default function PaginaCadastroPf() {
                               onClick={() => window.location.href = "/telemedicina"}
                               sx={{ mt: 2 }}
                             >
-                              ✅ Pagamento confirmado! Acesse o Telemedicina
+                              {cadastroSulamerica
+                                ? "✅ Cadastro realizado com sucesso! Acesse o Telemedicina"
+                                : "✅ Pagamento confirmado! Processando cadastro..."}
                             </Button>
                           </Box>
                         ) : (
@@ -633,6 +678,7 @@ export default function PaginaCadastroPf() {
                         )}
                       </>
                     )}
+
 
                     {pagamento.forma_pagamento === "pix" && (
                       <>

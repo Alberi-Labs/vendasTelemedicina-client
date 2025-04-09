@@ -4,14 +4,18 @@ import { useEffect, useState } from "react";
 import { useAtendimento } from "@/app/context/AtendimentoContex";
 import { useRouter, useSearchParams } from "next/navigation";
 import Select from "react-select";
+import { useAuth } from "@/app/context/AuthContext";
+
 
 export default function Consulta() {
     const { setDados } = useAtendimento();
+    const { user } = useAuth(); // ✅ obter usuário logado
     const router = useRouter();
-    const searchParams = useSearchParams(); 
-
+    const searchParams = useSearchParams();
+    const [showAviso, setShowAviso] = useState(false);
+    const [mensagemAviso, setMensagemAviso] = useState("");    
     const [clientes, setClientes] = useState<Cliente[]>([]);
-    const [clienteSelecionado, setClienteSelecionado] = useState<any>(null); 
+    const [clienteSelecionado, setClienteSelecionado] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     interface Cliente {
@@ -20,57 +24,62 @@ export default function Consulta() {
         cpf: string;
         telefone?: string;
         email?: string;
-        data_nascimento?: string; 
+        data_nascimento?: string;
     }
 
     useEffect(() => {
         async function fetchClientes() {
-            try {
-                const res = await fetch("/api/cliente/consultar");
-                const data = await res.json();
-
-                if (data.success) {
-                    setClientes(data.clientes);
-
-                    const cpfNaUrl = searchParams?.get("cpf");
-                    if (cpfNaUrl) {
-                        const clienteEncontrado = data.clientes.find((cliente: Cliente) => cliente.cpf === cpfNaUrl);
-                        if (clienteEncontrado) {
-                            const option = {
-                                value: clienteEncontrado.id,
-                                label: `${clienteEncontrado.nome} - ${clienteEncontrado.cpf}`,
-                                ...clienteEncontrado,
-                            };
-                            setClienteSelecionado(option);
-                            preencherDados(clienteEncontrado);
-                        }
-                    }
-                } else {
-                    console.error("Erro ao carregar clientes:", data.error);
+          try {
+            const res = await fetch("/api/usuario/buscarUsuario");
+            const data = await res.json();
+      
+            if (data.success) {
+              let clientesFiltrados = data.usuarios || [];
+      
+              // ✅ Se o usuário for cliente, exibe só ele
+              if (user?.role === "cliente") {
+                clientesFiltrados = clientesFiltrados.filter((c: Cliente) => c.id === user.id);
+              }
+      
+              setClientes(clientesFiltrados);
+      
+              const cpfNaUrl = searchParams?.get("cpf");
+              if (cpfNaUrl) {
+                const clienteEncontrado = clientesFiltrados.find((cliente: Cliente) => cliente.cpf === cpfNaUrl);
+                if (clienteEncontrado) {
+                  const option = {
+                    value: clienteEncontrado.id,
+                    label: `${clienteEncontrado.nome} - ${clienteEncontrado.cpf}`,
+                    ...clienteEncontrado,
+                  };
+                  setClienteSelecionado(option);
+                  preencherDados(clienteEncontrado);
                 }
-            } catch (error) {
-                console.error("Erro ao conectar com a API:", error);
-            } finally {
-                setLoading(false);
+              }
+            } else {
+              console.error("Erro ao carregar clientes:", data.error);
             }
+          } catch (error) {
+            console.error("Erro ao conectar com a API:", error);
+          } finally {
+            setLoading(false);
+          }
         }
-        fetchClientes();
-    }, [searchParams]); 
-
-    const formatarData = (data: string | undefined) => {
-        if (!data) return "";
-        const [ano, mes, dia] = data.split("-");
-        return `${dia}/${mes}/${ano}`;
-    };
-
+      
+        if (user) fetchClientes(); // só chama após auth carregar
+      }, [searchParams, user]);
+      
+      
     // ✅ Preenche os dados do cliente automaticamente
     const preencherDados = (cliente: Cliente) => {
+        console.log(cliente)
+
         setDados({
             nome: cliente.nome,
             cpf: cliente.cpf,
             telefone: cliente.telefone || "",
             email: cliente.email || "",
-            nascimento: cliente.data_nascimento ? formatarData(cliente.data_nascimento) : "",
+            nascimento: cliente.data_nascimento || "",
         });
     };
 
@@ -80,15 +89,24 @@ export default function Consulta() {
         if (selectedOption) preencherDados(selectedOption);
     };
 
-    const handleSubmit = () => {
-        if (!clienteSelecionado) {
-            alert("Selecione um cliente para continuar!");
-            return;
-        }
+const handleSubmit = () => {
+  if (!clienteSelecionado) {
+    alert("Selecione um cliente para continuar!");
+    return;
+  }
 
-        const url = `https://patient.docway.com.br/appointment/SulamericaVida/create?cartao=${clienteSelecionado.cpf}`;
-        router.push(url);
-    };
+  const podeConsultar = clienteSelecionado.plano_telemedicina && clienteSelecionado.creditos > 0;
+
+  if (!podeConsultar) {
+    setMensagemAviso("Você não possui créditos ou o plano de telemedicina não está ativo.");
+    setShowAviso(true);
+    return;
+  }
+
+  const url = `https://patient.docway.com.br/appointment/SulamericaVida/create?cartao=${clienteSelecionado.cpf}`;
+  router.push(url);
+};
+
 
     return (
         <div className="container-fluid d-flex align-items-center justify-content-center vh-100 px-3">
@@ -102,7 +120,7 @@ export default function Consulta() {
                                 <div className="mb-3">
                                     <label className="form-label">Selecione um cliente:</label>
                                     <Select
-                                        options={clientes.map((cliente) => ({
+                                        options={(clientes || []).map((cliente) => ({
                                             value: cliente.id,
                                             label: `${cliente.nome} - ${cliente.cpf}`,
                                             ...cliente,
@@ -117,14 +135,14 @@ export default function Consulta() {
 
                                 {clienteSelecionado && (
                                     <>
-                                        {[ 
+                                        {[
                                             { label: "Nome", value: clienteSelecionado.nome },
                                             { label: "CPF", value: clienteSelecionado.cpf },
                                             { label: "Telefone", value: clienteSelecionado.telefone },
                                             { label: "Email", value: clienteSelecionado.email },
-                                            { 
-                                                label: "Data de Nascimento", 
-                                                value: formatarData(clienteSelecionado.data_nascimento) // ✅ Exibe a data formatada
+                                            {
+                                                label: "Data de Nascimento",
+                                                value: clienteSelecionado.data_nasciment // ✅ Exibe a data formatada
                                             },
                                         ].map((field, index) => (
                                             <div key={index} className="mb-3">
@@ -152,6 +170,27 @@ export default function Consulta() {
                     </div>
                 </div>
             </div>
+            {showAviso && (
+  <div className="modal d-block" tabIndex={-1} role="dialog" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
+    <div className="modal-dialog modal-dialog-centered" role="document">
+      <div className="modal-content p-3">
+        <div className="modal-header">
+          <h5 className="modal-title text-danger">Atenção</h5>
+          <button type="button" className="btn-close" onClick={() => setShowAviso(false)} />
+        </div>
+        <div className="modal-body">
+          <p>{mensagemAviso}</p>
+        </div>
+        <div className="modal-footer">
+          <button type="button" className="btn btn-secondary" onClick={() => setShowAviso(false)}>
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
         </div>
     );
 }

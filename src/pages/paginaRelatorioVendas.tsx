@@ -64,6 +64,13 @@ export default function RelatorioVendas() {
     return false;
   });
 
+  const valorTotalVendas = vendasFiltradas.reduce((acc, venda) => {
+    return acc + parseFloat(venda.valor);
+  }, 0);
+
+  const totalVendas = vendasFiltradas.length;
+
+  const ticketMedio = totalVendas > 0 ? valorTotalVendas / totalVendas : 0;
 
   const vendasPorDia = vendasFiltradas.reduce((acc, venda) => {
     acc[venda.data] = (acc[venda.data] || 0) + 1;
@@ -74,6 +81,10 @@ export default function RelatorioVendas() {
     acc[venda.forma_pagamento] = (acc[venda.forma_pagamento] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
+  const nomeDoMes = (mes: string) => {
+    const numeroMes = parseInt(mes) - 1;
+    return new Date(2025, numeroMes).toLocaleString("pt-BR", { month: "long" });
+  };
 
   return (
     <Container className="mt-5">
@@ -86,6 +97,42 @@ export default function RelatorioVendas() {
 
         <div ref={relatorioRef}>
           <h2 className="text-center mb-4">Relatório de Vendas</h2>
+          <Row className="mb-4 g-4 text-center">
+          <Row className="mb-4 g-4 text-center">
+  <Col xs={12} md={6} lg={3}>
+    <Card className="text-center shadow-sm border rounded-3 py-3">
+      <h6 className="text-muted">Nº Vendas</h6>
+      <h4 className="fw-bold">{totalVendas}</h4>
+    </Card>
+  </Col>
+
+  <Col xs={12} md={6} lg={3}>
+    <Card className="text-center shadow-sm border rounded-3 py-3">
+      <h6 className="text-muted">Faturamento Total</h6>
+      <h4 className="fw-bold">R$ {valorTotalVendas.toFixed(2)}</h4>
+    </Card>
+  </Col>
+
+  <Col xs={12} md={6} lg={3}>
+    <Card className="text-center shadow-sm border rounded-3 py-3">
+      <h6 className="text-muted">Ticket Médio</h6>
+      <h4 className="fw-bold">R$ {ticketMedio.toFixed(2)}</h4>
+    </Card>
+  </Col>
+
+  <Col xs={12} md={6} lg={3}>
+    <Card className="text-center shadow-sm border rounded-3 py-3">
+      <h6 className="text-muted">Período Selecionado</h6>
+      <h4 className="fw-bold">
+        {filtro === "mes"
+          ? nomeDoMes(mesSelecionado)
+          : `${nomeDoMes(mesSelecionado)} - ${quinzenaSelecionada}ª quinzena`}
+      </h4>
+    </Card>
+  </Col>
+</Row>
+
+          </Row>
 
           <Row className="mb-4">
             <Col md={6}>

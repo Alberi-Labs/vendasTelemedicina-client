@@ -48,7 +48,7 @@ export default function PaginaGestaoClientes() {
   const router = useRouter();
   const [modalEditarOpen, setModalEditarOpen] = useState(false);
   const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
-  
+
   useEffect(() => {
     const fetchClientes = async () => {
       try {
@@ -81,32 +81,32 @@ export default function PaginaGestaoClientes() {
   };
 
   const handleEditarClick = async (cliente: Cliente) => {
-  try {
-    const response = await fetch(`/api/cliente/consultar?cpf=${cliente.cpf}`);
-    const data = await response.json();
+    try {
+      const response = await fetch(`/api/cliente/consultar?cpf=${cliente.cpf}`);
+      const data = await response.json();
 
-    if (data.success && data.clientes.length > 0) {
-      const clienteCompleto = data.clientes[0];
-      setClienteEditando({
-        ...clienteCompleto,
-        data_nascimento: clienteCompleto.data_nascimento
-          ? clienteCompleto.data_nascimento.split("/").reverse().join("-") // de DD/MM/AAAA → YYYY-MM-DD
-          : "",
-      });
-      setModalEditarOpen(true);
-    } else {
-      alert("Cliente não encontrado.");
+      if (data.success && data.clientes.length > 0) {
+        const clienteCompleto = data.clientes[0];
+        setClienteEditando({
+          ...clienteCompleto,
+          data_nascimento: clienteCompleto.data_nascimento
+            ? clienteCompleto.data_nascimento.split("/").reverse().join("-") // de DD/MM/AAAA → YYYY-MM-DD
+            : "",
+        });
+        setModalEditarOpen(true);
+      } else {
+        alert("Cliente não encontrado.");
+      }
+    } catch (error) {
+      console.error("Erro ao buscar cliente para edição:", error);
+      alert("Erro ao buscar dados do cliente.");
     }
-  } catch (error) {
-    console.error("Erro ao buscar cliente para edição:", error);
-    alert("Erro ao buscar dados do cliente.");
-  }
-};
+  };
 
-  
+
   const handleSalvarEdicao = async () => {
     if (!clienteEditando) return;
-  
+
     try {
       const response = await fetch(`/api/cliente/editar?id=${clienteEditando.idCliente}`, {
         method: "PUT",
@@ -115,13 +115,13 @@ export default function PaginaGestaoClientes() {
           nome: clienteEditando.nome,
           email: clienteEditando.email,
           telefone: clienteEditando.telefone,
-          cpf: clienteEditando.cpf.replace(/\D/g, ""), 
+          cpf: clienteEditando.cpf.replace(/\D/g, ""),
           data_nascimento: clienteEditando.data_nascimento,
           creditos: clienteEditando.creditos,
         }),
       });
-      
-  
+
+
       if (response.ok) {
         alert("Cliente atualizado com sucesso!");
         setModalEditarOpen(false);
@@ -138,15 +138,15 @@ export default function PaginaGestaoClientes() {
       alert("Erro ao atualizar cliente.");
     }
   };
-  
+
   const handleDeletarClick = async (cliente: Cliente) => {
     if (!window.confirm(`Deseja realmente deletar ${cliente.nome}?`)) return;
-  
+
     try {
       const response = await fetch(`/api/cliente/deletar?id=${cliente.idCliente}`, {
         method: "DELETE",
       });
-  
+
       if (response.ok) {
         alert("Cliente deletado!");
         setClientes(clientes.filter((c) => c.idCliente !== cliente.idCliente));
@@ -157,7 +157,7 @@ export default function PaginaGestaoClientes() {
       console.error("Erro:", error);
     }
   };
-  
+
   return (
     <Container maxWidth="lg">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
@@ -187,13 +187,13 @@ export default function PaginaGestaoClientes() {
                       <TableCell>{cliente.cpf}</TableCell>
                       <TableCell>{cliente.email}</TableCell>
                       <TableCell>
-  <div className="d-flex gap-2">
-    <Button variant="contained" size="small" onClick={() => handleClienteClick(cliente)}>👁 Ver</Button>
-    <Button variant="contained" size="small" onClick={() => handleEditarClick(cliente)}>✏️</Button>
-    <Button variant="contained" color="error" size="small" onClick={() => handleDeletarClick(cliente)}>🗑️</Button>
-    <Button variant="contained" size="small" onClick={() => router.push(`/gerarApolice?cliente=${cliente.idCliente}`)}>📄</Button>
-  </div>
-</TableCell>
+                        <div className="d-flex gap-2">
+                          <Button variant="contained" size="small" onClick={() => handleClienteClick(cliente)}>👁 Ver</Button>
+                          <Button variant="contained" size="small" onClick={() => handleEditarClick(cliente)}>✏️</Button>
+                          <Button variant="contained" color="error" size="small" onClick={() => handleDeletarClick(cliente)}>🗑️</Button>
+                          <Button variant="contained" size="small" onClick={() => router.push(`/gerarApolice?cliente=${cliente.idCliente}`)}>📄</Button>
+                        </div>
+                      </TableCell>
 
                     </TableRow>
                   ))}
@@ -230,7 +230,7 @@ export default function PaginaGestaoClientes() {
                           <TableRow key={venda.idVenda}>
                             <TableCell>{new Date(venda.data).toLocaleDateString()}</TableCell>
                             <TableCell>R$ {venda.valor}</TableCell>
-                            </TableRow>
+                          </TableRow>
                         ))
                       ) : (
                         <TableRow>
@@ -254,84 +254,84 @@ export default function PaginaGestaoClientes() {
         </DialogActions>
       </Dialog>
       <Dialog open={modalEditarOpen} onClose={() => setModalEditarOpen(false)} maxWidth="sm" fullWidth>
-  <DialogTitle>Editar Cliente</DialogTitle>
-  <DialogContent>
-  {clienteEditando && (
-  <>
-    <Box className="mb-3">
-      <label>Nome</label>
-      <input
-        className="form-control"
-        value={clienteEditando.nome}
-        onChange={(e) =>
-          setClienteEditando({ ...clienteEditando, nome: e.target.value })
-        }
-      />
-    </Box>
-    <Box className="mb-3">
-  <label>CPF</label>
-  <input
-    className="form-control"
-    value={clienteEditando.cpf}
-    onChange={(e) => {
-      const onlyNumbers = e.target.value.replace(/\D/g, "");
-      const formattedCpf = onlyNumbers
-        .replace(/^(\d{3})(\d)/, "$1.$2")
-        .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-        .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+        <DialogTitle>Editar Cliente</DialogTitle>
+        <DialogContent>
+          {clienteEditando && (
+            <>
+              <Box className="mb-3">
+                <label>Nome</label>
+                <input
+                  className="form-control"
+                  value={clienteEditando.nome}
+                  onChange={(e) =>
+                    setClienteEditando({ ...clienteEditando, nome: e.target.value })
+                  }
+                />
+              </Box>
+              <Box className="mb-3">
+                <label>CPF</label>
+                <input
+                  className="form-control"
+                  value={clienteEditando.cpf}
+                  onChange={(e) => {
+                    const onlyNumbers = e.target.value.replace(/\D/g, "");
+                    const formattedCpf = onlyNumbers
+                      .replace(/^(\d{3})(\d)/, "$1.$2")
+                      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+                      .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
 
-      setClienteEditando({ ...clienteEditando, cpf: formattedCpf });
-    }}
-  />
-</Box>
+                    setClienteEditando({ ...clienteEditando, cpf: formattedCpf });
+                  }}
+                />
+              </Box>
 
-    <Box className="mb-3">
-      <label>Telefone</label>
-      <input
-        className="form-control"
-        value={clienteEditando.telefone || ""}
-        onChange={(e) =>
-          setClienteEditando({ ...clienteEditando, telefone: e.target.value })
-        }
-      />
-    </Box>
+              <Box className="mb-3">
+                <label>Telefone</label>
+                <input
+                  className="form-control"
+                  value={clienteEditando.telefone || ""}
+                  onChange={(e) =>
+                    setClienteEditando({ ...clienteEditando, telefone: e.target.value })
+                  }
+                />
+              </Box>
 
-    <Box className="mb-3">
-      <label>Email</label>
-      <input
-        className="form-control"
-        value={clienteEditando.email}
-        onChange={(e) =>
-          setClienteEditando({ ...clienteEditando, email: e.target.value })
-        }
-      />
-    </Box>
+              <Box className="mb-3">
+                <label>Email</label>
+                <input
+                  className="form-control"
+                  value={clienteEditando.email}
+                  onChange={(e) =>
+                    setClienteEditando({ ...clienteEditando, email: e.target.value })
+                  }
+                />
+              </Box>
 
-    <Box className="mb-3">
-      <label>Data de Nascimento</label>
-      <input
-        type="date"
-        className="form-control"
-        value={clienteEditando.data_nascimento || ""}
-        onChange={(e) =>
-          setClienteEditando({ ...clienteEditando, data_nascimento: e.target.value })
-        }
-      />
-    </Box>
+              <Box className="mb-3">
+                <label>Data de Nascimento</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={clienteEditando.data_nascimento || ""}
+                  onChange={(e) =>
+                    setClienteEditando({ ...clienteEditando, data_nascimento: e.target.value })
+                  }
+                />
+              </Box>
 
-  </>
-)}
+            </>
+          )}
 
-  </DialogContent>
-  <DialogActions>
-    <Button onClick={() => setModalEditarOpen(false)} color="secondary">
-      Cancelar
-    </Button>
-    <Button variant="contained" onClick={handleSalvarEdicao}>
-      Salvar Alterações
-    </Button>
-  </DialogActions>
-</Dialog>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setModalEditarOpen(false)} color="secondary">
+            Cancelar
+          </Button>
+          <Button variant="contained" onClick={handleSalvarEdicao}>
+            Salvar Alterações
+          </Button>
+        </DialogActions>
+      </Dialog>
 
     </Container>
   );
