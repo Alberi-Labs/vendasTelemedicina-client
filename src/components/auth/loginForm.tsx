@@ -25,6 +25,12 @@ export default function LoginForm() {
       });
 
       const data = await res.json();
+      if (data.usuario?.empresa) {
+        localStorage.setItem("nome_empresa", data.usuario.empresa.nomeEmpresa);
+        localStorage.setItem("imagem_empresa", data.usuario.empresa.imagem_perfil);
+      }
+      
+      
       if (!res.ok) throw new Error(data.error);
 
       login(data.token);

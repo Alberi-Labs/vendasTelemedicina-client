@@ -23,6 +23,7 @@ export default function PaginaInicial() {
 
   const cards = [
     { path: "/paginaCadastroPf", icon: "bi-person", text: "Venda Individual", allowedRoles: ["admin", "vendedor", "gerente"] },
+    { path: "/paginaVendaPf", icon: "bi-cash-coin", text: "Pagina Venda Plano Telemedicina", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaRelatorioVendas", icon: "bi-file-earmark-bar-graph", text: "Relatório de Vendas", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoClientes", icon: "bi-people", text: "Gestão de Clientes", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaTelemedicina", icon: "bi-clipboard-heart", text: "Consultar com médico online", allowedRoles: ["admin", "cliente", "vendedor", "gerente"] },
@@ -32,13 +33,9 @@ export default function PaginaInicial() {
     { path: "/paginaCancelamento", icon: "bi-x-circle", text: "Cancelamento", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoUsuarios", icon: "bi-person-gear", text: "Gestão de Usuários", allowedRoles: ["admin"] },
     { path: "/paginaDashboardFinanceiro", icon: "bi-bar-chart-line", text: "Dashboard Financeiro", allowedRoles: ["admin", "gerente"] },
-    { path: "/paginaVendaPf", icon: "bi-bar-chart-line", text: "Pagina Venda Plano Telemedicina", allowedRoles: ["admin", "gerente"] }
-
+    { path: "/paginaGestaoEmpresas", icon: "bi-buildings", text: "Pagina Gestão de Empresas", allowedRoles: ["admin"] }
   ];
   
-  
-  
-
   const visibleCards = cards.filter(card => card.allowedRoles.includes(user?.role || ""));
 
   return (

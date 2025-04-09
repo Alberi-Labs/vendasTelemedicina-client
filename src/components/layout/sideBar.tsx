@@ -13,28 +13,34 @@ export default function Sidebar() {
   const [userName, setUserName] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
+  const [empresaNome, setEmpresaNome] = useState<string | null>(null);
+  const [empresaImagem, setEmpresaImagem] = useState<string | null>(null);
+  
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-
+    const empresaNome = localStorage.getItem("nome_empresa");
+    const empresaImagem = localStorage.getItem("imagem_empresa");
+  
     try {
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-
-        // ✅ Verifica se o objeto contém 'nome' e 'role' corretamente
+  
         if (parsedUser?.nome && parsedUser?.role) {
-          setUserName(parsedUser.nome); // 🔹 Corrigido de 'name' para 'nome'
+          setUserName(parsedUser.nome);
           setUserRole(parsedUser.role);
         } else {
           console.error("Formato inválido para usuário:", parsedUser);
         }
       }
+  
+      if (empresaNome) setEmpresaNome(empresaNome);
+      if (empresaImagem) setEmpresaImagem(empresaImagem);
     } catch (error) {
-      console.error("Erro ao parsear JSON do usuário:", error);
+      console.error("Erro ao parsear JSON do usuário ou dados da empresa:", error);
     }
   }, []);
-
+  
 
   console.log("userName:", userName);
   console.log("userRole:", userRole);
@@ -109,9 +115,26 @@ export default function Sidebar() {
                 paddingBottom: "10px",
               }}
             >
-              <Link href="/paginaInicial" style={{ textDecoration: "none", color: "#FFF" }} onClick={handleMenuClick}>
-                Farmacia
-              </Link>
+<div className="text-center mb-4">
+  {empresaImagem && empresaNome ? (
+    <Link href="/paginaInicial" passHref legacyBehavior>
+      <a onClick={handleMenuClick} style={{ textDecoration: "none" }}>
+        <img
+          src={empresaImagem}
+          alt="Logo da empresa"
+          style={{ width: 80, height: 80, objectFit: "contain", borderRadius: 8 }}
+          className="mb-2"
+        />
+        <h5 style={{ color: "#FFF", fontSize: "1rem", marginTop: "0.5rem" }}>{empresaNome}</h5>
+      </a>
+    </Link>
+  ) : (
+    <p style={{ color: "#ccc", fontStyle: "italic", fontSize: "0.9rem" }}>
+      Sem empresa vinculada
+    </p>
+  )}
+</div>
+
             </h2>
             <Nav className="flex-column">
               {canAccess.vendas && (

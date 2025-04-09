@@ -3,40 +3,55 @@ import { Button, Modal, Form, Table } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { Usuario } from "./api/usuario/buscarUsuario";
 
+type Empresa = {
+  idEmpresa: number;
+  nomeEmpresa: string;
+};
 
 export default function PaginaGestaoUsuario() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Usuario | null>(null);
-  const [formData, setFormData] = useState({ nome: "", email: "", cpf:"",role: "" });
+  const [formData, setFormData] = useState({
+    nome: "",
+    email: "",
+    cpf: "",
+    role: "",
+    id_empresa: "",
+  });
 
   useEffect(() => {
     fetchUsuarios();
+    fetchEmpresas();
   }, []);
 
   const fetchUsuarios = async () => {
-    try {
-      const res = await fetch("/api/usuario/buscarUsuario");
-      const data = await res.json();
-      if (data.success) {
-        const adaptado = data.usuarios.map((u: any) => ({
-          id: u.id,
-          nome: u.nome,
-          email: u.email,
-          cpf:u.cpf,
-          perfil: u.perfil,
-        }));
-        setUsuarios(adaptado);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar usuários:", error);
+    const res = await fetch("/api/usuario/buscarUsuario");
+    const data = await res.json();
+    if (data.success) {
+      const adaptado = data.usuarios.map((u: any) => ({
+        id: u.id,
+        nome: u.nome,
+        email: u.email,
+        cpf: u.cpf,
+        perfil: u.perfil,
+        id_empresa: u.id_empresa,
+      }));
+      setUsuarios(adaptado);
     }
+  };
+
+  const fetchEmpresas = async () => {
+    const res = await fetch("/api/empresas/buscarEmpresa");
+    const data = await res.json();
+    if (data.success) setEmpresas(data.empresas);
   };
 
   const handleClose = () => {
     setShowModal(false);
     setEditing(null);
-    setFormData({ nome: "", email: "", cpf: "", role: "" });
+    setFormData({ nome: "", email: "", cpf: "", role: "", id_empresa: "" });
   };
 
   const handleShow = (usuario?: Usuario) => {
@@ -45,11 +60,12 @@ export default function PaginaGestaoUsuario() {
       setFormData({
         nome: usuario.nome,
         email: usuario.email,
-        cpf:usuario.cpf,
+        cpf: usuario.cpf,
         role: usuario.perfil.toLowerCase(),
+        id_empresa: usuario.id_empresa?.toString() ?? "",
       });
     } else {
-      setFormData({ nome: "", email: "", cpf: "", role: "" });
+      setFormData({ nome: "", email: "", cpf: "", role: "", id_empresa: "" });
     }
     setShowModal(true);
   };
@@ -60,118 +76,88 @@ export default function PaginaGestaoUsuario() {
       nome: formData.nome,
       email: formData.email,
       perfil: formData.role,
-      telefone: "", // Adapte se quiser coletar
+      telefone: "",
       imagem: null,
-      cpf: "",
+      cpf: formData.cpf,
       creditos: 0,
       data_nascimento: null,
-      id_empresa: 1,
+      id_empresa: parseInt(formData.id_empresa),
     };
 
-    try {
-      const res = await fetch("/api/usuario/editarUsuario", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    const res = await fetch("/api/usuario/editarUsuario", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-      if (res.ok) {
-        fetchUsuarios();
-        handleClose();
-      } else {
-        console.error("Erro ao salvar usuário");
-      }
-    } catch (error) {
-      console.error("Erro ao editar:", error);
+    if (res.ok) {
+      fetchUsuarios();
+      handleClose();
+    } else {
+      console.error("Erro ao salvar usuário");
     }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
 
-    try {
-      const res = await fetch(`/api/usuario/deletarUsuario?idUsuario=${id}`, {
-        method: "DELETE",
-      });
+    const res = await fetch(`/api/usuario/deletarUsuario?idUsuario=${id}`, {
+      method: "DELETE",
+    });
 
-      if (res.ok) {
-        fetchUsuarios();
-      } else {
-        console.error("Erro ao deletar usuário");
-      }
-    } catch (error) {
-      console.error("Erro ao deletar:", error);
-    }
+    if (res.ok) fetchUsuarios();
   };
 
   return (
     <div className="container py-5">
-      <motion.h2
-        className="text-center mb-5 fw-bold"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        Gestão de Usuários
-      </motion.h2>
-
+      <motion.h2 className="text-center mb-5 fw-bold">Gestão de Usuários</motion.h2>
       <div className="mb-3 text-end">
         <Button variant="success" onClick={() => handleShow()}>
           <i className="bi bi-person-plus me-2"></i>Adicionar Usuário
         </Button>
       </div>
+      <Table striped bordered hover responsive>
+  <thead className="table-dark">
+    <tr>
+      <th>Nome</th>
+      <th>Email</th>
+      <th>Cpf</th>
+      <th>Função</th>
+      <th>Empresa</th> {/* NOVO */}
+      <th>Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {usuarios.map((user) => {
+      const empresaDoUsuario = empresas.find((e) => e.idEmpresa === user.id_empresa);
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Table striped bordered hover responsive className="shadow-sm">
-          <thead className="table-dark">
-            <tr>
-              <th>Nome</th>
-              <th>Email</th>
-              <th>Cpf</th>
-              <th>Função</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuarios.map((user, index) => (
-              <motion.tr
-                key={user.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <td>{user.nome}</td>
-                <td>{user.email}</td>
-                <td>{user.cpf}</td>
-                <td>{user.perfil}</td>
-                <td>
-                  <Button
-                    variant="outline-primary"
-                    size="sm"
-                    className="me-2"
-                    onClick={() => handleShow(user)}
-                  >
-                    <i className="bi bi-pencil"></i>
-                  </Button>
-                  <Button
-                    variant="outline-danger"
-                    size="sm"
-                    onClick={() => handleDelete(user.id)}
-                  >
-                    <i className="bi bi-trash"></i>
-                  </Button>
-                </td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </Table>
-      </motion.div>
+      return (
+        <tr key={user.id}>
+          <td>{user.nome}</td>
+          <td>{user.email}</td>
+          <td>{user.cpf}</td>
+          <td>{user.perfil}</td>
+          <td>{empresaDoUsuario?.nomeEmpresa || "Não vinculada"}</td> {/* NOVO */}
+          <td>
+            <Button size="sm" variant="outline-primary" onClick={() => handleShow(user)}>
+              <i className="bi bi-pencil"></i>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline-danger"
+              className="ms-2"
+              onClick={() => handleDelete(user.id)}
+            >
+              <i className="bi bi-trash"></i>
+            </Button>
+          </td>
+        </tr>
+      );
+    })}
+  </tbody>
+</Table>
 
-      {/* Modal */}
+
       <Modal show={showModal} onHide={handleClose} centered>
         <Modal.Header closeButton>
           <Modal.Title>{editing ? "Editar Usuário" : "Novo Usuário"}</Modal.Title>
@@ -194,31 +180,37 @@ export default function PaginaGestaoUsuario() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Função</Form.Label>
+              <Form.Select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+                <option value="">Selecione um perfil</option>
+                <option value="cliente">Cliente</option>
+                <option value="admin">Admin</option>
+                <option value="gestor">Gestor</option>
+                <option value="vendedor">Vendedor</option>
+              </Form.Select>
+            </Form.Group>
             <Form.Group>
-  <Form.Label>Função</Form.Label>
-  <Form.Select
-    value={formData.role.toLowerCase()} // garante seleção correta mesmo se vier em maiúscula ou minúscula
-    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-  >
-    <option value="">Selecione um perfil</option>
-    <option value="cliente">Cliente</option>
-    <option value="admin">Admin</option>
-    <option value="gestor">Gestor</option>
-    <option value="vendedor">Vendedor</option>
-  </Form.Select>
-</Form.Group>
-
+              <Form.Label>Empresa</Form.Label>
+              <Form.Select
+                value={formData.id_empresa}
+                onChange={(e) => setFormData({ ...formData, id_empresa: e.target.value })}
+              >
+                <option value="">Selecione a empresa</option>
+                {empresas.map((empresa) => (
+                  <option key={empresa.idEmpresa} value={empresa.idEmpresa}>
+                    {empresa.nomeEmpresa}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            disabled={!formData.nome || !formData.email || !formData.role}
-          >
+          <Button variant="primary" onClick={handleSave} disabled={!formData.nome || !formData.email || !formData.role}>
             Salvar
           </Button>
         </Modal.Footer>

@@ -13,14 +13,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log("🔹 Recebendo requisição de login para CPF:", cpf);
 
-    // Busca o usuário apenas na tabela tb_usuarios usando CPF
+    // Busca o usuário com join na empresa
     const [usuarios]: any = await pool.query(
-      `SELECT idUsuario AS id, nome, senha, perfil AS role, id_empresa FROM tb_usuarios WHERE cpf = ?`,
+      `SELECT 
+         u.idUsuario AS id, 
+         u.nome, 
+         u.senha, 
+         u.perfil AS role, 
+         u.id_empresa, 
+         e.nomeEmpresa, 
+         e.imagem_perfil 
+       FROM tb_usuarios u
+       LEFT JOIN tb_empresas e ON u.id_empresa = e.idEmpresa
+       WHERE u.cpf = ?`,
       [cpf]
     );
 
     if (usuarios.length === 0) {
-      console.error("❌ Usuário não encontrado na tabela tb_usuarios:", cpf);
+      console.error("❌ Usuário não encontrado:", cpf);
       return res.status(401).json({ error: "Usuário não encontrado" });
     }
 
@@ -41,7 +51,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log("🔑 Token gerado com sucesso para:", user.nome);
 
-    return res.status(200).json({ token, nome: user.nome, role: user.role, id_empresa: user.id_empresa });
+    return res.status(200).json({
+      token,
+      usuario: {
+        id: user.id,
+        nome: user.nome,
+        role: user.role,
+        id_empresa: user.id_empresa,
+        empresa: {
+          nomeEmpresa: user.nomeEmpresa,
+          imagem_perfil: user.imagem_perfil,
+        },
+      },
+    });
   } catch (error) {
     console.error("🔥 Erro no servidor:", error);
     return res.status(500).json({ error: "Erro no servidor" });

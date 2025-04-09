@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         creditos = ?, 
         data_nascimento = ?, 
         id_empresa = ? 
-      WHERE id = ?`,
+      WHERE idUsuario = ?`,
       [
         nome,
         email,
@@ -45,10 +45,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         cpf,
         creditos,
         data_nascimento,
-        id,
+        id_empresa, // Estava faltando aqui
+        id
       ]
     );
-
+    
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Usuário não encontrado." });
     }
