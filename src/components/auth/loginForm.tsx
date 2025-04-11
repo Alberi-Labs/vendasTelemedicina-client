@@ -1,39 +1,93 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { useAuth } from "@/app/context/AuthContext"; // ✅ Importa o contexto de autenticação
+import { useAuth } from "@/app/context/AuthContext";
 import Loading from "../loading/loading";
 import AvisoAlerta from "../avisoAlerta/avisoAlerta";
 
 export default function LoginForm() {
   const router = useRouter();
-  const { login } = useAuth(); // ✅ Usa o login do contexto
+  const { login } = useAuth();
+
+  const [tipoLogin, setTipoLogin] = useState<"cliente" | "funcionario">("cliente");
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: { preventDefault: () => void }) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
+    const rota = tipoLogin === "cliente" ? "/api/clienteSaudeecor/buscarDados" : "/api/login";
+
+    const formatarCpf = (cpf: string) => {
+      return cpf.replace(/\D/g, "") 
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    };
+
+    const cpfFormatado = tipoLogin === "cliente" ? formatarCpf(cpf) : cpf;
+
+    const payload =
+      tipoLogin === "cliente"
+        ? { cpf: cpfFormatado, dataNascimento: password }
+        : { cpf, password };
+
     try {
-      const res = await fetch("/api/login", {
+      const res = await fetch(rota, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf, password }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
+      console.log(data);
+      if (!res.ok) throw new Error(data.error);
+
       if (data.usuario?.empresa) {
         localStorage.setItem("nome_empresa", data.usuario.empresa.nomeEmpresa);
         localStorage.setItem("imagem_empresa", data.usuario.empresa.imagem_perfil);
       }
-      
-      
-      if (!res.ok) throw new Error(data.error);
 
-      login(data.token);
+      if (tipoLogin === "cliente") {
+        // Encontrar o cliente que tem os dados do contrato preenchidos
+        const clienteRaw = data.find((c: any) => 
+          c.data_contrato_vigencia_inicio || 
+          c.data_contrato_vigencia_final || 
+          c.num_contrato_retorno_apolice || 
+          c.num_contrato_retorno_certificado || 
+          c.cod_contrato_retorno_operacao
+        ) || data[0]; // fallback pro primeiro caso nenhum tenha
+      
+        if (!clienteRaw) throw new Error("Cliente não encontrado na resposta da API.");
+      
+        localStorage.setItem("cliente", JSON.stringify(clienteRaw));
+      
+        const clienteData = {
+          id: clienteRaw.seq_cliente,
+          nome: clienteRaw.nom_cliente,
+          role: clienteRaw.tip_pagamento === "EMPRESA" ? "clientePJ" : "cliente",
+          cpf: cpf,
+          saude_cor: true,
+          dt_nascimento: password,
+          dsc_instituicao: clienteRaw.dsc_instituicao,
+          tip_pagamento: clienteRaw.tip_pagamento,
+          data_contrato_vigencia_inicio: clienteRaw.data_contrato_vigencia_inicio,
+          data_contrato_vigencia_final: clienteRaw.data_contrato_vigencia_final,
+          num_contrato_retorno_apolice: clienteRaw.num_contrato_retorno_apolice,
+          num_contrato_retorno_certificado: clienteRaw.num_contrato_retorno_certificado,
+          cod_contrato_retorno_operacao: clienteRaw.cod_contrato_retorno_operacao,
+        };
+        
+      
+        console.log(clienteData);
+        login(clienteData, true);
+      }
+      
+      
+
       setTimeout(() => {
         router.push("/paginaInicial");
       }, 100);
@@ -41,7 +95,9 @@ export default function LoginForm() {
       setError(err instanceof Error ? err.message : "Ocorreu um erro inesperado.");
       setLoading(false);
     }
+
   };
+
 
   return (
     <div className="container d-flex justify-content-center align-items-center vh-100">
@@ -49,7 +105,31 @@ export default function LoginForm() {
         <div className="col-md-6 d-none d-md-block p-0" style={{ background: "url('/image.png') center/cover no-repeat" }}></div>
         <div className="col-md-6 p-4 d-flex flex-column justify-content-center" style={{ minHeight: "100%" }}>
           {error && <AvisoAlerta mensagem={error} tipo="danger" />}
-          <h2 className="mb-5">Login</h2>
+
+          {/* Abas de Login */}
+          <div className="d-flex mb-4">
+            <button
+              className={`btn flex-fill ${tipoLogin === "cliente" ? "btn-primary" : "btn-outline-primary"}`}
+              onClick={() => {
+                setTipoLogin("cliente");
+                setPassword(""); // limpa o campo ao trocar
+              }}
+            >
+              Cliente
+            </button>
+            <button
+              className={`btn flex-fill ms-2 ${tipoLogin === "funcionario" ? "btn-primary" : "btn-outline-primary"}`}
+              onClick={() => {
+                setTipoLogin("funcionario");
+                setPassword("");
+              }}
+            >
+              Funcionário
+            </button>
+          </div>
+
+          <h2 className="mb-4">Login - {tipoLogin === "cliente" ? "Cliente" : "Funcionário"}</h2>
+
           <form onSubmit={handleLogin}>
             <div className="mb-3">
               <label htmlFor="cpf" className="form-label">CPF</label>
@@ -64,17 +144,18 @@ export default function LoginForm() {
               />
             </div>
 
-
             <div className="mb-3">
-              <label htmlFor="password" className="form-label">Senha</label>
+              <label htmlFor="campo2" className="form-label">
+                {tipoLogin === "cliente" ? "Data de Nascimento" : "Senha"}
+              </label>
               <input
-                type="password"
-                id="password"
+                type={tipoLogin === "cliente" ? "date" : "password"}
+                id="campo2"
                 className="form-control"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="Digite sua senha"
+                placeholder={tipoLogin === "cliente" ? "Selecione sua data de nascimento" : "Digite sua senha"}
               />
             </div>
 

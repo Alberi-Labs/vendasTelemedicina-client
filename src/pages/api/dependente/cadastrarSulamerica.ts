@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import puppeteer from "puppeteer";
-import { consultarDependente } from "./consultarDependente";
 
 
 // Função para converter data de "aaaa-mm-dd" para "dd/mm/aaaa"
@@ -25,7 +24,7 @@ export async function POST(req: Request) {
         }
     
         // 🔹 Consulta o titular diretamente do banco
-        const titular = await consultarDependente();
+        const titular = await consultarBanco();
         const cpf = titular.cpf;
         const dataNascimento = titular.data_nascimento;
 
@@ -113,4 +112,13 @@ export async function POST(req: Request) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
     }
+}
+
+// Simulated function to fetch titular data from the database
+async function consultarBanco(): Promise<{ cpf: string; data_nascimento: string }> {
+    // Replace this with actual database logic
+    return {
+        cpf: "12345678901", // Example CPF
+        data_nascimento: "1980-01-01", // Example date of birth
+    };
 }

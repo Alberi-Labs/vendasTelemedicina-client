@@ -26,16 +26,18 @@ export default function PaginaInicial() {
     { path: "/paginaVendaPf", icon: "bi-cash-coin", text: "Pagina Venda Plano Telemedicina", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaRelatorioVendas", icon: "bi-file-earmark-bar-graph", text: "Relatório de Vendas", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoClientes", icon: "bi-people", text: "Gestão de Clientes", allowedRoles: ["admin", "gerente"] },
-    { path: "/paginaTelemedicina", icon: "bi-clipboard-heart", text: "Consultar com médico online", allowedRoles: ["admin", "cliente", "vendedor", "gerente"] },
-    { path: "/paginaApolice", icon: "bi-download", text: "Baixar Apólice", allowedRoles: ["admin", "cliente"] },
-    { path: "/paginaControleDependentes", icon: "bi-people-fill", text: "Controle de Dependentes", allowedRoles: ["admin", "cliente"] },
-    { path: "/paginaControlePagamento", icon: "bi-credit-card", text: "Controle de Pagamento", allowedRoles: ["admin", "gerente", "vendedor"] },
+    { path: "/paginaTelemedicina", icon: "bi-clipboard-heart", text: "Consultar com médico online", allowedRoles: ["admin", "cliente","clientePJ", "vendedor", "gerente"] },
+    { path: "/paginaApolice", icon: "bi-download", text: "Baixar Apólice", allowedRoles: ["admin", "cliente","clientePJ"] },
+    { path: "/paginaGestaoEmpresas", icon: "bi-buildings", text: "Emitir Carteirinha", allowedRoles: ["admin","clientePJ", "cliente"] },
+    { path: "/paginaControleDependentes", icon: "bi-people-fill", text: "Controle de Dependentes", allowedRoles: ["admin","clientePJ", "cliente"] },
+    { path: "/paginaControlePagamento", icon: "bi-credit-card", text: "Controle de Pagamento", allowedRoles: ["admin", "gerente", "cliente"] },
     { path: "/paginaCancelamento", icon: "bi-x-circle", text: "Cancelamento", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoUsuarios", icon: "bi-person-gear", text: "Gestão de Usuários", allowedRoles: ["admin"] },
     { path: "/paginaDashboardFinanceiro", icon: "bi-bar-chart-line", text: "Dashboard Financeiro", allowedRoles: ["admin", "gerente"] },
-    { path: "/paginaGestaoEmpresas", icon: "bi-buildings", text: "Pagina Gestão de Empresas", allowedRoles: ["admin"] }
+    { path: "/paginaGestaoEmpresas", icon: "bi-buildings", text: "Pagina Gestão de Empresas", allowedRoles: ["admin"] },
+
   ];
-  
+
   const visibleCards = cards.filter(card => card.allowedRoles.includes(user?.role || ""));
 
   return (
@@ -48,7 +50,11 @@ export default function PaginaInicial() {
       )}
 
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-        <h1 className="fw-bold">Olá, seja bem-vindo ao nosso sistema de vendas!</h1>
+        <h1 className="fw-bold">
+          {user?.role === "cliente"
+            ? "Olá, seja bem-vindo(a) à área do cliente!"
+            : "Olá, seja bem-vindo ao nosso sistema de vendas!"}
+        </h1>
         <p className="text-muted">Aqui você pode efetuar vendas, consultar relatórios e configurar o acesso às consultas.</p>
       </motion.div>
 

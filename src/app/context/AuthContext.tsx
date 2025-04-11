@@ -2,16 +2,28 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { jwtDecode } from "jwt-decode";
 
 interface User {
-  id: number;
+  id?: number;
   nome: string;
   role: string;
-  id_empresa: number;
+  id_empresa?: number;
+  cpf?: string;
+  telefone?: string;
+  email?: string;
+  saude_cor?: boolean;
+  dt_nascimento?: string;
+  data_contrato_vigencia_inicio?: string;
+  data_contrato_vigencia_final?: string;
+  num_contrato_retorno_apolice?: string;
+  num_contrato_retorno_certificado?: string;
+  cod_contrato_retorno_operacao?: string;
+  dsc_instituicao?: string;
+  tip_pagamento?: string;
+  imagem_empresa?: string;
 }
-
 
 interface AuthContextType {
   user: User | null;
-  login: (token: string) => void;
+  login: (tokenOrUserData: string | User, isCliente?: boolean) => void;
   logout: () => void;
   isAuthLoaded: boolean;
 }
@@ -39,16 +51,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsAuthLoaded(true); 
   }, []);
 
-  const login = (token: string) => {
+  const login = (tokenOrUserData: string | User, isCliente: boolean = false) => {
     try {
-      localStorage.setItem("token", token);
-      const decodedUser = jwtDecode<User>(token);
-      localStorage.setItem("user", JSON.stringify(decodedUser)); 
-      setUser(decodedUser);
+      if (isCliente && typeof tokenOrUserData !== "string") {
+        localStorage.setItem("user", JSON.stringify(tokenOrUserData));
+        setUser(tokenOrUserData);
+      } else if (!isCliente && typeof tokenOrUserData === "string") {
+        localStorage.setItem("token", tokenOrUserData);
+        const decodedUser = jwtDecode<User>(tokenOrUserData);
+        localStorage.setItem("user", JSON.stringify(decodedUser));
+        setUser(decodedUser);
+      } else {
+        throw new Error("Formato de login inválido.");
+      }
     } catch (error) {
       console.error("Erro ao salvar usuário:", error);
     }
   };
+  
 
   const logout = () => {
     localStorage.removeItem("token");

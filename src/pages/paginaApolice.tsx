@@ -1,9 +1,39 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "react-bootstrap";
+import { useAuth } from "@/app/context/AuthContext";
 
 export default function PaginaApolice() {
   const [isMounted, setIsMounted] = useState(false);
+  const { user } = useAuth();
+
+  console.log(user)
+  const formatarDataBR = (dataISO: string | undefined) => {
+    if (!dataISO) return "";
+    const [ano, mes, dia] = dataISO.split("-");
+    return `${dia}/${mes}/${ano}`;
+  };
+
+  const calcularIdade = (dataNascimento: string | undefined): number => {
+    if (!dataNascimento) return 0;
+
+    const hoje = new Date();
+    const [ano, mes, dia] = dataNascimento.split("-").map(Number);
+    const nascimento = new Date(ano, mes - 1, dia);
+
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const mesAtual = hoje.getMonth();
+    const diaAtual = hoje.getDate();
+
+    if (
+      mesAtual < nascimento.getMonth() ||
+      (mesAtual === nascimento.getMonth() && diaAtual < nascimento.getDate())
+    ) {
+      idade--;
+    }
+
+    return idade;
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -37,11 +67,12 @@ export default function PaginaApolice() {
             <div className="card-body">
               <h4 className="mb-3 fw-semibold">👤 Cliente</h4>
               <ul className="list-unstyled">
-                <li><strong>Nome:</strong> ALINE LIMA SANTOS</li>
-                <li><strong>CPF:</strong> 048.867.461-10</li>
-                <li><strong>Data de nascimento:</strong> 24/08/1992</li>
-                <li><strong>Idade na venda:</strong> 32</li>
+                <li><strong>Nome:</strong> {user?.nome}</li>
+                <li><strong>CPF:</strong> {user?.cpf}</li>
+                <li><strong>Data de nascimento:</strong> {formatarDataBR(user?.dt_nascimento)}</li>
+                <li><strong>Idade:</strong> {calcularIdade(user?.dt_nascimento)}</li>
               </ul>
+
             </div>
           </div>
         </motion.div>
@@ -57,12 +88,13 @@ export default function PaginaApolice() {
               <h4 className="mb-3 fw-semibold">📄 Contrato / Apólice</h4>
               <ul className="list-unstyled">
                 <li><strong>Situação:</strong> Contrato aprovado</li>
-                <li><strong>Vigência:</strong> 08/01/2025 - 08/01/2026</li>
-                <li><strong>Data registro:</strong> 08/01/2025 - 15:13:02</li>
-                <li><strong>Operação:</strong> 10294917</li>
-                <li><strong>Certificado:</strong> 5002</li>
-                <li><strong>Sorteio:</strong> 0</li>
+                <li>
+                  <strong>Vigência:</strong> {user?.data_contrato_vigencia_inicio} - {user?.data_contrato_vigencia_final}
+                </li>
+                <li><strong>Operação:</strong> {user?.cod_contrato_retorno_operacao || "—"}</li>
+                <li><strong>Certificado:</strong> {user?.num_contrato_retorno_certificado || "—"}</li>
               </ul>
+
             </div>
           </div>
         </motion.div>

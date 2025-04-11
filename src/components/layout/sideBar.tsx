@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { Nav } from "react-bootstrap";
 import Loading from "../loading/loading";
+import { useAuth } from "@/app/context/AuthContext";
 
 export default function Sidebar() {
   const router = useRouter();
@@ -15,17 +16,18 @@ export default function Sidebar() {
   const [loading, setLoading] = useState(false);
   const [empresaNome, setEmpresaNome] = useState<string | null>(null);
   const [empresaImagem, setEmpresaImagem] = useState<string | null>(null);
-  
+  const { user } = useAuth();
+
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    const empresaNome = localStorage.getItem("nome_empresa");
-    const empresaImagem = localStorage.getItem("imagem_empresa");
-  
+    const empresaNome = user?.dsc_instituicao ?? null;
+    const empresaImagem = user?.imagem_empresa || localStorage.getItem("imagem_empresa") || "/uploads/default.png";
+    
     try {
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-  
+
         if (parsedUser?.nome && parsedUser?.role) {
           setUserName(parsedUser.nome);
           setUserRole(parsedUser.role);
@@ -33,14 +35,14 @@ export default function Sidebar() {
           console.error("Formato inválido para usuário:", parsedUser);
         }
       }
-  
+
       if (empresaNome) setEmpresaNome(empresaNome);
       if (empresaImagem) setEmpresaImagem(empresaImagem);
     } catch (error) {
       console.error("Erro ao parsear JSON do usuário ou dados da empresa:", error);
     }
   }, []);
-  
+
 
   console.log("userName:", userName);
   console.log("userRole:", userRole);
@@ -115,25 +117,25 @@ export default function Sidebar() {
                 paddingBottom: "10px",
               }}
             >
-<div className="text-center mb-4">
-  {empresaImagem && empresaNome ? (
-    <Link href="/paginaInicial" passHref legacyBehavior>
-      <a onClick={handleMenuClick} style={{ textDecoration: "none" }}>
-        <img
-          src={empresaImagem}
-          alt="Logo da empresa"
-          style={{ width: 80, height: 80, objectFit: "contain", borderRadius: 8 }}
-          className="mb-2"
-        />
-        <h5 style={{ color: "#FFF", fontSize: "1rem", marginTop: "0.5rem" }}>{empresaNome}</h5>
-      </a>
-    </Link>
-  ) : (
-    <p style={{ color: "#ccc", fontStyle: "italic", fontSize: "0.9rem" }}>
-      Sem empresa vinculada
-    </p>
-  )}
-</div>
+              <div className="text-center mb-4">
+                {empresaImagem && empresaNome ? (
+                  <Link href="/paginaInicial" passHref legacyBehavior>
+                    <a onClick={handleMenuClick} style={{ textDecoration: "none" }}>
+                      <img
+                        src={empresaImagem}
+                        alt="Logo da empresa"
+                        style={{ width: 80, height: 80, objectFit: "contain", borderRadius: 8 }}
+                        className="mb-2"
+                      />
+                      <h5 style={{ color: "#FFF", fontSize: "1rem", marginTop: "0.5rem" }}>{empresaNome}</h5>
+                    </a>
+                  </Link>
+                ) : (
+                  <p style={{ color: "#ccc", fontStyle: "italic", fontSize: "0.9rem" }}>
+                    Sem empresa vinculada
+                  </p>
+                )}
+              </div>
 
             </h2>
             <Nav className="flex-column">
