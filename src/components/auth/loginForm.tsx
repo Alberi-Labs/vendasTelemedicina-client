@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { useAuth } from "@/app/context/AuthContext";
+import { useAuth, User } from "@/app/context/AuthContext";
 import Loading from "../loading/loading";
 import AvisoAlerta from "../avisoAlerta/avisoAlerta";
 
@@ -52,7 +52,6 @@ export default function LoginForm() {
       }
 
       if (tipoLogin === "cliente") {
-        // Encontrar o cliente que tem os dados do contrato preenchidos
         const clienteRaw = data.find((c: any) => 
           c.data_contrato_vigencia_inicio || 
           c.data_contrato_vigencia_final || 
@@ -64,30 +63,28 @@ export default function LoginForm() {
         if (!clienteRaw) throw new Error("Cliente não encontrado na resposta da API.");
       
         localStorage.setItem("cliente", JSON.stringify(clienteRaw));
-      
-        const clienteData = {
+        const clienteData: User = {
           id: clienteRaw.seq_cliente,
           nome: clienteRaw.nom_cliente,
-          role: clienteRaw.tip_pagamento === "EMPRESA" ? "clientePJ" : "cliente",
+          role: clienteRaw.tip_pagamento === "EMPRESA" || "IMPORTACAO" ? "clientePJ" : "cliente",
           cpf: cpf,
           saude_cor: true,
           dt_nascimento: password,
           dsc_instituicao: clienteRaw.dsc_instituicao,
           tip_pagamento: clienteRaw.tip_pagamento,
-          data_contrato_vigencia_inicio: clienteRaw.data_contrato_vigencia_inicio,
-          data_contrato_vigencia_final: clienteRaw.data_contrato_vigencia_final,
+          data_contrato_vigencia_inicio: clienteRaw.dat_contrato_vigencia_inicio,
+          data_contrato_vigencia_final: clienteRaw.dat_contrato_vigencia_final,
           num_contrato_retorno_apolice: clienteRaw.num_contrato_retorno_apolice,
           num_contrato_retorno_certificado: clienteRaw.num_contrato_retorno_certificado,
           cod_contrato_retorno_operacao: clienteRaw.cod_contrato_retorno_operacao,
+          dsc_email: clienteRaw.dsc_email,
+          num_celular: clienteRaw.num_celular,
+          cobrancas: clienteRaw.cobranca ?? [], 
         };
-        
-      
-        console.log(clienteData);
+
         login(clienteData, true);
       }
       
-      
-
       setTimeout(() => {
         router.push("/paginaInicial");
       }, 100);
@@ -97,7 +94,6 @@ export default function LoginForm() {
     }
 
   };
-
 
   return (
     <div className="container d-flex justify-content-center align-items-center vh-100">

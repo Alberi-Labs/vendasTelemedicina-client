@@ -23,11 +23,11 @@ export default function Sidebar() {
     const storedUser = localStorage.getItem("user");
     const empresaNome = user?.dsc_instituicao ?? null;
     const empresaImagem = user?.imagem_empresa || localStorage.getItem("imagem_empresa") || "/uploads/default.png";
-    
+
     try {
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-
+        console.log(parsedUser)
         if (parsedUser?.nome && parsedUser?.role) {
           setUserName(parsedUser.nome);
           setUserRole(parsedUser.role);
@@ -61,17 +61,18 @@ export default function Sidebar() {
     }
     setMenuOpen(!menuOpen);
   };
-
+  console.log(userRole)
   const canAccess = {
     vendas: userRole === "admin" || userRole === "vendedor",
     relatorios: userRole === "admin",
-    consulta: userRole === "admin" || userRole === "cliente",
-    apolice: userRole === "admin" || userRole === "cliente",
+    consulta: userRole === "admin" || userRole === "cliente" || userRole === "clientePJ",
+    apolice: userRole === "admin" || userRole === "cliente" || userRole === "clientePJ",
     controleDependentes: userRole === "admin" || userRole === "cliente",
     controleDePagamento: userRole === "admin" || userRole === "cliente",
     cancelamento: userRole === "admin" || userRole === "cliente",
     dashboard: userRole === "admin" || userRole === "gerente",
     gestaoUsuarios: userRole === "admin" || userRole === "gerente",
+    gestaoDependentes: userRole === "admin" || userRole === "cliente" || userRole === "clientePJ",
     suporte: true,
   };
 
@@ -277,7 +278,7 @@ export default function Sidebar() {
                   <i className="bi-people-fill me-2"></i>Controle de Dependentes
                 </Nav.Link>
               )}
-              {canAccess.suporte && (
+              {canAccess.controleDePagamento && (
                 <Nav.Link as={Link} href="/paginaControlePagamento" onClick={handleMenuClick} style={{
                   color: router.pathname === "/paginaControlePagamento" ? "#000" : "#FFF",
                   backgroundColor: router.pathname === "/paginaControlePagamento" ? "#b5cd00" : "transparent",
@@ -292,7 +293,21 @@ export default function Sidebar() {
                   <i className="bi-credit-card me-2"></i>Controle de Pagamento
                 </Nav.Link>
               )}
+              {canAccess.gestaoDependentes && (
+                <Nav.Link as={Link} href="/paginaControleDependentes" onClick={handleMenuClick} style={{
+                  color: router.pathname === "/paginaControleDependentes" ? "#000" : "#FFF",
+                  backgroundColor: router.pathname === "/paginaControleDependentes" ? "#b5cd00" : "transparent",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  transition: "background-color 0.3s ease-in-out",
+                  marginBottom: "5px"
 
+                }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaControleDependentes" ? "#b5cd00" : "transparent")}>
+                  <i className="bi-people-fill me-2"></i>Controle de Dependentes
+                </Nav.Link>
+              )}
               {canAccess.gestaoUsuarios && (
                 <Nav.Link as={Link} href="/paginaGestaoUsuarios" onClick={handleMenuClick} style={{
                   color: router.pathname === "/paginaGestaoUsuarios" ? "#000" : "#FFF",

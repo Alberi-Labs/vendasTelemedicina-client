@@ -9,7 +9,7 @@ import { useAuth } from "@/app/context/AuthContext";
 
 export default function Consulta() {
   const { setDados } = useAtendimento();
-  const { user } = useAuth(); // ✅ obter usuário logado
+  const { user } = useAuth(); 
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showAviso, setShowAviso] = useState(false);
@@ -37,7 +37,7 @@ export default function Consulta() {
         if (data.success) {
           let clientesFiltrados = data.usuarios || [];
   
-          if (user?.role === "cliente") {
+          if (user?.role === "cliente" || user?.role === "clientePJ") {
             clientesFiltrados = clientesFiltrados.filter((c: Cliente) => c.cpf === user.cpf);
   
             if (clientesFiltrados.length > 0) {
@@ -55,7 +55,7 @@ export default function Consulta() {
           setClientes(clientesFiltrados);
   
           const cpfNaUrl = searchParams?.get("cpf");
-          if (cpfNaUrl && user?.role !== "cliente") {
+          if (cpfNaUrl && user?.role !== "cliente" && user?.role !== "clientePJ") {
             const clienteEncontrado = clientesFiltrados.find(
               (cliente: Cliente) => cliente.cpf === cpfNaUrl
             );
@@ -81,32 +81,33 @@ export default function Consulta() {
   
     if (!user) return;
   
-    if (user?.role === "cliente" && user?.saude_cor) {
+    if (user?.role === "cliente" || user?.role === "clientePJ"  && user?.saude_cor) {
+      console.log(user);
       const clienteFake: Cliente = {
-        id: user.id as number, // 👈 força dizendo "confia"
+        id: user.id as number,
         nome: user.nome,
         cpf: user.cpf || "",
-        telefone: user.telefone,
-        email: user.email,
+        telefone: user.num_celular,
+        email: user.dsc_email,
         data_nascimento: user.dt_nascimento,
       };
-    
+  
       preencherDados(clienteFake);
-    
+  
       setClienteSelecionado({
         value: clienteFake.id,
         label: `${clienteFake.nome} - ${clienteFake.cpf}`,
         ...clienteFake,
       });
-    
+  
       setLoading(false);
+      return; // ⛔ impede chamada da API
     }
-    
-    if (user) fetchClientes(); // só chama após auth carregar
-
+  
+    // ✅ só chama se user.saude_cor não for verdadeiro
+    fetchClientes();
   }, [searchParams, user]);
   
-
 
   const preencherDados = (cliente: Cliente) => {
     console.log(cliente)

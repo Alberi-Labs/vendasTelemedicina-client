@@ -20,6 +20,9 @@ export interface Cobranca {
     seq_instituicao: string;
     nom_cliente: string;
     num_cpf: string;
+    dsc_email: string;
+    num_celular: string;
+    ind_sexo: string;
     dsc_instituicao: string;
     dsc_produto: string;
     vlr_pagamento: string | null;

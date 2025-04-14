@@ -20,7 +20,7 @@ export default function PaginaInicial() {
     setLoading(true);
     router.push(path);
   };
-
+  console.log(user)
   const cards = [
     { path: "/paginaCadastroPf", icon: "bi-person", text: "Venda Individual", allowedRoles: ["admin", "vendedor", "gerente"] },
     { path: "/paginaVendaPf", icon: "bi-cash-coin", text: "Pagina Venda Plano Telemedicina", allowedRoles: ["admin", "gerente"] },

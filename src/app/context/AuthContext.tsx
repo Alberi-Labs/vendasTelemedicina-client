@@ -1,13 +1,16 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { jwtDecode } from "jwt-decode";
+import { Cobranca } from "@/types/dadosSaudeECor";
 
-interface User {
+export interface User {
+  dsc_email: string | undefined;
   id?: number;
   nome: string;
   role: string;
   id_empresa?: number;
   cpf?: string;
   telefone?: string;
+  num_celular: string | undefined;
   email?: string;
   saude_cor?: boolean;
   dt_nascimento?: string;
@@ -19,6 +22,7 @@ interface User {
   dsc_instituicao?: string;
   tip_pagamento?: string;
   imagem_empresa?: string;
+  cobrancas?: Cobranca[];
 }
 
 interface AuthContextType {

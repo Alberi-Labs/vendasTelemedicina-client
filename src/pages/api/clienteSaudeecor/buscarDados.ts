@@ -1,6 +1,6 @@
 // buscarDados.ts
 
-import { DadosSaudeECor } from "@/types/dadoSaudeECor";
+import { DadosSaudeECor } from "@/types/dadosSaudeECor";
 import { NextApiRequest, NextApiResponse } from "next";
 
 const SaudeECorURL = process.env.SAUDE_E_COR_URL;

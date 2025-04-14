@@ -13,13 +13,14 @@ interface Dependente {
 export default function PaginaControleDependentes() {
   const [dependentes, setDependentes] = useState<Dependente[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [erroBusca, setErroBusca] = useState<string | null>(null);
   const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Dependente | null>(null);
   const [formData, setFormData] = useState({ nome: "", cpf: "", nascimento: "" });
 
   const buscarDependentesDoServidor = async () => {
-    setLoading(true); // começa o show do spinner
+    setLoading(true);
     try {
       const response = await fetch("/api/dependente/consultarDependente", {
         method: "POST",
@@ -31,20 +32,22 @@ export default function PaginaControleDependentes() {
           titularNascimento: user?.dt_nascimento,
         }),
       });
-  
+    
       const responseText = await response.text();
       let result;
-  
+    
       try {
         result = JSON.parse(responseText);
       } catch (err) {
-        throw new Error("Resposta não é JSON válido: " + responseText);
+        setErroBusca("⚠️ Resposta inválida do servidor (não é JSON).");
+        return;
       }
-  
+    
       if (!response.ok) {
-        throw new Error(result.error || "Erro ao buscar dependentes");
+        setErroBusca(result?.error || "⚠️ Erro ao buscar dependentes do servidor.");
+        return;
       }
-  
+    
       if (Array.isArray(result.dependentes)) {
         const dependentesFormatados = result.dependentes.map((dep: any, i: number) => ({
           id: i + 1,
@@ -52,17 +55,19 @@ export default function PaginaControleDependentes() {
           cpf: dep.cpf,
           nascimento: dep.nascimento,
         }));
-  
+    
         setDependentes(dependentesFormatados);
+      } else {
+        setDependentes([]);
       }
-  
-    } catch (error) {
+    
+    } catch (error: any) {
       console.error("❌ Erro ao buscar dependentes:", error);
+      setErroBusca("❌ Erro ao buscar dependentes: " + error.message);
     } finally {
-      setLoading(false); // para o show
-    }
+      setLoading(false);
+    }    
   };
-  
 
   const handleClose = () => {
     setShowModal(false);
@@ -139,7 +144,7 @@ export default function PaginaControleDependentes() {
       >
         Gestão de Dependentes
       </motion.h2>
-  
+
       {loading ? (
         <div className="text-center my-5">
           <div className="spinner-border text-primary" role="status">
@@ -147,6 +152,10 @@ export default function PaginaControleDependentes() {
           </div>
           <p className="mt-2">Carregando dependentes...</p>
         </div>
+      ) : erroBusca ? (
+        <div className="text-center text-danger fw-bold">Erro ao buscar dependentes</div>
+      ) : dependentes?.length === 0 ? (
+        <div className="text-center text-muted fw-semibold">Sem dependentes cadastrados</div>
       ) : (
         <>
           <div className="row justify-content-center">
@@ -176,7 +185,7 @@ export default function PaginaControleDependentes() {
               </motion.div>
             ))}
           </div>
-  
+
           {(dependentes?.length ?? 0) < 3 && (
             <motion.div
               className="text-center mt-4"
@@ -191,7 +200,7 @@ export default function PaginaControleDependentes() {
           )}
         </>
       )}
-  
+
       {/* Modal */}
       <Modal show={showModal} onHide={handleClose} centered>
         <Modal.Header closeButton>
@@ -224,5 +233,4 @@ export default function PaginaControleDependentes() {
       </Modal>
     </div>
   );
-  
 }
