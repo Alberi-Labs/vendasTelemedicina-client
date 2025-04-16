@@ -144,13 +144,13 @@ export default function PaginaApolice() {
           </Button>
 
           <a
-            href="/Guia%20Explicativo%20+%20Anexo.pdf"
-            download
+            href="/api/arquivo/downloadArquivo"
             className="btn btn-danger d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
           >
             <i className="bi bi-file-earmark-pdf fs-5"></i>
             Baixar Guia Explicativo
           </a>
+
         </div>
       </motion.div>
     </div>
