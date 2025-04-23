@@ -39,7 +39,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <Container style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             {children}
           </Container>
-          {!isLoginPage && <FooterBar />}
+          <FooterBar />
         </div>
       </div>
     </AtendimentoProvider>
