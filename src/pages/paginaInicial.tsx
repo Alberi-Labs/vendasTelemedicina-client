@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
-import Loading from "@/components/loading/loading";
+import Loading from "@/components/loading/loading"; // Importando o componente de loading
 import { useAuth } from "@/app/context/AuthContext";
 
 export default function PaginaInicial() {
   const { user } = useAuth();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);  // Estado para controlar o loading
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -16,26 +16,34 @@ export default function PaginaInicial() {
 
   if (!isMounted) return null;
 
-  const handleNavigation = (path: string) => {
-    setLoading(true);
-    router.push(path);
+  const handleNavigation = (item: { path?: string; href?: string }) => {
+    setLoading(true);  // Ativa o loading ao clicar
+
+    if (item.href) {
+      // Se for um link externo (href), abre em uma nova aba
+      window.open(item.href, "_blank");
+      setLoading(false);  // Desativa o loading logo após abrir o link
+    } else if (item.path) {
+      // Se for uma rota interna (path), navega para a página
+      router.push(item.path);
+      setLoading(false);  // Desativa o loading após a navegação
+    }
   };
-  console.log(user)
+
   const cards = [
     { path: "/paginaCadastroPf", icon: "bi-person", text: "Venda Individual", allowedRoles: ["admin", "vendedor", "gerente"] },
     { path: "/paginaVendaPf", icon: "bi-cash-coin", text: "Pagina Venda Plano Telemedicina", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaRelatorioVendas", icon: "bi-file-earmark-bar-graph", text: "Relatório de Vendas", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoClientes", icon: "bi-people", text: "Gestão de Clientes", allowedRoles: ["admin", "gerente"] },
-    { path: "/paginaTelemedicina", icon: "bi-clipboard-heart", text: "Consultar com médico online", allowedRoles: ["admin", "cliente","clientePJ", "vendedor", "gerente"] },
-    { path: "/paginaApolice", icon: "bi-download", text: "Baixar Apólice", allowedRoles: ["admin", "cliente","clientePJ"] },
-    { path: "/paginaGestaoEmpresas", icon: "bi-buildings", text: "Emitir Carteirinha", allowedRoles: ["admin","clientePJ", "cliente"] },
-    { path: "/paginaControleDependentes", icon: "bi-people-fill", text: "Controle de Dependentes", allowedRoles: ["admin","clientePJ", "cliente"] },
+    { path: "/paginaTelemedicina", icon: "bi-clipboard-heart", text: "Consultar com médico online", allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"] },
+    { path: "/paginaApolice", icon: "bi-download", text: "Baixar Apólice", allowedRoles: ["admin", "cliente", "clientePJ"] },
+    { path: "/paginaControleDependentes", icon: "bi-people-fill", text: "Controle de Dependentes", allowedRoles: ["admin", "clientePJ", "cliente"] },
     { path: "/paginaControlePagamento", icon: "bi-credit-card", text: "Controle de Pagamento", allowedRoles: ["admin", "gerente", "cliente"] },
-    { path: "/paginaCancelamento", icon: "bi-x-circle", text: "Cancelamento", allowedRoles: ["admin", "gerente"] },
+    { path: "/paginaCancelamento", icon: "bi-x-circle", text: "Cancelamento", allowedRoles: ["admin", "gerente", "cliente"] },
     { path: "/paginaGestaoUsuarios", icon: "bi-person-gear", text: "Gestão de Usuários", allowedRoles: ["admin"] },
     { path: "/paginaDashboardFinanceiro", icon: "bi-bar-chart-line", text: "Dashboard Financeiro", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoEmpresas", icon: "bi-buildings", text: "Pagina Gestão de Empresas", allowedRoles: ["admin"] },
-
+    { href: "https://wa.me/5561998565628", icon: "bi-question-circle", text: "Suporte e Ajuda", allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"] },
   ];
 
   const visibleCards = cards.filter(card => card.allowedRoles.includes(user?.role || ""));
@@ -61,13 +69,13 @@ export default function PaginaInicial() {
       <div className="d-flex flex-wrap justify-content-center gap-4 mt-4">
         {visibleCards.map((item, index) => (
           <motion.div
-            key={item.path}
+            key={item.path || item.href} // Usa `href` ou `path` como chave
             className="card p-4 text-center shadow-lg border-0"
             style={{ width: "250px", cursor: "pointer" }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: index * 0.2 }}
-            onClick={() => handleNavigation(item.path)}
+            onClick={() => handleNavigation(item)} // Passa o item inteiro
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)";
               e.currentTarget.style.transform = "scale(1.05)";

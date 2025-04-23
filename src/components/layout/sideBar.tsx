@@ -22,7 +22,7 @@ export default function Sidebar() {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const empresaNome = user?.dsc_instituicao ?? null;
-    const empresaImagem = user?.imagem_empresa || localStorage.getItem("imagem_empresa") || "/uploads/default.png";
+    const empresaImagem = user?.imagem_empresa || localStorage.getItem("imagem_empresa") || "/Default.jpg";
 
     try {
       if (storedUser) {
@@ -125,7 +125,7 @@ export default function Sidebar() {
                       <img
                         src={empresaImagem}
                         alt="Logo da empresa"
-                        style={{ width: 80, height: 80, objectFit: "contain", borderRadius: 8 }}
+                        style={{ width: 120, height: 145, objectFit: "contain", borderRadius: 8 }}
                         className="mb-2"
                       />
                       <h5 style={{ color: "#FFF", fontSize: "1rem", marginTop: "0.5rem" }}>{empresaNome}</h5>
@@ -291,21 +291,6 @@ export default function Sidebar() {
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaControlePagamento" ? "#b5cd00" : "transparent")}>
                   <i className="bi-credit-card me-2"></i>Controle de Pagamento
-                </Nav.Link>
-              )}
-              {canAccess.gestaoDependentes && (
-                <Nav.Link as={Link} href="/paginaControleDependentes" onClick={handleMenuClick} style={{
-                  color: router.pathname === "/paginaControleDependentes" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/paginaControleDependentes" ? "#b5cd00" : "transparent",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out",
-                  marginBottom: "5px"
-
-                }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaControleDependentes" ? "#b5cd00" : "transparent")}>
-                  <i className="bi-people-fill me-2"></i>Controle de Dependentes
                 </Nav.Link>
               )}
               {canAccess.gestaoUsuarios && (

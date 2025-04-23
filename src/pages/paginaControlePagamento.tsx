@@ -15,23 +15,26 @@ export default function PaginaControlePagamento() {
   const [pagamentosPassados, setPagamentosPassados] = useState<Pagamento[]>([]);
   const [pagamentosFuturos, setPagamentosFuturos] = useState<Pagamento[]>([]);
   const { user } = useAuth(); 
-
+  
   useEffect(() => {
     if (!user) return;
 
     const cobrancas = user.cobrancas || [];
 
-    const primeiroPagamento: Pagamento | null = cobrancas.length > 0
-      ? {
-          id: cobrancas[0].seq_cobranca,
-          data: cobrancas[0].dat_referencia,
-          valor: `R$ ${cobrancas[0].vlr_pagamento}`,
-          situacao: "Pago",
-        }
-      : null;
+    // Organiza os pagamentos passados
+    const pagos: Pagamento[] = cobrancas
+      .filter((cob) => cob.ind_status_pagamento === "RECEIVED")
+      .map((cob) => ({
+        id: cob.seq_cobranca,
+        data: cob.dat_vencimento,
+        valor: `R$ ${cob.vlr_pagamento}`,
+        situacao: "Pago",
+        link: cob.dsc_link_pagamento,
+      }));
 
+    // Organiza os pagamentos futuros
     const futuros: Pagamento[] = cobrancas
-      .filter((cob) => cob.tip_status_pagamento !== null)
+      .filter((cob) => cob.ind_status_pagamento === "PENDING")
       .map((cob) => ({
         id: cob.seq_cobranca,
         data: cob.dat_vencimento,
@@ -40,9 +43,7 @@ export default function PaginaControlePagamento() {
         link: cob.dsc_link_pagamento,
       }));
 
-    if (primeiroPagamento) {
-      setPagamentosPassados([primeiroPagamento]);
-    }
+    setPagamentosPassados(pagos);
     setPagamentosFuturos(futuros);
   }, [user]);
 
@@ -138,13 +139,13 @@ export default function PaginaControlePagamento() {
                       >
                         <i className="bi bi-link-45deg me-1"></i> Link
                       </Button>
-                      <Button
+                      {/* <Button
                         variant="outline-secondary"
                         size="sm"
                         onClick={() => handleGerarBoleto(p.id)}
                       >
                         <i className="bi bi-file-earmark-pdf me-1"></i> Boleto
-                      </Button>
+                      </Button> */}
                     </div>
                   )}
                 </td>

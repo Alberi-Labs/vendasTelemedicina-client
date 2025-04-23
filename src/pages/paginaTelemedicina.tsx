@@ -149,8 +149,12 @@ export default function Consulta() {
   };
 
   const formatarDataBR = (dataISO: string | undefined) => {
-    if (!dataISO) return "";
-    const [ano, mes, dia] = dataISO.split("-");
+    console.log(dataISO)
+    if (!dataISO) return "";  // Se a data não for fornecida, retorna uma string vazia
+  
+    const [ano, mes, dia] = dataISO.split("-");  // Divide a data no formato ISO (YYYY-MM-DD)
+    
+    // Retorna no formato DD/MM/YYYY
     return `${dia}/${mes}/${ano}`;
   };
   
@@ -189,8 +193,8 @@ export default function Consulta() {
                       { label: "Email", value: clienteSelecionado.email },
                       {
                         label: "Data de Nascimento",
-                        value: formatarDataBR(clienteSelecionado.data_nascimento || user?.dt_nascimento),
-                      },
+                        value: user?.dt_nascimento || formatarDataBR(clienteSelecionado?.data_nascimento) || "",
+                      }                      
                     ].map((field, index) => (
                       <div key={index} className="mb-3">
                         <label className="form-label">{field.label}:</label>

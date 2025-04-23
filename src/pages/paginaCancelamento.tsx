@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button, Card } from "react-bootstrap";
-
-interface Props {
-    nome: string;
-    cpf: string;
-    dataNascimento: string;
-}
+import { useAuth } from "@/app/context/AuthContext";
 
 const beneficiosPerdidos = [
     "Consulta Online",
@@ -15,14 +10,15 @@ const beneficiosPerdidos = [
     "Assistência em caso de morte acidental",
 ];
 
-const PaginaCancelamento: React.FC<Props> = ({ nome, cpf, dataNascimento }) => {
+const PaginaCancelamento: React.FC = () => {
     const [isMounted, setIsMounted] = useState(false);
+    const { user } = useAuth();  // Aqui pegamos o usuário diretamente do contexto
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
 
-    if (!isMounted) return null;
+    if (!isMounted || !user) return null;  // Espera o usuário estar carregado
 
     const handleCancelamento = () => {
         alert("❌ Benefícios cancelados com sucesso!");
@@ -54,9 +50,9 @@ const PaginaCancelamento: React.FC<Props> = ({ nome, cpf, dataNascimento }) => {
 
                             <h5 className="fw-semibold mt-4">👤 Seus Dados</h5>
                             <ul className="list-unstyled">
-                                <li><strong>Nome:</strong> {nome}</li>
-                                <li><strong>CPF:</strong> {cpf}</li>
-                                <li><strong>Data de Nascimento:</strong> {dataNascimento}</li>
+                                <li><strong>Nome:</strong> {user.nome}</li>
+                                <li><strong>CPF:</strong> {user.cpf}</li>
+                                <li><strong>Data de Nascimento:</strong> {user.dt_nascimento}</li>
                             </ul>
 
                             <h5 className="fw-semibold mt-4">🚫 Benefícios que serão cancelados</h5>
@@ -68,7 +64,6 @@ const PaginaCancelamento: React.FC<Props> = ({ nome, cpf, dataNascimento }) => {
                                     </li>
                                 ))}
                             </ul>
-
 
                             <div className="text-center mt-4">
                                 <Button
