@@ -11,8 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.log(req.body)
   try {
     const instituicao = "Fernando Card";
-    // const nomeCliente = "joão da Silva"
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     await page.setViewport({
       width: 1920,
@@ -20,10 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     await page.goto("https://saudeecor.i9.dev.br/white/login.php", { waitUntil: "networkidle2" });
-    page.on('dialog', async (dialog) => {
-      console.log(`Alerta detectado: ${dialog.message()}`);
-      await dialog.dismiss(); // Ou use dialog.accept() se precisar confirmar
-    });
+
     await page.type('input[name="usuario"]', '020.314.821-57');
     await page.type('input[name="senha"]', '102030');
     await Promise.all([
@@ -52,20 +48,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     //   if (empresaLink) (empresaLink as HTMLElement).click();
     // });
 
-    await page.evaluate((instituicao) => {
-      const options = Array.from(document.querySelectorAll('#seq_instituicao option'));
-      const optionToSelect = options.find(option => option.textContent?.trim() === instituicao);
-      if (optionToSelect) {
-        (optionToSelect as HTMLOptionElement).selected = true;
-        const selectElement = document.querySelector('#seq_instituicao');
-        if (selectElement) {
-          selectElement.dispatchEvent(new Event('change'));
-        }
-      } else {
-        console.error(`Instituição "${instituicao}" não encontrada.`);
-      }
-    }, instituicao);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // await page.evaluate((instituicao) => {
+    //   const options = Array.from(document.querySelectorAll('#seq_instituicao option'));
+    //   const optionToSelect = options.find(option => option.textContent?.trim() === instituicao);
+    //   if (optionToSelect) {
+    //     (optionToSelect as HTMLOptionElement).selected = true;
+    //     const selectElement = document.querySelector('#seq_instituicao');
+    //     if (selectElement) {
+    //       selectElement.dispatchEvent(new Event('change'));
+    //     }
+    //   } else {
+    //     console.error(`Instituição "${instituicao}" não encontrada.`);
+    //   }
+    // }, instituicao);
+    // await new Promise((resolve) => setTimeout(resolve, 2000));
 
     await page.waitForSelector("#btn_pesquisar", { visible: true });
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -94,7 +90,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           boundingBox.x + boundingBox.width / 2,
           boundingBox.y + boundingBox.height / 2
         );
-        console.log("Botão 'Escolher Cliente' clicado!");
       } else {
         console.error("BoundingBox do botão 'Escolher Cliente' não encontrado.");
       }
@@ -123,16 +118,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await page.waitForSelector('.table .btn-primary', { visible: true });
     await page.click('.table .btn-primary');
 
-    console.log("Esperando pelo seletor...");
     await page.waitForSelector('.timeline-footer .btn-warning', { visible: true });
-    console.log("Seletor encontrado. Buscando o botão...");
+
     const escolherProduto = await page.$('.timeline-footer .btn-warning');
     if (!escolherProduto) {
       console.error("Botão não encontrado.");
     } else {
-      console.log("Botão encontrado. Tentando clicar...");
       await page.evaluate((element) => (element as HTMLElement).click(), escolherProduto);
-      console.log("Clique executado.");
     }
 
 
@@ -225,12 +217,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (paymentLink) {
-
-      await pool.query(
-        `INSERT INTO tb_vendas_telemedicina (forma_pagamento, id_usuario) VALUES (?, ?)`,
-        [formaDePagamento, idUsuario]
-      );
-      
       return res.status(200).json({
         message: "Integração concluída com sucesso!",
         paymentLink

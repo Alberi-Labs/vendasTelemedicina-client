@@ -13,7 +13,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, isAuthLoaded } = useAuth(); 
 
   // Verifica se a página é uma das que não devem exibir o Sidebar ou FooterBar
-  const isLoginPage = router.pathname === '/' || router.pathname === '/loginCliente' || router.pathname === '/loginFuncionario';
+  const isLoginPage = router.pathname === '/' || router.pathname === '/loginCliente' || router.pathname === '/loginFuncionario' || router.pathname === '/vendaOnlline';
 
   useEffect(() => {
     if (isAuthLoaded && !user && !isLoginPage) {

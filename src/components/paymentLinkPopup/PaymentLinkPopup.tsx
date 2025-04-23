@@ -63,6 +63,9 @@ const PaymentLinkPopup: React.FC<PaymentLinkPopupProps> = ({ show, onClose, paym
         >
           Clique aqui para abrir o link de pagamento!
         </Button>
+        <br />
+        <p>Após confirmação do pagamento aguarde 24horas para acessar nosso portal e desfrutar dos benefícios!</p>
+
       </div>
     </>
   );
