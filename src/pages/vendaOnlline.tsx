@@ -9,6 +9,7 @@ import Paper from "@mui/material/Paper";
 import Container from "@mui/material/Container";
 import TelaCarregamento from "@/components/telaCarregamento/TelaCarregamento";
 import PaymentLinkPopup from "@/components/paymentLinkPopup/PaymentLinkPopup";
+import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 
 export default function CadastroPf() {
     const [currentStep, setCurrentStep] = useState(0);
@@ -32,6 +33,8 @@ export default function CadastroPf() {
     const [loading, setLoading] = useState(false);
     const [showPopup, setShowPopup] = useState(false);
     const [paymentLink, setPaymentLink] = useState("");
+    const [mensagemDeErro, setMensagemDeErro] = useState<string | null>(null);
+
     let idUsuario: string = "";
 
     useEffect(() => {
@@ -138,21 +141,21 @@ export default function CadastroPf() {
                     }),
                 });
     
+                const data = await response.json();
+    
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Erro ao enviar os dados');
+                    throw new Error(data.error || 'Erro ao enviar os dados');
                 }
     
-                const data = await response.json();
                 if (data.paymentLink) {
                     setPaymentLink(data.paymentLink);
                     setShowPopup(true);
                 } else {
-                    alert('Erro: o link de pagamento não foi retornado.');
+                    setMensagemDeErro('Erro: o link de pagamento não foi retornado.');
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Erro ao enviar os dados para /api/vendaPlanoPf/vendaClienteOnlline:', error);
-                alert('Erro ao gerar o link de pagamento.');
+                setMensagemDeErro(error.message || 'Erro inesperado.');
                 return;
             } finally {
                 setLoading(false);
@@ -161,7 +164,6 @@ export default function CadastroPf() {
     
         setCurrentStep((prev) => prev + 1);
     };
-    
     
 
     const prevStep = () => setCurrentStep((prev) => prev - 1);
@@ -419,6 +421,14 @@ export default function CadastroPf() {
                 onClose={() => setShowPopup(false)}
                 paymentLink={paymentLink}
             />
+            {mensagemDeErro && (
+                <AvisoAlerta
+                    mensagem={mensagemDeErro}
+                    tipo="danger"
+                    duracao={5000}
+                    onClose={() => setMensagemDeErro(null)}
+                />
+            )}
         </Container>
     );
 }
