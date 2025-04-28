@@ -23,7 +23,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const produto = "Plano Telemedicina Básico";
 
   try {
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+          "--window-size=1920,1080"
+        ],
+      });
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
 
