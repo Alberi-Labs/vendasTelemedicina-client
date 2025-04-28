@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
         const browser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             args: [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
@@ -96,18 +96,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await newPage.evaluate((cidade) => {
             const normalizeString = (str: string) =>
                 str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
-
+        
             const cidadeSelect = document.querySelector<HTMLSelectElement>('#ind_cidade');
             if (cidadeSelect) {
                 const option = Array.from(cidadeSelect.options).find(opt =>
                     normalizeString(opt.textContent || "") === normalizeString(cidade)
                 );
                 if (option) {
-                    cidadeSelect.value = option.value;
+                    (option as HTMLOptionElement).selected = true;
                     cidadeSelect.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             }
         }, cidade);
+        
 
         console.log("Formulário preenchido dinamicamente!");
 
@@ -120,11 +121,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     opt.textContent?.trim() === instituicao
                 );
                 if (option) {
-                    instituicaoSelect.value = option.value;
+                    (option as HTMLOptionElement).selected = true;
                     instituicaoSelect.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             }
         }, instituicao);
+        
 
         // Espera produtos carregarem
         await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -138,11 +140,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     opt.textContent?.includes(produto)
                 );
                 if (option) {
-                    produtoSelect.value = option.value;
+                    (option as HTMLOptionElement).selected = true;
                     produtoSelect.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             }
         }, produto);
+        
 
         // Aceita termos
         await newPage.waitForSelector('#termo_condicao', { visible: true });
@@ -151,32 +154,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             await newPage.click('#termo_condicao');
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 4000));
 
         // Clica no botão de pagamento
         await newPage.waitForSelector('#btn_pagamento:not([disabled])', { visible: true });
         await newPage.click('#btn_pagamento');
+        await new Promise((resolve) => setTimeout(resolve, 3000));
 
         // Aguarda o link de pagamento
         let pagamentoLink = "";
 
         try {
-            pagamentoLink = await Promise.race([
-                newPage.waitForSelector('a[href*="asaas.com/i/"]', { timeout: 5000 }).then(async () => {
-                    return await newPage.$eval('a[href*="asaas.com/i/"]', (a) => (a as HTMLAnchorElement).href);
-                }),
-                new Promise<string>((_, reject) =>
-                    setTimeout(() => reject(new Error("Timeout: Link de pagamento não encontrado")), 5000)
-                )
-            ]);
+            await newPage.waitForSelector('.lockscreen-wrapper .text-center a[href]', { timeout: 5000 });
+        
+            pagamentoLink = await newPage.$eval('.lockscreen-wrapper .text-center a[href]', (a) => {
+                return (a as HTMLAnchorElement).href;
+            });
+            console.log(pagamentoLink)
+
+            if (!pagamentoLink.includes('asaas.com/i/')) {
+                throw new Error("Link encontrado, mas não é o do pagamento.");
+            }
         } catch (err) {
             await browser.close();
             console.error("Erro ao capturar link:", err);
             return res.status(500).json({ error: "Não foi possível gerar a venda, tente novamente." });
         }
+        
 
-        await browser.close();
-
+        console.log(pagamentoLink)
         return res.status(200).json({
             message: "Compra gerada com sucesso!",
             pagamentoLink: pagamentoLink,

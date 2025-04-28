@@ -147,8 +147,8 @@ export default function CadastroPf() {
                     throw new Error(data.error || 'Erro ao enviar os dados');
                 }
     
-                if (data.paymentLink) {
-                    setPaymentLink(data.paymentLink);
+                if (data.pagamentoLink) {
+                    setPaymentLink(data.pagamentoLink);
                     setShowPopup(true);
                 } else {
                     setMensagemDeErro('Erro: o link de pagamento não foi retornado.');
