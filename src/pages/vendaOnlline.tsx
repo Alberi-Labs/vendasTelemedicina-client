@@ -115,43 +115,54 @@ export default function CadastroPf() {
         if (currentStep === 1) {
             setLoading(true);
             try {
-                const response = await fetch('/api/vendaPlanoPf/cadastroClientePf', {
+                const sexoFormatado = formData.sexo.toLowerCase() === 'feminino' ? 'F' : 'M';
+    
+                const response = await fetch('/api/vendaPlanoPf/vendaClienteOnlline', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
+                        nomeCliente: formData.nome,
                         email: formData.email,
                         cpf: formData.cpf,
                         celular: formData.celular,
+                        dataNascimento: formData.nascimento,
                         cep: formData.cep,
                         endereco: formData.endereco,
+                        casa: formData.casa,
+                        sexo: sexoFormatado,
                         uf: formData.uf,
                         cidade: formData.cidade,
-                        nome: formData.nome,
-                        sexo: formData.sexo,
-                        dataNascimento: formData.nascimento,
+                        formaDePagamento: formData.formaPagamento,
                     }),
                 });
-
+    
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.message || 'Erro ao enviar os dados');
                 }
-
-                idUsuario = await response.json();
-
-                console.log("Usuário cadastrado com ID:", idUsuario);
+    
+                const data = await response.json();
+                if (data.paymentLink) {
+                    setPaymentLink(data.paymentLink);
+                    setShowPopup(true);
+                } else {
+                    alert('Erro: o link de pagamento não foi retornado.');
+                }
             } catch (error) {
-                console.error('Erro ao enviar os dados para /api/saudeECorCadastroPF:', error);
+                console.error('Erro ao enviar os dados para /api/vendaPlanoPf/vendaClienteOnlline:', error);
+                alert('Erro ao gerar o link de pagamento.');
                 return;
             } finally {
                 setLoading(false);
             }
         }
-
+    
         setCurrentStep((prev) => prev + 1);
     };
+    
+    
 
     const prevStep = () => setCurrentStep((prev) => prev - 1);
 
