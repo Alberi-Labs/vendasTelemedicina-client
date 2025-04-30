@@ -23,19 +23,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const produto = "Plano Telemedicina Básico";
 
     try {
+        console.log("Iniciando navegador...");
         const browser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--window-size=1920,1080"
+              "--no-sandbox",
+              "--disable-setuid-sandbox",
+              "--disable-dev-shm-usage",
+              "--disable-gpu",
+              "--window-size=1920,1080",
             ],
-        });
+          });
+          
+
+        console.log("Abrindo nova aba...");
         const page = await browser.newPage();
         await page.setViewport({ width: 1920, height: 1080 });
 
+        console.log("Acessando página de login...");
         await page.goto("https://saudeecor.i9.dev.br/white/login.php", { waitUntil: "networkidle2" });
 
         page.on('dialog', async (dialog) => {
@@ -43,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             await dialog.dismiss();
         });
 
-        // Faz login fixo
+        console.log("Realizando login...");
         await page.type('input[name="usuario"]', '020.314.821-57');
         await page.type('input[name="senha"]', '102030');
         await Promise.all([
@@ -51,15 +56,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             page.waitForNavigation({ waitUntil: "networkidle2" }),
         ]);
 
-        // Abre menu lateral
+        console.log("Abrindo menu lateral...");
         await page.waitForSelector('a[data-widget="pushmenu"]', { visible: true });
         await page.click('a[data-widget="pushmenu"]');
 
-        // Clica em "Compra online" e captura nova aba
-        // Captura as páginas abertas antes do clique
+        console.log("Preparando para abrir nova aba de compra...");
         const pagesBefore = await browser.pages();
 
-        // Clica no botão que abre a nova aba
+        console.log("Clicando em 'Compra online'...");
         await page.evaluate(() => {
             const compraLink = Array.from(document.querySelectorAll('a.nav-link')).find(
                 (el) => el.textContent?.trim() === "Compra online"
@@ -67,25 +71,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             if (compraLink) (compraLink as HTMLElement).click();
         });
 
-        // Espera até que uma nova página apareça
         let newPage: Page | undefined;
-
         for (let i = 0; i < 10; i++) {
             const pagesAfter = await browser.pages();
             newPage = pagesAfter.find(p => !pagesBefore.includes(p));
             if (newPage) break;
-            await new Promise(resolve => setTimeout(resolve, 500)); // aguarda meio segundo
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         if (!newPage) {
             throw new Error("Nova aba não foi detectada.");
         }
 
+        console.log("Nova aba aberta com sucesso!");
         await newPage.bringToFront();
         await newPage.waitForSelector('form#formulario', { visible: true });
 
-
-        // Preenche dados enviados pelo body
+        console.log("Preenchendo formulário com os dados do cliente...");
         await newPage.type('#nom_cliente', nomeCliente);
         await newPage.type('#dsc_email', email);
         await newPage.type('#num_cpf', cpf);
@@ -94,13 +96,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await newPage.type('#num_cep', cep);
         await newPage.type('#dsc_endereco', endereco);
 
-        // Seleciona sexo e UF
+        console.log("Selecionando sexo e UF...");
         await newPage.select('#ind_sexo', sexo);
         await newPage.select('#ind_uf', uf);
 
-        // Aguarda carregar cidades
+        console.log("Aguardando cidades carregarem...");
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        // Seleciona cidade pelo nome (ignora acento/maiúsculas)
+
+        console.log("Selecionando cidade...");
         await newPage.evaluate((cidade) => {
             const normalizeString = (str: string) =>
                 str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
@@ -117,10 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
         }, cidade);
 
-
-        console.log("Formulário preenchido dinamicamente!");
-
-        // Seleciona Instituição pelo nome
+        console.log("Selecionando instituição...");
         await newPage.waitForSelector('#seq_instituicao', { visible: true });
         await newPage.evaluate((instituicao) => {
             const instituicaoSelect = document.querySelector<HTMLSelectElement>('#seq_instituicao');
@@ -135,11 +135,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
         }, instituicao);
 
-
-        // Espera produtos carregarem
+        console.log("Aguardando produtos carregarem...");
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        // Seleciona Produto pelo nome
+        console.log("Selecionando produto...");
         await newPage.waitForSelector('#seq_produto', { visible: true });
         await newPage.evaluate((produto) => {
             const produtoSelect = document.querySelector<HTMLSelectElement>('#seq_produto');
@@ -154,22 +153,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
         }, produto);
 
-
-        // Aceita termos
+        console.log("Aceitando termos...");
         await newPage.waitForSelector('#termo_condicao', { visible: true });
         const isChecked = await newPage.$eval('#termo_condicao', (checkbox) => (checkbox as HTMLInputElement).checked);
         if (!isChecked) {
             await newPage.click('#termo_condicao');
         }
 
+        console.log("Aguardando antes de enviar pagamento...");
         await new Promise((resolve) => setTimeout(resolve, 4000));
 
-        // Clica no botão de pagamento
+        console.log("Clicando no botão de pagamento...");
         await newPage.waitForSelector('#btn_pagamento:not([disabled])', { visible: true });
         await newPage.click('#btn_pagamento');
         await new Promise((resolve) => setTimeout(resolve, 3000));
 
-        // Aguarda o link de pagamento
+        console.log("Capturando link de pagamento...");
         let pagamentoLink = "";
 
         try {
@@ -178,19 +177,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             pagamentoLink = await newPage.$eval('.lockscreen-wrapper .text-center a[href]', (a) => {
                 return (a as HTMLAnchorElement).href;
             });
-            console.log(pagamentoLink)
 
             if (!pagamentoLink.includes('asaas.com/i/')) {
                 throw new Error("Link encontrado, mas não é o do pagamento.");
             }
+
+            console.log("Link de pagamento capturado com sucesso:", pagamentoLink);
         } catch (err) {
             await browser.close();
             console.error("Erro ao capturar link:", err);
             return res.status(500).json({ error: "Não foi possível gerar a venda, tente novamente." });
         }
 
+        await browser.close();
+        console.log("Navegador fechado. Processo concluído.");
 
-        console.log(pagamentoLink)
         return res.status(200).json({
             message: "Compra gerada com sucesso!",
             pagamentoLink: pagamentoLink,
