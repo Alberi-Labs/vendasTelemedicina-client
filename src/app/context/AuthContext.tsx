@@ -23,7 +23,6 @@ export interface User {
   tip_pagamento?: string;
   imagem_empresa?: string;
   cobrancas?: Cobranca[];
-  empresa?: string
 }
 
 interface AuthContextType {
