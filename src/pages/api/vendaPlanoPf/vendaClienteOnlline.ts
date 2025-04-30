@@ -56,26 +56,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await page.click('a[data-widget="pushmenu"]');
 
         // Clica em "Compra online" e captura nova aba
-        await page.waitForSelector('a.nav-link', { visible: true });
-        const [newPage] = await Promise.all([
-            new Promise<Page>((resolve) =>
-                browser.once('targetcreated', async (target) => {
-                    const page = await target.page();
-                    if (page) {
-                        await page.bringToFront();
-                        resolve(page);
-                    }
-                })
-            ),
-            page.evaluate(() => {
-                const compraLink = Array.from(document.querySelectorAll('a.nav-link')).find(
-                    (el) => el.textContent?.trim() === "Compra online"
-                );
-                if (compraLink) (compraLink as HTMLElement).click();
-            }),
-        ]);
+        // Captura as páginas abertas antes do clique
+        const pagesBefore = await browser.pages();
 
+        // Clica no botão que abre a nova aba
+        await page.evaluate(() => {
+            const compraLink = Array.from(document.querySelectorAll('a.nav-link')).find(
+                (el) => el.textContent?.trim() === "Compra online"
+            );
+            if (compraLink) (compraLink as HTMLElement).click();
+        });
+
+        // Espera até que uma nova página apareça
+        let newPage: Page | undefined;
+
+        for (let i = 0; i < 10; i++) {
+            const pagesAfter = await browser.pages();
+            newPage = pagesAfter.find(p => !pagesBefore.includes(p));
+            if (newPage) break;
+            await new Promise(resolve => setTimeout(resolve, 500)); // aguarda meio segundo
+        }
+
+        if (!newPage) {
+            throw new Error("Nova aba não foi detectada.");
+        }
+
+        await newPage.bringToFront();
         await newPage.waitForSelector('form#formulario', { visible: true });
+
 
         // Preenche dados enviados pelo body
         await newPage.type('#nom_cliente', nomeCliente);
@@ -96,7 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await newPage.evaluate((cidade) => {
             const normalizeString = (str: string) =>
                 str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
-        
+
             const cidadeSelect = document.querySelector<HTMLSelectElement>('#ind_cidade');
             if (cidadeSelect) {
                 const option = Array.from(cidadeSelect.options).find(opt =>
@@ -108,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 }
             }
         }, cidade);
-        
+
 
         console.log("Formulário preenchido dinamicamente!");
 
@@ -126,7 +134,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 }
             }
         }, instituicao);
-        
+
 
         // Espera produtos carregarem
         await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -145,7 +153,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 }
             }
         }, produto);
-        
+
 
         // Aceita termos
         await newPage.waitForSelector('#termo_condicao', { visible: true });
@@ -166,7 +174,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         try {
             await newPage.waitForSelector('.lockscreen-wrapper .text-center a[href]', { timeout: 5000 });
-        
+
             pagamentoLink = await newPage.$eval('.lockscreen-wrapper .text-center a[href]', (a) => {
                 return (a as HTMLAnchorElement).href;
             });
@@ -180,7 +188,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             console.error("Erro ao capturar link:", err);
             return res.status(500).json({ error: "Não foi possível gerar a venda, tente novamente." });
         }
-        
+
 
         console.log(pagamentoLink)
         return res.status(200).json({
