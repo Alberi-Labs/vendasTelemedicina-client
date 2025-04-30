@@ -59,13 +59,11 @@ export default function PaginaInicial() {
 
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
         <h1 className="fw-bold">
-          {user?.role === "cliente" || user?.role === "clientePJ"
+          {user?.role === "cliente"
             ? "Olá, seja bem-vindo(a) à área do cliente!"
             : "Olá, seja bem-vindo ao nosso sistema de vendas!"}
         </h1>
-        <p className="text-muted">{user?.role === "cliente" || user?.role === "clientePJ"
-            ? "Aqui você pode realizar consultas e acessar seus dados."
-            : "Olá, seja bem-vindo ao nosso sistema de gerenciamento!"}</p>
+        <p className="text-muted">Aqui você pode efetuar vendas, consultar relatórios e configurar o acesso às consultas.</p>
       </motion.div>
 
       <div className="d-flex flex-wrap justify-content-center gap-4 mt-4">
