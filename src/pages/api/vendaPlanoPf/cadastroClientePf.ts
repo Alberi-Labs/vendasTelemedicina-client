@@ -13,7 +13,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { email, cpf, celular, cep, endereco, uf, cidade, nome, sexo, dataNascimento } = req.body;
         const instituicao = "Fernando Card";
 
-        const browser = await puppeteer.launch({ headless: true });
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: [
+              "--no-sandbox",
+              "--disable-setuid-sandbox",
+              "--disable-dev-shm-usage",
+              "--disable-gpu",
+              "--window-size=1920,1080",
+            ],
+          });
+          
         const page = await browser.newPage();
         page.on('dialog', async (dialog) => {
             console.log(`Alerta detectado: ${dialog.message()}`);

@@ -11,8 +11,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.log(req.body)
   try {
     const instituicao = "Fernando Card";
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--window-size=1920,1080",
+      ],
+    });
+        const page = await browser.newPage();
     await page.setViewport({
       width: 1920,
       height: 1080,
