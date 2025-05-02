@@ -12,10 +12,9 @@ type Apolice = {
 export default function PaginaApolice() {
   const [isMounted, setIsMounted] = useState(false);
   const [apolices, setApolices] = useState<Apolice[]>([]);
-  const [showAviso, setShowAviso] = useState(false); // Estado para controlar a exibição do aviso
+  const [showAviso, setShowAviso] = useState(false);
 
   const { user } = useAuth();
-
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -42,29 +41,20 @@ export default function PaginaApolice() {
     fetchApolice();
   }, [user?.cpf]);
 
-  const formatarDataBR = (dataISO: string | undefined) => {
-    if (!dataISO) return "";
-    const [ano, mes, dia] = dataISO.split("-");
-    return `${dia}/${mes}/${ano}`;
-  };
 
   const calcularIdade = (dataNascimento: string | undefined): number => {
     console.log(dataNascimento);
     if (!dataNascimento) return 0;
   
-    // Divide a data no formato DD/MM/YYYY
     const [dia, mes, ano] = dataNascimento.split("/").map(Number);
   
-    // Cria a data de nascimento usando o ano, mês e dia
-    const nascimento = new Date(ano, mes - 1, dia); // Meses em JavaScript começam do zero, então subtraímos 1
+    const nascimento = new Date(ano, mes - 1, dia); 
   
-    // Calcula a idade
     const hoje = new Date();
     let idade = hoje.getFullYear() - nascimento.getFullYear();
     const mesAtual = hoje.getMonth();
     const diaAtual = hoje.getDate();
   
-    // Ajuste caso o aniversário ainda não tenha ocorrido no ano atual
     if (
       mesAtual < nascimento.getMonth() ||
       (mesAtual === nascimento.getMonth() && diaAtual < nascimento.getDate())
@@ -78,13 +68,55 @@ export default function PaginaApolice() {
 
   if (!isMounted) return null;
 
-  const handleDownload = () => {
-    if (apolices.length > 0) {
-      window.open(apolices[0].link, "_blank");
-    } else {
+  const handleDownload = async () => {
+    if (!user) {
+      setShowAviso(true);
+      return;
+    }
+  
+    const dadosApolice = {
+      nomeseg: user.nome,
+      cpf: user.cpf,
+      datanascimento: user.dt_nascimento?.split("-").reverse().join("/"),
+      matricula: user.id,
+      numoperacao: user.cod_contrato_retorno_operacao,
+      numcertificado: user.num_contrato_retorno_certificado,
+      numsorteio: "0",
+      numapolice: user.num_contrato_retorno_apolice,
+      dataemissao: new Date().toLocaleDateString("pt-BR"),
+      premiomensal: "R$29,90",
+    };
+   
+    try {
+      const response = await fetch("/api/apolices/gerarApolice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dadosApolice),
+      });
+  
+      if (!response.ok) {
+        console.error("Erro ao gerar PDF");
+        setShowAviso(true);
+        return;
+      }
+  
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+  
+      const nomeSanitizado = user.nome.replace(/\s+/g, "_").replace(/[^\w_]/g, "");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `apolice_${nomeSanitizado}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      console.error("Erro ao baixar apólice:", err);
       setShowAviso(true);
     }
   };
+  
+
   return (
     <div className="container py-5">
       <motion.h1

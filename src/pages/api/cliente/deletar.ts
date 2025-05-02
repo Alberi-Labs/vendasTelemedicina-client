@@ -6,14 +6,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ error: "Método não permitido" });
     }
 
-    const { cpf } = req.query;
+    const { id } = req.query;
 
-    if (!cpf) {
+    if (!id) {
         return res.status(400).json({ error: "CPF é obrigatório." });
     }
 
     try {
-        const [result]: any = await pool.query("DELETE FROM tb_clientes WHERE cpf = ?", [cpf]);
+        const [result]: any = await pool.query("DELETE FROM tb_clientes WHERE idCliente = ?", [id]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: "Cliente não encontrado." });

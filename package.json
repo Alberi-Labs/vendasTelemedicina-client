@@ -21,6 +21,7 @@
     "bootstrap": "^5.3.3",
     "bootstrap-icons": "^1.11.3",
     "chart.js": "^4.4.8",
+    "docxtemplater": "^3.61.1",
     "dotenv": "^16.4.7",
     "formidable": "^3.5.2",
     "framer-motion": "^12.5.0",
@@ -35,6 +36,7 @@
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^5.1.91",
+    "pizzip": "^3.1.8",
     "prisma": "^6.3.1",
     "puppeteer": "^24.3.0",
     "puppeteer-core": "^24.3.0",
@@ -47,6 +49,7 @@
     "react-to-print": "^3.0.5",
     "recharts": "^2.15.1",
     "tesseract.js": "^6.0.1",
+    "uuid": "^11.1.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {

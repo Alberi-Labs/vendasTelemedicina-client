@@ -72,7 +72,6 @@ export default function PaginaGestaoUsuario() {
 
   const handleSave = async () => {
     const payload = {
-      id: editing?.id,
       nome: formData.nome,
       email: formData.email,
       perfil: formData.role,
@@ -84,11 +83,16 @@ export default function PaginaGestaoUsuario() {
       id_empresa: parseInt(formData.id_empresa),
     };
 
-    const res = await fetch("/api/usuario/editarUsuario", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const isEditando = !!editing;
+
+    const res = await fetch(
+      isEditando ? "/api/usuario/editarUsuario" : "/api/usuario/cadastrarClienteUsuario",
+      {
+        method: isEditando ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(isEditando ? { id: editing.id, ...payload } : payload),
+      }
+    );
 
     if (res.ok) {
       fetchUsuarios();
@@ -97,6 +101,7 @@ export default function PaginaGestaoUsuario() {
       console.error("Erro ao salvar usuário");
     }
   };
+
 
   const handleDelete = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
@@ -108,6 +113,14 @@ export default function PaginaGestaoUsuario() {
     if (res.ok) fetchUsuarios();
   };
 
+  function formatarCPF(cpf: string) {
+    const apenasNumeros = cpf.replace(/\D/g, "").slice(0, 11);
+    return apenasNumeros.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, (match, p1, p2, p3, p4) => {
+      return `${p1}.${p2}.${p3}${p4 ? `-${p4}` : ""}`;
+    });
+  }
+
+
   return (
     <div className="container py-5">
       <motion.h2 className="text-center mb-5 fw-bold">Gestão de Usuários</motion.h2>
@@ -117,45 +130,45 @@ export default function PaginaGestaoUsuario() {
         </Button>
       </div>
       <Table striped bordered hover responsive>
-  <thead className="table-dark">
-    <tr>
-      <th>Nome</th>
-      <th>Email</th>
-      <th>Cpf</th>
-      <th>Função</th>
-      <th>Empresa</th> {/* NOVO */}
-      <th>Ações</th>
-    </tr>
-  </thead>
-  <tbody>
-    {usuarios.map((user) => {
-      const empresaDoUsuario = empresas.find((e) => e.idEmpresa === user.id_empresa);
+        <thead className="table-dark">
+          <tr>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Cpf</th>
+            <th>Função</th>
+            <th>Empresa</th> {/* NOVO */}
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {usuarios.map((user) => {
+            const empresaDoUsuario = empresas.find((e) => e.idEmpresa === user.id_empresa);
 
-      return (
-        <tr key={user.id}>
-          <td>{user.nome}</td>
-          <td>{user.email}</td>
-          <td>{user.cpf}</td>
-          <td>{user.perfil}</td>
-          <td>{empresaDoUsuario?.nomeEmpresa || "Não vinculada"}</td> {/* NOVO */}
-          <td>
-            <Button size="sm" variant="outline-primary" onClick={() => handleShow(user)}>
-              <i className="bi bi-pencil"></i>
-            </Button>
-            <Button
-              size="sm"
-              variant="outline-danger"
-              className="ms-2"
-              onClick={() => handleDelete(user.id)}
-            >
-              <i className="bi bi-trash"></i>
-            </Button>
-          </td>
-        </tr>
-      );
-    })}
-  </tbody>
-</Table>
+            return (
+              <tr key={user.id}>
+                <td>{user.nome}</td>
+                <td>{user.email}</td>
+                <td>{user.cpf}</td>
+                <td>{user.perfil}</td>
+                <td>{empresaDoUsuario?.nomeEmpresa || "Não vinculada"}</td> {/* NOVO */}
+                <td>
+                  <Button size="sm" variant="outline-primary" onClick={() => handleShow(user)}>
+                    <i className="bi bi-pencil"></i>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline-danger"
+                    className="ms-2"
+                    onClick={() => handleDelete(user.id)}
+                  >
+                    <i className="bi bi-trash"></i>
+                  </Button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </Table>
 
 
       <Modal show={showModal} onHide={handleClose} centered>
@@ -172,6 +185,7 @@ export default function PaginaGestaoUsuario() {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
               />
             </Form.Group>
+
             <Form.Group className="mb-3">
               <Form.Label>Email</Form.Label>
               <Form.Control
@@ -180,9 +194,28 @@ export default function PaginaGestaoUsuario() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>CPF</Form.Label>
+              <Form.Control
+                type="text"
+                value={formData.cpf}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    cpf: formatarCPF(e.target.value),
+                  })
+                }
+              />
+            </Form.Group>
+
+
             <Form.Group className="mb-3">
               <Form.Label>Função</Form.Label>
-              <Form.Select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+              <Form.Select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              >
                 <option value="">Selecione um perfil</option>
                 <option value="cliente">Cliente</option>
                 <option value="admin">Admin</option>
@@ -190,6 +223,7 @@ export default function PaginaGestaoUsuario() {
                 <option value="vendedor">Vendedor</option>
               </Form.Select>
             </Form.Group>
+
             <Form.Group>
               <Form.Label>Empresa</Form.Label>
               <Form.Select
@@ -205,14 +239,20 @@ export default function PaginaGestaoUsuario() {
               </Form.Select>
             </Form.Group>
           </Form>
+
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button variant="primary" onClick={handleSave} disabled={!formData.nome || !formData.email || !formData.role}>
+          <Button
+            variant="primary"
+            onClick={handleSave}
+            disabled={!formData.nome || !formData.email || !formData.cpf || !formData.role}
+          >
             Salvar
           </Button>
+
         </Modal.Footer>
       </Modal>
     </div>

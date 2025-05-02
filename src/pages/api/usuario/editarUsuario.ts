@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         cpf,
         creditos,
         data_nascimento,
-        id_empresa, // Estava faltando aqui
+        id_empresa, 
         id
       ]
     );
