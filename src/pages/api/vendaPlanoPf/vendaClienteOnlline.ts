@@ -25,6 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         console.log("Iniciando navegador...");
         const browser = await puppeteer.launch({
+            slowMo: 15,
             headless: true,
             args: [
               "--no-sandbox",
