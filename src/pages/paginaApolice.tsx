@@ -102,14 +102,8 @@ export default function PaginaApolice() {
   
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-  
-      const nomeSanitizado = user.nome.replace(/\s+/g, "_").replace(/[^\w_]/g, "");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `apolice_${nomeSanitizado}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+        window.open(url, "_blank");
+
     } catch (err) {
       console.error("Erro ao baixar apólice:", err);
       setShowAviso(true);

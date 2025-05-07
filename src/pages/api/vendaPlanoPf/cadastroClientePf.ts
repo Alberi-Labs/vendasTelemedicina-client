@@ -9,13 +9,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        console.log(req.body)
         const { email, cpf, celular, cep, endereco, uf, cidade, nome, sexo, dataNascimento } = req.body;
         const instituicao = "Fernando Card";
 
         const browser = await puppeteer.launch({
             headless: true,
-            slowMo: 15,
+            slowMo: 10,
             args: [
               "--no-sandbox",
               "--disable-setuid-sandbox",

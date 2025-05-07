@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log("🔸 Iniciando Puppeteer...");
     const browser = await puppeteer.launch({
       headless: true,
-      slowMo: 15,
+      slowMo: 10,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
