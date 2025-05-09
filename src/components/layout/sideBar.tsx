@@ -17,48 +17,37 @@ export default function Sidebar() {
   const [empresaNome, setEmpresaNome] = useState<string | null>(null);
   const [empresaImagem, setEmpresaImagem] = useState<string | null>(null);
   const { user } = useAuth();
-  
-  const imagensDisponiveis = [
-    "saudeecor.jpg",
-    "vita.png",
-    "drogariatessaro.jpeg",
-  ];
-  
-  const encontrarImagemPorEmpresa = (nomeEmpresa: string) => {
-    const nomeNormalizado = nomeEmpresa
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // remove acentos
-      .replace(/\s+/g, "") // remove espaços
-      .toLowerCase();
-  
-    const imagemEncontrada = imagensDisponiveis.find((img) =>
-      nomeNormalizado.includes(img.split(".")[0]) // compara sem extensão
-    );
-  
-    return imagemEncontrada ? `/logos/${imagemEncontrada}` : "/Default.jpg";
-  };
-  
+
+
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    const empresaNome = user?.dsc_instituicao ?? "";
-    const imagemDetectada = encontrarImagemPorEmpresa(empresaNome);
-  
+    const empresaNome = user?.dsc_instituicao ?? null;
+    const empresaImagem = user?.imagem_empresa || localStorage.getItem("imagem_empresa") || "/Default.jpg";
+
     try {
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
+        console.log(parsedUser)
         if (parsedUser?.nome && parsedUser?.role) {
           setUserName(parsedUser.nome);
           setUserRole(parsedUser.role);
+        } else {
+          console.error("Formato inválido para usuário:", parsedUser);
         }
       }
-  
-      setEmpresaNome(empresaNome);
-      setEmpresaImagem(user?.imagem_empresa || imagemDetectada); // prioridade para imagem vinda do backend
+
+      if (empresaNome) setEmpresaNome(empresaNome);
+      if (empresaImagem) setEmpresaImagem(empresaImagem);
     } catch (error) {
       console.error("Erro ao parsear JSON do usuário ou dados da empresa:", error);
     }
   }, []);
-  
+
+
+  console.log("userName:", userName);
+  console.log("userRole:", userRole);
+
+
   const handleMenuClick = () => {
     setMenuOpen(false);
     setTimeout(() => {

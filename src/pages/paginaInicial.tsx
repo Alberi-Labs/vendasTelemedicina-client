@@ -63,7 +63,7 @@ export default function PaginaInicial() {
         transition={{ duration: 0.6 }}
       >
         <h1 className="fw-bold">
-          {user?.role === "cliente" || user?.role === "clientePJ"
+          {user?.role === "cliente"
             ? "Olá, seja bem-vindo(a) à área do cliente!"
             : "Olá, seja bem-vindo ao nosso sistema de vendas!"}
         </h1>

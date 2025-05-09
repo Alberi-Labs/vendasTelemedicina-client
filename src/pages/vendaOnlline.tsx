@@ -9,6 +9,7 @@ import Paper from "@mui/material/Paper";
 import Container from "@mui/material/Container";
 import TelaCarregamento from "@/components/telaCarregamento/TelaCarregamento";
 import PaymentLinkPopup from "@/components/paymentLinkPopup/PaymentLinkPopup";
+import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 
 export default function CadastroPf() {
     const [currentStep, setCurrentStep] = useState(0);
@@ -32,6 +33,8 @@ export default function CadastroPf() {
     const [loading, setLoading] = useState(false);
     const [showPopup, setShowPopup] = useState(false);
     const [paymentLink, setPaymentLink] = useState("");
+    const [mensagemDeErro, setMensagemDeErro] = useState<string | null>(null);
+
     let idUsuario: string = "";
 
     useEffect(() => {
@@ -115,43 +118,53 @@ export default function CadastroPf() {
         if (currentStep === 1) {
             setLoading(true);
             try {
-                const response = await fetch('/api/vendaPlanoPf/cadastroClientePf', {
+                const sexoFormatado = formData.sexo.toLowerCase() === 'feminino' ? 'F' : 'M';
+    
+                const response = await fetch('/api/vendaPlanoPf/vendaClienteOnlline', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
+                        nomeCliente: formData.nome,
                         email: formData.email,
                         cpf: formData.cpf,
                         celular: formData.celular,
+                        dataNascimento: formData.nascimento,
                         cep: formData.cep,
                         endereco: formData.endereco,
+                        casa: formData.casa,
+                        sexo: sexoFormatado,
                         uf: formData.uf,
                         cidade: formData.cidade,
-                        nome: formData.nome,
-                        sexo: formData.sexo,
-                        dataNascimento: formData.nascimento,
+                        formaDePagamento: formData.formaPagamento,
                     }),
                 });
-
+    
+                const data = await response.json();
+    
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Erro ao enviar os dados');
+                    throw new Error(data.error || 'Erro ao enviar os dados');
                 }
-
-                idUsuario = await response.json();
-
-                console.log("Usuário cadastrado com ID:", idUsuario);
-            } catch (error) {
-                console.error('Erro ao enviar os dados para /api/saudeECorCadastroPF:', error);
+    
+                if (data.pagamentoLink) {
+                    setPaymentLink(data.pagamentoLink);
+                    setShowPopup(true);
+                } else {
+                    setMensagemDeErro('Erro: o link de pagamento não foi retornado.');
+                }
+            } catch (error: any) {
+                console.error('Erro ao enviar os dados para /api/vendaPlanoPf/vendaClienteOnlline:', error);
+                setMensagemDeErro(error.message || 'Erro inesperado.');
                 return;
             } finally {
                 setLoading(false);
             }
         }
-
+    
         setCurrentStep((prev) => prev + 1);
     };
+    
 
     const prevStep = () => setCurrentStep((prev) => prev - 1);
 
@@ -408,6 +421,14 @@ export default function CadastroPf() {
                 onClose={() => setShowPopup(false)}
                 paymentLink={paymentLink}
             />
+            {mensagemDeErro && (
+                <AvisoAlerta
+                    mensagem={mensagemDeErro}
+                    tipo="danger"
+                    duracao={5000}
+                    onClose={() => setMensagemDeErro(null)}
+                />
+            )}
         </Container>
     );
 }
