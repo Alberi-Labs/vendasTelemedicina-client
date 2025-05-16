@@ -80,6 +80,9 @@ export default function LoginForm() {
           dsc_email: clienteRaw.dsc_email,
           num_celular: clienteRaw.num_celular,
           cobrancas: clienteRaw.cobranca ?? [], 
+          dsc_link_pagamento: clienteRaw.dsc_link_pagamento,
+          ind_status_pagamento: clienteRaw.ind_status_pagamento,
+          tip_status_pagamento: clienteRaw.tip_status_pagamento,
         };
 
         login(clienteData, true);

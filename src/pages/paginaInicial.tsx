@@ -26,7 +26,7 @@ export default function PaginaInicial() {
       setLoading(false);
     }
   };
-
+  console.log(user)
   const cards = [
     { path: "/paginaCadastroPf", icon: "bi-person", text: "Venda Individual", allowedRoles: ["admin", "vendedor", "gerente"] },
     { path: "/paginaVendaPj", icon: "bi-briefcase", text: "Venda Empresarial", allowedRoles: ["admin", "vendedor", "gerente"] },
@@ -34,7 +34,7 @@ export default function PaginaInicial() {
     { path: "/paginaRelatorioVendas", icon: "bi-file-earmark-bar-graph", text: "Relatório de Vendas", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoClientes", icon: "bi-people", text: "Gestão de Clientes", allowedRoles: ["admin", "vendedor",  "gerente"] },
     { path: "/paginaTelemedicina", icon: "bi-clipboard-heart", text: "Consultar com médico online", allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"] },
-    { path: "/paginaApolice", icon: "bi-download", text: "Baixar Apólice", allowedRoles: ["admin", "cliente", "clientePJ"] },
+    { path: "/paginaApolice", icon: "bi-download", text: "Baixar Apólice/Guia Explicativo", allowedRoles: ["admin", "cliente", "clientePJ"] },
     { path: "/paginaControleDependentes", icon: "bi-people-fill", text: "Controle de Dependentes", allowedRoles: ["admin", "clientePJ", "cliente"] },
     { path: "/paginaControlePagamento", icon: "bi-credit-card", text: "Controle de Pagamento", allowedRoles: ["admin", "gerente", "cliente"] },
     { path: "/paginaCancelamento", icon: "bi-x-circle", text: "Cancelamento", allowedRoles: ["admin", "gerente", "cliente"] },

@@ -23,6 +23,9 @@ export interface User {
   tip_pagamento?: string;
   imagem_empresa?: string;
   cobrancas?: Cobranca[];
+  dsc_link_pagamento?: string;
+  ind_status_pagamento?: string;
+  tip_status_pagamento?: string;
 }
 
 interface AuthContextType {

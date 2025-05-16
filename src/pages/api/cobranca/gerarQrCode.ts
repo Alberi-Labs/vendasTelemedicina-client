@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 access_token: '$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjNkOWVhOGQ5LWNlNDEtNDViNC1iZTA1LTRjYTI0MGRkNTdiMzo6JGFhY2hfMjU5NzVmNjQtYTE5OS00MjA2LThlYzQtZjJjZGZjOGVjNmUz'
             },
             body: JSON.stringify(body)
-        });
+        });-
         const data = await response.json();
         console.log(data);
         if (!response.ok) {

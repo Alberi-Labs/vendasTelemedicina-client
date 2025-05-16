@@ -259,7 +259,7 @@ export default function Sidebar() {
                 }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaApolice" ? "#b5cd00" : "transparent")}>
-                  <i className="bi-download me-2"></i>Baixar Apólice
+                  <i className="bi-download me-2"></i>Baixar Apólice/Guia Explicativo
                 </Nav.Link>
               )}
 

@@ -15,13 +15,12 @@ export default function PaginaControlePagamento() {
   const [pagamentosPassados, setPagamentosPassados] = useState<Pagamento[]>([]);
   const [pagamentosFuturos, setPagamentosFuturos] = useState<Pagamento[]>([]);
   const { user } = useAuth(); 
-  
+  console.log(user);
   useEffect(() => {
     if (!user) return;
-
+  
     const cobrancas = user.cobrancas || [];
-
-    // Organiza os pagamentos passados
+  
     const pagos: Pagamento[] = cobrancas
       .filter((cob) => cob.ind_status_pagamento === "RECEIVED")
       .map((cob) => ({
@@ -31,8 +30,17 @@ export default function PaginaControlePagamento() {
         situacao: "Pago",
         link: cob.dsc_link_pagamento,
       }));
-
-    // Organiza os pagamentos futuros
+  
+    if (user.ind_status_pagamento === "RECEIVED" && user.data_contrato_vigencia_inicio) {
+      pagos.unshift({
+        id: "contrato-inicial",
+        data: user.data_contrato_vigencia_inicio,
+        valor: "R$ 39,90",
+        situacao: "Pago",
+        link: user.dsc_link_pagamento,
+      });
+    }
+  
     const futuros: Pagamento[] = cobrancas
       .filter((cob) => cob.ind_status_pagamento === "PENDING")
       .map((cob) => ({
@@ -42,10 +50,11 @@ export default function PaginaControlePagamento() {
         situacao: "Pendente",
         link: cob.dsc_link_pagamento,
       }));
-
+  
     setPagamentosPassados(pagos);
     setPagamentosFuturos(futuros);
   }, [user]);
+  
 
   const renderBadge = (situacao: Pagamento["situacao"]) => {
     const map = {
@@ -64,7 +73,7 @@ export default function PaginaControlePagamento() {
   const handleGerarBoleto = (id: string) => {
     alert(`🧾 Boleto gerado para o pagamento #${id}`);
   };
-
+  
   return (
     <div className="container py-5">
       <motion.h2
