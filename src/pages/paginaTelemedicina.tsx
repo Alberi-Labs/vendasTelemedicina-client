@@ -158,6 +158,19 @@ export default function Consulta() {
     return `${dia}/${mes}/${ano}`;
   };
   
+  const formatarDataNascimento = (data: string | undefined): string => {
+    if (!data) return "—";
+  
+    if (data.includes("/")) return data;
+  
+    if (data.includes("-")) {
+      const [ano, mes, dia] = data.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+  
+    return "Formato inválido";
+  };
+  
 
   return (
     <div className="container-fluid d-flex align-items-center justify-content-center vh-100 px-3">
@@ -193,7 +206,7 @@ export default function Consulta() {
                       { label: "Email", value: clienteSelecionado.email },
                       {
                         label: "Data de Nascimento",
-                        value: user?.dt_nascimento || formatarDataBR(clienteSelecionado?.data_nascimento) || "",
+                        value: formatarDataNascimento(user?.dt_nascimento) || formatarDataNascimento(clienteSelecionado?.data_nascimento) || "",
                       }                      
                     ].map((field, index) => (
                       <div key={index} className="mb-3">

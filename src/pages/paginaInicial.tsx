@@ -41,7 +41,7 @@ export default function PaginaInicial() {
     { path: "/paginaGestaoUsuarios", icon: "bi-person-gear", text: "Gestão de Usuários", allowedRoles: ["admin"] },
     { path: "/paginaDashboardFinanceiro", icon: "bi-bar-chart-line", text: "Dashboard Financeiro", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoEmpresas", icon: "bi-buildings", text: "Pagina Gestão de Empresas", allowedRoles: ["admin"] },
-    { href: "https://wa.me/5561998565628", icon: "bi-question-circle", text: "Suporte e Ajuda", allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"] },
+    { href: "https://wa.me/5561996364787", icon: "bi-question-circle", text: "Suporte e Ajuda", allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"] },
   ];
 
   const visibleCards = cards.filter(card => card.allowedRoles.includes(user?.role || ""));
@@ -95,8 +95,8 @@ export default function PaginaInicial() {
                 </li>
                 <li>
                   <strong>Suporte ao cliente:</strong>{" "}
-                  <a href="https://wa.me/5561998565628" target="_blank" rel="noreferrer">
-                    (61) 99856-5628
+                  <a href="https://wa.me/5561996364787" target="_blank" rel="noreferrer">
+                    (61) 99636-4787
                   </a>{" "}
                   — disponível via WhatsApp ou ligação.
                 </li>

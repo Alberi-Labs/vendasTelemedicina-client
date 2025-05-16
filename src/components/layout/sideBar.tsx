@@ -327,7 +327,7 @@ export default function Sidebar() {
               {canAccess.suporte && (
                 <Nav.Link
                   as="a"
-                  href="https://wa.me/5561998565628"
+                  href="https://wa.me/5561996364787"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{

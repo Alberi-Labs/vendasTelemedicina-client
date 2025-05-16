@@ -19,36 +19,22 @@ export default function PaginaApolice() {
     setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    const fetchApolice = async () => {
-      if (user?.cpf) {
-        try {
-          const res = await fetch(`/api/apolices/consultarApolice?cpf=${user.cpf}`);
-          const data = await res.json();
-          if (res.ok) {
-            setApolices(data.apolices);
-          } else {
-            console.warn("Apólice não encontrada:", data.message);
-            setShowAviso(true);
-          }
-        } catch (error) {
-          console.error("Erro ao buscar apólice:", error);
-          setShowAviso(true); 
-        }
-      }
-    };
-
-    fetchApolice();
-  }, [user?.cpf]);
-
-
   const calcularIdade = (dataNascimento: string | undefined): number => {
-    console.log(dataNascimento);
     if (!dataNascimento) return 0;
   
-    const [dia, mes, ano] = dataNascimento.split("/").map(Number);
+    let nascimento: Date;
   
-    const nascimento = new Date(ano, mes - 1, dia); 
+    if (dataNascimento.includes("/")) {
+      // Formato: dd/mm/yyyy
+      const [dia, mes, ano] = dataNascimento.split("/").map(Number);
+      nascimento = new Date(ano, mes - 1, dia);
+    } else if (dataNascimento.includes("-")) {
+      // Formato: yyyy-mm-dd
+      nascimento = new Date(dataNascimento);
+    } else {
+      console.warn("Formato de data inválido:", dataNascimento);
+      return 0;
+    }
   
     const hoje = new Date();
     let idade = hoje.getFullYear() - nascimento.getFullYear();
@@ -63,6 +49,19 @@ export default function PaginaApolice() {
     }
   
     return idade;
+  };
+  
+  const formatarDataNascimento = (data: string | undefined): string => {
+    if (!data) return "—";
+  
+    if (data.includes("/")) return data;
+  
+    if (data.includes("-")) {
+      const [ano, mes, dia] = data.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+  
+    return "Formato inválido";
   };
   
 
@@ -110,7 +109,6 @@ export default function PaginaApolice() {
     }
   };
   
-
   return (
     <div className="container py-5">
       <motion.h1
@@ -143,7 +141,7 @@ export default function PaginaApolice() {
               <ul className="list-unstyled">
                 <li><strong>Nome:</strong> {user?.nome}</li>
                 <li><strong>CPF:</strong> {user?.cpf}</li>
-                <li><strong>Data de nascimento:</strong> {user?.dt_nascimento}</li>
+                <li><strong>Data de nascimento:</strong> {formatarDataNascimento(user?.dt_nascimento)}</li>
                 <li><strong>Idade:</strong> {calcularIdade(user?.dt_nascimento)}</li>
               </ul>
             </div>

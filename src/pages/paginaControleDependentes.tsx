@@ -12,7 +12,7 @@ interface Dependente {
 
 export default function PaginaControleDependentes() {
   const [dependentes, setDependentes] = useState<Dependente[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [erroBusca, setErroBusca] = useState<string | null>(null);
   const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
@@ -130,9 +130,9 @@ export default function PaginaControleDependentes() {
     setDependentes((prev) => prev?.filter((d) => d.id !== id) || []);
   };
 
-  useEffect(() => {
-    buscarDependentesDoServidor();
-  }, []);
+  // useEffect(() => {
+  //   buscarDependentesDoServidor();
+  // }, []);
 
   return (
     <div className="container py-5">

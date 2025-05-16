@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 export default function FooterBar() {
   return (
     <a
-      href="https://wa.me/5561998565628"
+      href="https://wa.me/5561996364787"
       target="_blank"
       rel="noopener noreferrer"
     >
