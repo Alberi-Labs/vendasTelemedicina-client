@@ -83,7 +83,7 @@ export default function PaginaApolice() {
       numsorteio: "0",
       numapolice: user.num_contrato_retorno_apolice,
       dataemissao: new Date().toLocaleDateString("pt-BR"),
-      premiomensal: "R$29,90",
+      valorplano: "R$29,90",
     };
    
     try {

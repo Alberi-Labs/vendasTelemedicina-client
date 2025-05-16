@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         console.log("Iniciando navegador...");
         const browser = await puppeteer.launch({
-            slowMo: 15,
+            slowMo: 5,
             headless: true,
             args: [
               "--no-sandbox",
@@ -162,18 +162,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         console.log("Aguardando antes de enviar pagamento...");
-        await new Promise((resolve) => setTimeout(resolve, 4000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
         console.log("Clicando no botão de pagamento...");
         await newPage.waitForSelector('#btn_pagamento:not([disabled])', { visible: true });
         await newPage.click('#btn_pagamento');
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
         console.log("Capturando link de pagamento...");
         let pagamentoLink = "";
 
         try {
-            await newPage.waitForSelector('.lockscreen-wrapper .text-center a[href]', { timeout: 5000 });
+            await newPage.waitForSelector('.lockscreen-wrapper .text-center a[href]', { timeout: 3000 });
 
             pagamentoLink = await newPage.$eval('.lockscreen-wrapper .text-center a[href]', (a) => {
                 return (a as HTMLAnchorElement).href;
