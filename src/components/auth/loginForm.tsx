@@ -23,7 +23,7 @@ export default function LoginForm() {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
-    console.log(nomeNormalizado)
+    console.log("nome",nomeNormalizado)
 
     if (nomeNormalizado.includes("vita")) return "/uploads/vita.png";
     if (nomeNormalizado.includes("clinica abc")) return "/uploads/clinicaabc.png";

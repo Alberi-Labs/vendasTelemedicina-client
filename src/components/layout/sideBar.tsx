@@ -18,7 +18,6 @@ export default function Sidebar() {
   const [empresaImagem, setEmpresaImagem] = useState<string | null>(null);
   const { user } = useAuth();
 
-  console.log("user", user);
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const empresaNome = user?.dsc_instituicao ?? null;
