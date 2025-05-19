@@ -22,7 +22,7 @@ export default function Sidebar() {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const empresaNome = user?.dsc_instituicao ?? null;
-    const empresaImagem = user?.imagem_empresa || localStorage.getItem("imagem_empresa") || "/Default.jpg";
+    const empresaImagem = user?.imagem_empresa || localStorage.getItem("imagem_empresa") || "/default.jpg";
 
     try {
       if (storedUser) {
