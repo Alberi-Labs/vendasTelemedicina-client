@@ -18,7 +18,7 @@ export default function Sidebar() {
   const [empresaImagem, setEmpresaImagem] = useState<string | null>(null);
   const { user } = useAuth();
 
-
+  console.log("user", user);
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const empresaNome = user?.dsc_instituicao ?? null;
@@ -27,7 +27,6 @@ export default function Sidebar() {
     try {
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        console.log(parsedUser)
         if (parsedUser?.nome && parsedUser?.role) {
           setUserName(parsedUser.nome);
           setUserRole(parsedUser.role);
@@ -43,11 +42,6 @@ export default function Sidebar() {
     }
   }, []);
 
-
-  console.log("userName:", userName);
-  console.log("userRole:", userRole);
-
-
   const handleMenuClick = () => {
     setMenuOpen(false);
     setTimeout(() => {
@@ -61,7 +55,6 @@ export default function Sidebar() {
     }
     setMenuOpen(!menuOpen);
   };
-  console.log(userRole)
   const canAccess = {
     vendas: userRole === "admin" || userRole === "vendedor",
     relatorios: userRole === "admin",
@@ -75,6 +68,7 @@ export default function Sidebar() {
     gestaoDependentes: userRole === "admin" || userRole === "cliente" || userRole === "clientePJ",
     suporte: true,
   };
+
 
   return (
     <>

@@ -26,11 +26,11 @@ export default function PaginaInicial() {
       setLoading(false);
     }
   };
-  console.log(user)
+  
   const cards = [
-    { path: "/paginaCadastroPf", icon: "bi-person", text: "Venda Individual", allowedRoles: ["admin", "vendedor", "gerente"] },
+    { path: "/paginaCadastroPf", icon: "bi-person", text: "Venda de Consulta", allowedRoles: ["admin", "vendedor", "gerente"] },
     { path: "/paginaVendaPj", icon: "bi-briefcase", text: "Venda Empresarial", allowedRoles: ["admin", "vendedor", "gerente"] },
-    { path: "/paginaVendaPf", icon: "bi-cash-coin", text: "Pagina Venda Plano Telemedicina", allowedRoles: ["admin", "vendedor", "gerente"] },
+    { path: "/paginaVendaPf", icon: "bi-cash-coin", text: "Venda Plano Telemedicina", allowedRoles: ["admin", "vendedor", "gerente"] },
     { path: "/paginaRelatorioVendas", icon: "bi-file-earmark-bar-graph", text: "Relatório de Vendas", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoClientes", icon: "bi-people", text: "Gestão de Clientes", allowedRoles: ["admin", "vendedor",  "gerente"] },
     { path: "/paginaTelemedicina", icon: "bi-clipboard-heart", text: "Consultar com médico online", allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"] },

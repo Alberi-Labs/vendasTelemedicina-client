@@ -32,7 +32,6 @@ export default function Consulta() {
       try {
         const res = await fetch("/api/usuario/buscarUsuario");
         const data = await res.json();
-        console.log(data);
   
         if (data.success) {
           let clientesFiltrados = data.usuarios || [];
@@ -82,7 +81,6 @@ export default function Consulta() {
     if (!user) return;
   
     if (user?.role === "cliente" || user?.role === "clientePJ"  && user?.saude_cor) {
-      console.log(user);
       const clienteFake: Cliente = {
         id: user.id as number,
         nome: user.nome,
@@ -110,8 +108,6 @@ export default function Consulta() {
   
 
   const preencherDados = (cliente: Cliente) => {
-    console.log(cliente)
-
     setDados({
       nome: cliente.nome,
       cpf: cliente.cpf,
@@ -126,7 +122,6 @@ export default function Consulta() {
     setClienteSelecionado(selectedOption);
     if (selectedOption) preencherDados(selectedOption);
   };
-  console.log(clienteSelecionado)
 
   const handleSubmit = () => {
     if (!clienteSelecionado) {
@@ -146,16 +141,6 @@ export default function Consulta() {
     const cpfLimpo = clienteSelecionado.cpf.replace(/\D/g, "");
     const url = `https://patient.docway.com.br/appointment/SulamericaVida/create?cartao=${cpfLimpo}`;
         router.push(url);
-  };
-
-  const formatarDataBR = (dataISO: string | undefined) => {
-    console.log(dataISO)
-    if (!dataISO) return "";  // Se a data não for fornecida, retorna uma string vazia
-  
-    const [ano, mes, dia] = dataISO.split("-");  // Divide a data no formato ISO (YYYY-MM-DD)
-    
-    // Retorna no formato DD/MM/YYYY
-    return `${dia}/${mes}/${ano}`;
   };
   
   const formatarDataNascimento = (data: string | undefined): string => {

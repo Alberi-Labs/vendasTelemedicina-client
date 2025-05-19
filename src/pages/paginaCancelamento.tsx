@@ -24,6 +24,19 @@ const PaginaCancelamento: React.FC = () => {
         alert("❌ Benefícios cancelados com sucesso!");
     };
 
+      
+  const formatarDataNascimento = (data: string | undefined): string => {
+    if (!data) return "—";
+  
+    if (data.includes("/")) return data;
+  
+    if (data.includes("-")) {
+      const [ano, mes, dia] = data.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+  
+    return "Formato inválido";
+  };
     return (
         <div className="container py-5">
             <motion.h1
@@ -52,7 +65,7 @@ const PaginaCancelamento: React.FC = () => {
                             <ul className="list-unstyled">
                                 <li><strong>Nome:</strong> {user.nome}</li>
                                 <li><strong>CPF:</strong> {user.cpf}</li>
-                                <li><strong>Data de Nascimento:</strong> {user.dt_nascimento}</li>
+                                <li><strong>Data de Nascimento:</strong> {formatarDataNascimento(user.dt_nascimento)}</li>
                             </ul>
 
                             <h5 className="fw-semibold mt-4">🚫 Benefícios que serão cancelados</h5>

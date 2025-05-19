@@ -152,7 +152,6 @@ export default function CadastroPf() {
 
                 idUsuario = await response.json();
 
-                console.log("Usuário cadastrado com ID:", idUsuario);
             } catch (error) {
                 console.error('Erro ao enviar os dados para /api/saudeECorCadastroPF:', error);
                 return;

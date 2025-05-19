@@ -15,7 +15,6 @@ export default function PaginaControlePagamento() {
   const [pagamentosPassados, setPagamentosPassados] = useState<Pagamento[]>([]);
   const [pagamentosFuturos, setPagamentosFuturos] = useState<Pagamento[]>([]);
   const { user } = useAuth(); 
-  console.log(user);
   useEffect(() => {
     if (!user) return;
   

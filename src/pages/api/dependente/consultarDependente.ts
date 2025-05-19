@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log("🆔 CPF Formatado:", cpfFormatado);
     console.log("📅 Data Formatada:", dataFormatada);
 
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
     await page.goto("https://sulamericavida.docway.com.br/", { waitUntil: "networkidle2" });
@@ -55,7 +55,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await page.waitForSelector("#btn-cadastrar", { visible: true });
     await page.click("#btn-cadastrar");
 
-    await page.waitForSelector("#resumoDependente", { visible: true });
+    // Verifica se existe a seção de dependentes
+    const existeResumo = await page.$("#resumoDependente");
+
+    if (!existeResumo) {
+      await browser.close();
+      return res.status(200).json({
+        success: false,
+        message: "Nenhum dependente encontrado!",
+        dependentes: [],
+      });
+    }
 
     const dependentesRaw = await page.$eval("#resumoDependente", el => el.textContent || "");
 
@@ -67,16 +77,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return { nome, cpf, nascimento };
       });
 
-    console.log("📋 Dependentes extraídos:");
-    console.log(dependentesFormatados);
+    console.log("📋 Dependentes extraídos:", dependentesFormatados);
 
     await browser.close();
+
+    if (dependentesFormatados.length === 0) {
+      return res.status(200).json({
+        success: false,
+        message: "Nenhum dependente encontrado!",
+        dependentes: [],
+      });
+    }
 
     return res.status(200).json({
       success: true,
       message: "Dependente cadastrado com sucesso!",
       dependentes: dependentesFormatados,
     });
+
   } catch (error) {
     console.error("🚨 Erro:", error);
     const errorMessage = error instanceof Error ? error.message : "Erro desconhecido.";

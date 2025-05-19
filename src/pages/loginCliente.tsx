@@ -7,9 +7,11 @@ import Loading from "@/components/loading/loading";
 export default function LoginForm() {
     const router = useRouter();
     const { login } = useAuth();
-  
+    const currentDomain = window.location.hostname;
+    console.log("Current domain:", currentDomain);
+    
     const [cpf, setCpf] = useState("");
-    const [dataNascimento, setDataNascimento] = useState(""); // Data de nascimento
+    const [dataNascimento, setDataNascimento] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -66,7 +68,6 @@ export default function LoginForm() {
         });
   
         const data = await res.json();
-        console.log(data);
         if (!res.ok) throw new Error(data.error);
   
         if (data.usuario?.empresa) {

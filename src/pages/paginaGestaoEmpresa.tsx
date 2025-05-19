@@ -68,7 +68,6 @@ export default function PaginaGestaoEmpresa() {
     }
   };
 
-  console.log("Empresas:", empresas); // Log para verificar os dados retornados
   const handleClose = () => {
     setShowModal(false);
     setEditing(null);

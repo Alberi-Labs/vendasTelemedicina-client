@@ -138,8 +138,6 @@ export default function PaginaCadastroPf() {
       [name]: value,
     }));
 
-    console.log("Novo formData:", { ...formData, [name]: value });
-
     // Se o CPF for digitado completamente, dispara a verificação no banco
     if (name === "cpf" && limparCpf(value).length === 11) {
       verificarCpf(value);
@@ -165,7 +163,6 @@ export default function PaginaCadastroPf() {
 
       if (response.ok && data.clientes.length > 0) {
         setClienteExiste(true);
-        console.log(data.clientes[0].data_nascimento)
         setFormData({
           ...data.clientes[0],
           cpf: formatCpf(data.clientes[0].cpf),
@@ -204,7 +201,6 @@ export default function PaginaCadastroPf() {
   };
   const cadastrarCliente = async () => {
     try {
-      console.log(formData);
       const response = await fetch(`/api/cliente/cadastrar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
