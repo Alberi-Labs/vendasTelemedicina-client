@@ -63,12 +63,12 @@ export default function LoginForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      let nomeEmpresa = "";
+      let nomeInstituicao = "";
 
-      if (data.usuario?.empresa) {
-        nomeEmpresa = data.usuario.empresa.nomeEmpresa;
-        localStorage.setItem("nome_empresa", nomeEmpresa);
-        localStorage.setItem("imagem_empresa", data.usuario.empresa.imagem_perfil);
+      if (data.usuario?.instituicao) {
+        nomeInstituicao = data.usuario.instituicao.nomeInstituicao;
+        localStorage.setItem("nome_empresa", nomeInstituicao);
+        localStorage.setItem("imagem_empresa", data.usuario.instituicao.imagem_perfil);
       }
 
       if (tipoLogin === "cliente") {
@@ -82,7 +82,7 @@ export default function LoginForm() {
 
         if (!clienteRaw) throw new Error("Cliente não encontrado na resposta da API.");
 
-        nomeEmpresa = clienteRaw.dsc_instituicao;
+        nomeInstituicao = clienteRaw.dsc_instituicao;
         localStorage.setItem("cliente", JSON.stringify(clienteRaw));
 
         const clienteData: User = {
@@ -110,8 +110,8 @@ export default function LoginForm() {
         login(clienteData, true);
       }
 
-      if (nomeEmpresa) {
-        const imagem = mapearImagemEmpresa(nomeEmpresa);
+      if (nomeInstituicao) {
+        const imagem = mapearImagemEmpresa(nomeInstituicao);
         setImagemEmpresa(imagem);
         localStorage.setItem("imagem_empresa", imagem || "")
       }
@@ -137,7 +137,7 @@ export default function LoginForm() {
             <div className="mb-3 text-center">
               <Image
                 src={imagemEmpresa}
-                alt="Logo da empresa"
+                alt="Logo da instituicao"
                 width={180}
                 height={80}
                 onError={() => setImagemEmpresa(null)}

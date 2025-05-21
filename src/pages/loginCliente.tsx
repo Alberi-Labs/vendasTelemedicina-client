@@ -14,6 +14,20 @@ export default function LoginForm() {
 
   console.log("Current domain:", currentDomain);
 
+  const mapearImagemEmpresa = (nome: string): string | null => {
+    const nomeNormalizado = nome
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    console.log("nome",nomeNormalizado)
+
+    if (nomeNormalizado.includes("vita")) return "/uploads/vita.png";
+    if (nomeNormalizado.includes("clinica abc")) return "/uploads/clinicaabc.png";
+    if (nomeNormalizado.includes("medic center")) return "/uploads/mediccenter.png";
+
+    return null; // fallback se não encontrar
+  };
+
   const [cpf, setCpf] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
   const [error, setError] = useState("");
@@ -74,9 +88,10 @@ export default function LoginForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      if (data.usuario?.empresa) {
-        localStorage.setItem("nome_empresa", data.usuario.empresa.nomeEmpresa);
-        localStorage.setItem("imagem_empresa", data.usuario.empresa.imagem_perfil);
+      if (data.usuario?.instituicao) {
+        localStorage.setItem("nome_empresa", data.usuario.instituicao.nomeInstituicao);
+        const imagem = mapearImagemEmpresa(data.usuario.instituicao.nomeInstituicao);
+        localStorage.setItem("imagem_empresa", imagem || "")
       }
 
       const clienteRaw = data.find((c: any) =>

@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-      const { idEmpresa, nomeEmpresa, email, ativo, valor_plano } = fields;
+      const { idInstituicao, nomeInstituicao, email, ativo, valor_plano } = fields;
 
       let imagemPath = null;
       if (files.imagem_perfil) {
@@ -44,35 +44,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       await pool.query(
-        `UPDATE tb_empresas SET 
-          nomeEmpresa = ?, 
+        `UPDATE tb_instituicao SET 
+          nomeInstituicao = ?, 
           email = ?, 
           ativo = ?, 
           valor_plano = ?
           ${imagemPath ? ", imagem_perfil = ?" : ""}
-          WHERE idEmpresa = ?`,
+          WHERE idInstituicao = ?`,
         imagemPath
           ? [
-              (nomeEmpresa as string[])[0],
+              (nomeInstituicao as string[])[0],
               (email as string[])[0],
               String((ativo as string[])[0]) === "true",
               parseFloat((valor_plano as string[])[0]),
               imagemPath,
-              (idEmpresa as string[])[0],
+              (idInstituicao as string[])[0],
             ]
           : [
-              (nomeEmpresa as string[])[0],
+              (nomeInstituicao as string[])[0],
               (email as string[])[0],
               String((ativo as string[])[0]) === "true",
               parseFloat((valor_plano as string[])[0]),
-              (idEmpresa as string[])[0],
+              (idInstituicao as string[])[0],
             ]
       );
 
-      return res.status(200).json({ success: true, message: "Empresa atualizada com sucesso" });
+      return res.status(200).json({ success: true, message: "Instituicao atualizada com sucesso" });
     } catch (error) {
-      console.error("Erro ao atualizar empresa:", error);
-      return res.status(500).json({ success: false, message: "Erro ao atualizar empresa" });
+      console.error("Erro ao atualizar instituicao:", error);
+      return res.status(500).json({ success: false, message: "Erro ao atualizar instituicao" });
     }
   });
 }

@@ -3,14 +3,14 @@ import { Button, Modal, Form, Table } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { Usuario } from "./api/usuario/buscarUsuario";
 
-type Empresa = {
-  idEmpresa: number;
-  nomeEmpresa: string;
+type Instituicao = {
+  idInstituicao: number;
+  nomeInstituicao: string;
 };
 
 export default function PaginaGestaoUsuario() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [instituicoes, setInstituicoes] = useState<Instituicao[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Usuario | null>(null);
   const [formData, setFormData] = useState({
@@ -18,12 +18,12 @@ export default function PaginaGestaoUsuario() {
     email: "",
     cpf: "",
     role: "",
-    id_empresa: "",
+    id_instituicao: "",
   });
 
   useEffect(() => {
     fetchUsuarios();
-    fetchEmpresas();
+    fetchInstituicoes();
   }, []);
 
   const fetchUsuarios = async () => {
@@ -36,22 +36,22 @@ export default function PaginaGestaoUsuario() {
         email: u.email,
         cpf: u.cpf,
         perfil: u.perfil,
-        id_empresa: u.id_empresa,
+        id_instituicao: u.id_instituicao,
       }));
       setUsuarios(adaptado);
     }
   };
 
-  const fetchEmpresas = async () => {
-    const res = await fetch("/api/empresas/buscarEmpresa");
+  const fetchInstituicoes = async () => {
+    const res = await fetch("/api/instituicoes/buscarInstituicao");
     const data = await res.json();
-    if (data.success) setEmpresas(data.empresas);
+    if (data.success) setInstituicoes(data.instituicoes);
   };
 
   const handleClose = () => {
     setShowModal(false);
     setEditing(null);
-    setFormData({ nome: "", email: "", cpf: "", role: "", id_empresa: "" });
+    setFormData({ nome: "", email: "", cpf: "", role: "", id_instituicao: "" });
   };
 
   const handleShow = (usuario?: Usuario) => {
@@ -62,10 +62,10 @@ export default function PaginaGestaoUsuario() {
         email: usuario.email,
         cpf: usuario.cpf,
         role: usuario.perfil.toLowerCase(),
-        id_empresa: usuario.id_empresa?.toString() ?? "",
+        id_instituicao: usuario.id_instituicao?.toString() ?? "",
       });
     } else {
-      setFormData({ nome: "", email: "", cpf: "", role: "", id_empresa: "" });
+      setFormData({ nome: "", email: "", cpf: "", role: "", id_instituicao: "" });
     }
     setShowModal(true);
   };
@@ -80,7 +80,7 @@ export default function PaginaGestaoUsuario() {
       cpf: formData.cpf,
       creditos: 0,
       data_nascimento: null,
-      id_empresa: parseInt(formData.id_empresa),
+      id_instituicao: parseInt(formData.id_instituicao),
     };
 
     const isEditando = !!editing;
@@ -136,13 +136,13 @@ export default function PaginaGestaoUsuario() {
             <th>Email</th>
             <th>Cpf</th>
             <th>Função</th>
-            <th>Empresa</th> {/* NOVO */}
+            <th>Instituicao</th> {/* NOVO */}
             <th>Ações</th>
           </tr>
         </thead>
         <tbody>
           {usuarios.map((user) => {
-            const empresaDoUsuario = empresas.find((e) => e.idEmpresa === user.id_empresa);
+            const empresaDoUsuario = instituicoes.find((e) => e.idInstituicao === user.id_instituicao);
 
             return (
               <tr key={user.id}>
@@ -150,7 +150,7 @@ export default function PaginaGestaoUsuario() {
                 <td>{user.email}</td>
                 <td>{user.cpf}</td>
                 <td>{user.perfil}</td>
-                <td>{empresaDoUsuario?.nomeEmpresa || "Não vinculada"}</td> {/* NOVO */}
+                <td>{empresaDoUsuario?.nomeInstituicao || "Não vinculada"}</td> {/* NOVO */}
                 <td>
                   <Button size="sm" variant="outline-primary" onClick={() => handleShow(user)}>
                     <i className="bi bi-pencil"></i>
@@ -225,15 +225,15 @@ export default function PaginaGestaoUsuario() {
             </Form.Group>
 
             <Form.Group>
-              <Form.Label>Empresa</Form.Label>
+              <Form.Label>Instituicao</Form.Label>
               <Form.Select
-                value={formData.id_empresa}
-                onChange={(e) => setFormData({ ...formData, id_empresa: e.target.value })}
+                value={formData.id_instituicao}
+                onChange={(e) => setFormData({ ...formData, id_instituicao: e.target.value })}
               >
-                <option value="">Selecione a empresa</option>
-                {empresas.map((empresa) => (
-                  <option key={empresa.idEmpresa} value={empresa.idEmpresa}>
-                    {empresa.nomeEmpresa}
+                <option value="">Selecione a instituicao</option>
+                {instituicoes.map((instituicao) => (
+                  <option key={instituicao.idInstituicao} value={instituicao.idInstituicao}>
+                    {instituicao.nomeInstituicao}
                   </option>
                 ))}
               </Form.Select>

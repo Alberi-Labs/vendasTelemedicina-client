@@ -7,11 +7,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const [rows]: any = await pool.query("SELECT idEmpresa, nomeEmpresa FROM tb_empresa ORDER BY nomeEmpresa ASC");
+    const [rows]: any = await pool.query("SELECT idInstituicao, nomeInstituicao FROM tb_instituicao ORDER BY nomeInstituicao ASC");
 
     return res.status(200).json(rows);
   } catch (error) {
-    console.error("Erro ao buscar empresas:", error);
-    return res.status(500).json({ error: "Erro ao buscar empresas" });
+    console.error("Erro ao buscar instituicoes:", error);
+    return res.status(500).json({ error: "Erro ao buscar instituicoes" });
   }
 }

@@ -3,14 +3,14 @@ import { jwtDecode } from "jwt-decode";
 import { Cobranca } from "@/types/dadosSaudeECor";
 
 export interface User {
-  dsc_email: string | undefined;
+  dsc_email?: string | undefined;
   id?: number;
   nome: string;
   role: string;
-  id_empresa?: number;
+  id_instituicao?: number;
   cpf?: string;
   telefone?: string;
-  num_celular: string | undefined;
+  num_celular?: string | undefined;
   email?: string;
   saude_cor?: boolean;
   dt_nascimento?: string;
@@ -26,6 +26,8 @@ export interface User {
   dsc_link_pagamento?: string;
   ind_status_pagamento?: string;
   tip_status_pagamento?: string;
+  login_sistema?: string;
+  senha_sistema?: string;
 }
 
 interface AuthContextType {
@@ -60,16 +62,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (tokenOrUserData: string | User, isCliente: boolean = false) => {
     try {
-      if (isCliente && typeof tokenOrUserData !== "string") {
+      if (typeof tokenOrUserData !== "string") {
         localStorage.setItem("user", JSON.stringify(tokenOrUserData));
         setUser(tokenOrUserData);
-      } else if (!isCliente && typeof tokenOrUserData === "string") {
+      } else {
         localStorage.setItem("token", tokenOrUserData);
         const decodedUser = jwtDecode<User>(tokenOrUserData);
         localStorage.setItem("user", JSON.stringify(decodedUser));
         setUser(decodedUser);
-      } else {
-        throw new Error("Formato de login inválido.");
       }
     } catch (error) {
       console.error("Erro ao salvar usuário:", error);

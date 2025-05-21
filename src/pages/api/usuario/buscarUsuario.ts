@@ -13,7 +13,7 @@ export interface Usuario {
   cpf: string;
   creditos: number | null;
   data_nascimento: string | null;
-  id_empresa: number;
+  id_instituicao: number;
   criado_em: string;
   plano_telemedicina: boolean | number;
   cep: string | null;
@@ -68,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       cpf: u.cpf,
       creditos: u.creditos,
       data_nascimento: formatarDataParaBrasileiro(u.data_nascimento),
-      id_empresa: u.id_empresa,
+      id_instituicao: u.id_instituicao,
       criado_em: formatarDataParaBrasileiro(u.criado_em),
       plano_telemedicina: !!u.plano_telemedicina,
       cep: u.cep,

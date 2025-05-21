@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { useAuth } from "@/app/context/AuthContext";
+import { useAuth, User } from "@/app/context/AuthContext";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 import Loading from "@/components/loading/loading";
 
 export default function LoginForm() {
   const router = useRouter();
-  const { login } = useAuth(); // ✅ Usa o login do contexto
+  const { login } = useAuth();
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -26,8 +26,19 @@ export default function LoginForm() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      console.log("data", data);
+      const clienteData: User = {
+        id: data.usuario.id,
+        nome: data.usuario.nome,
+        role: data.usuario.role,
+        id_instituicao: data.usuario.id_instituicao,
+        login_sistema:data.usuario.login_sistema,
+        senha_sistema:data.usuario.senha_sistema,
+        dsc_instituicao: data.usuario.instituicao.nomeInstituicao,
+        imagem_empresa: data.usuario.instituicao.imagem_perfil,
+      }
 
-      login(data.token);
+      login(clienteData, false);
       setTimeout(() => {
         router.push("/paginaInicial");
       }, 100);

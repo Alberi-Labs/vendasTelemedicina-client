@@ -2,12 +2,14 @@ import pool from "@/lib/db";
 import { NextApiRequest, NextApiResponse } from "next";
 import puppeteer from "puppeteer";
 import bcrypt from "bcrypt";
+import { useAuth } from "@/app/context/AuthContext";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "POST") {
         return res.status(405).json({ error: "Método não permitido" });
     }
-
+      const { user } = useAuth(); 
+    
     try {
         const { email, cpf, celular, cep, endereco, uf, cidade, nome, sexo, dataNascimento } = req.body;
         const instituicao = "Fernando Card";
@@ -190,7 +192,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Inserir o usuário no banco
         const [usuarioResult]: any = await pool.query(
             `INSERT INTO tb_usuarios 
-    (nome, email, senha, telefone, perfil, imagem, cpf, creditos, data_nascimento, id_empresa, plano_telemedicina, cep, endereco, uf, cidade, sexo) 
+    (nome, email, senha, telefone, perfil, imagem, cpf, creditos, data_nascimento, id_instituicao, plano_telemedicina, cep, endereco, uf, cidade, sexo) 
    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 nome,

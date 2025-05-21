@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Button, Modal, Form, Table } from "react-bootstrap";
 import { motion } from "framer-motion";
 
-type Empresa = {
-  idEmpresa: number;
-  nomeEmpresa: string;
+type Instituicao = {
+  idInstituicao: number;
+  nomeInstituicao: string;
   nomeFantasia: string;
   email: string;
   cnpj: string;
@@ -20,12 +20,12 @@ type Empresa = {
 };
 
 export default function PaginaGestaoEmpresa() {
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [instituicoes, setInstituicoes] = useState<Instituicao[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<Empresa | null>(null);
+  const [editing, setEditing] = useState<Instituicao | null>(null);
   const [previewImagem, setPreviewImagem] = useState<string | null>(null);
   const [formData, setFormData] = useState<{
-    nomeEmpresa: string;
+    nomeInstituicao: string;
     nomeFantasia: string;
     email: string;
     cnpj: string;
@@ -38,7 +38,7 @@ export default function PaginaGestaoEmpresa() {
     valor_plano: number;
     imagem_perfil: File | null;
   }>({
-    nomeEmpresa: "",
+    nomeInstituicao: "",
     nomeFantasia: "",
     email: "",
     cnpj: "",
@@ -53,18 +53,18 @@ export default function PaginaGestaoEmpresa() {
   });
 
   useEffect(() => {
-    fetchEmpresas();
+    fetchInstituicoes();
   }, []);
 
-  const fetchEmpresas = async () => {
+  const fetchInstituicoes = async () => {
     try {
-      const res = await fetch("/api/empresas/buscarEmpresa");
+      const res = await fetch("/api/instituicoes/buscarEmpresa");
       const data = await res.json();
       if (data.success) {
-        setEmpresas(data.empresas);
+        setInstituicoes(data.instituicoes);
       }
     } catch (error) {
-      console.error("Erro ao buscar empresas:", error);
+      console.error("Erro ao buscar instituicoes:", error);
     }
   };
 
@@ -73,7 +73,7 @@ export default function PaginaGestaoEmpresa() {
     setEditing(null);
     setPreviewImagem(null);
     setFormData({
-      nomeEmpresa: "",
+      nomeInstituicao: "",
       nomeFantasia: "",
       email: "",
       cnpj: "",
@@ -88,24 +88,24 @@ export default function PaginaGestaoEmpresa() {
     });
   };
   
-  const handleShow = (empresa?: Empresa) => {
-    if (empresa) {
-      setEditing(empresa);
+  const handleShow = (instituicao?: Instituicao) => {
+    if (instituicao) {
+      setEditing(instituicao);
       setFormData({
-        nomeEmpresa: empresa.nomeEmpresa,
-        nomeFantasia: empresa.nomeFantasia,
-        email: empresa.email,
-        cnpj: empresa.cnpj,
-        celular: empresa.celular,
-        cep: empresa.cep,
-        endereco: empresa.endereco,
-        uf: empresa.uf,
-        cidade: empresa.cidade,
-        ativo: empresa.ativo ?? false,
-        valor_plano: empresa.valor_plano ?? 0,
+        nomeInstituicao: instituicao.nomeInstituicao,
+        nomeFantasia: instituicao.nomeFantasia,
+        email: instituicao.email,
+        cnpj: instituicao.cnpj,
+        celular: instituicao.celular,
+        cep: instituicao.cep,
+        endereco: instituicao.endereco,
+        uf: instituicao.uf,
+        cidade: instituicao.cidade,
+        ativo: instituicao.ativo ?? false,
+        valor_plano: instituicao.valor_plano ?? 0,
         imagem_perfil: null,
       });
-      setPreviewImagem(empresa.imagem_perfil ?? null);
+      setPreviewImagem(instituicao.imagem_perfil ?? null);
     } else {
       handleClose();
     }
@@ -115,7 +115,7 @@ export default function PaginaGestaoEmpresa() {
 
   const handleSave = async () => {
     const form = new FormData();
-    if (editing) form.append("idEmpresa", editing.idEmpresa.toString());
+    if (editing) form.append("idInstituicao", editing.idInstituicao.toString());
     Object.entries(formData).forEach(([key, value]) => {
       if (key === "imagem_perfil") {
         if (value instanceof File) form.append("imagem_perfil", value);
@@ -125,33 +125,33 @@ export default function PaginaGestaoEmpresa() {
     });
 
     try {
-        const res = await fetch(editing ? "/api/empresas/editarEmpresa" : "/api/empresas/criarEmpresa", {
+        const res = await fetch(editing ? "/api/instituicoes/editarEmpresa" : "/api/instituicoes/criarEmpresa", {
             method: editing ? "PUT" : "POST",
         body: form,
       });
 
       if (res.ok) {
-        fetchEmpresas();
+        fetchInstituicoes();
         handleClose();
       } else {
-        console.error("Erro ao salvar empresa");
+        console.error("Erro ao salvar instituicao");
       }
     } catch (error) {
       console.error("Erro ao salvar:", error);
     }
   };
 
-  const handleDelete = async (idEmpresa: number) => {
-    if (!confirm("Tem certeza que deseja excluir esta empresa?")) return;
+  const handleDelete = async (idInstituicao: number) => {
+    if (!confirm("Tem certeza que deseja excluir esta instituicao?")) return;
     try {
-      const res = await fetch(`/api/empresa/deletarEmpresa?id=${idEmpresa}`, {
+      const res = await fetch(`/api/instituicao/deletarEmpresa?id=${idInstituicao}`, {
         method: "DELETE",
       });
 
       if (res.ok) {
-        fetchEmpresas();
+        fetchInstituicoes();
       } else {
-        console.error("Erro ao deletar empresa");
+        console.error("Erro ao deletar instituicao");
       }
     } catch (error) {
       console.error("Erro ao deletar:", error);
@@ -171,7 +171,7 @@ export default function PaginaGestaoEmpresa() {
 
       <div className="mb-3 text-end">
         <Button variant="success" onClick={() => handleShow()}>
-          <i className="bi bi-building-add me-2"></i>Adicionar Empresa
+          <i className="bi bi-building-add me-2"></i>Adicionar Instituicao
         </Button>
       </div>
 
@@ -192,23 +192,23 @@ export default function PaginaGestaoEmpresa() {
             </tr>
           </thead>
           <tbody>
-            {empresas.map((empresa, index) => (
+            {instituicoes.map((instituicao, index) => (
               <motion.tr
-                key={empresa.idEmpresa}
+                key={instituicao.idInstituicao}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <td>{empresa.nomeEmpresa}</td>
-                <td>{empresa.email}</td>
-                <td>{empresa.ativo ? "Sim" : "Não"}</td>
+                <td>{instituicao.nomeInstituicao}</td>
+                <td>{instituicao.email}</td>
+                <td>{instituicao.ativo ? "Sim" : "Não"}</td>
                 <td>
-  R$ {empresa.valor_plano != null ? parseFloat(empresa.valor_plano as any).toFixed(2) : "0,00"}
+  R$ {instituicao.valor_plano != null ? parseFloat(instituicao.valor_plano as any).toFixed(2) : "0,00"}
 </td>
                 <td>
-                  {empresa.imagem_perfil ? (
+                  {instituicao.imagem_perfil ? (
                     <img
-                      src={empresa.imagem_perfil}
+                      src={instituicao.imagem_perfil}
                       alt="Logo"
                       width={40}
                       height={40}
@@ -222,14 +222,14 @@ export default function PaginaGestaoEmpresa() {
                     variant="outline-primary"
                     size="sm"
                     className="me-2"
-                    onClick={() => handleShow(empresa)}
+                    onClick={() => handleShow(instituicao)}
                   >
                     <i className="bi bi-pencil"></i>
                   </Button>
                   <Button
                     variant="outline-danger"
                     size="sm"
-                    onClick={() => handleDelete(empresa.idEmpresa)}
+                    onClick={() => handleDelete(instituicao.idInstituicao)}
                   >
                     <i className="bi bi-trash"></i>
                   </Button>
@@ -242,12 +242,12 @@ export default function PaginaGestaoEmpresa() {
 
       <Modal show={showModal} onHide={handleClose} centered>
         <Modal.Header closeButton>
-          <Modal.Title>{editing ? "Editar Empresa" : "Nova Empresa"}</Modal.Title>
+          <Modal.Title>{editing ? "Editar Instituicao" : "Nova Instituicao"}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
             {[
-              "nomeEmpresa", "nomeFantasia", "email", "cnpj", "celular",
+              "nomeInstituicao", "nomeFantasia", "email", "cnpj", "celular",
               "cep", "endereco", "uf", "cidade"
             ].map((field) => (
               <Form.Group className="mb-3" key={field}>
@@ -277,7 +277,7 @@ export default function PaginaGestaoEmpresa() {
             <Form.Group className="mb-3">
               <Form.Check
                 type="checkbox"
-                label="Empresa Ativa"
+                label="Instituicao Ativa"
                 checked={formData.ativo}
                 onChange={(e) =>
                   setFormData({ ...formData, ativo: e.target.checked })
@@ -317,7 +317,7 @@ export default function PaginaGestaoEmpresa() {
           <Button
             variant="primary"
             onClick={handleSave}
-            disabled={!formData.nomeEmpresa || !formData.email}
+            disabled={!formData.nomeInstituicao || !formData.email}
           >
             Salvar
           </Button>

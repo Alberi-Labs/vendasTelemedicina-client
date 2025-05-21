@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     cpf,
     creditos,
     data_nascimento,
-    id_empresa,
+    id_instituicao,
 
   } = req.body;
 
@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const senhaCriptografada = await bcrypt.hash(senhaFinal, 10);
     const roleFinal = role || "cliente";
     const [resultado] = await pool.query(
-      `INSERT INTO tb_usuarios (nome, email, senha, telefone, perfil, cpf, creditos, data_nascimento, criado_em, id_empresa)
+      `INSERT INTO tb_usuarios (nome, email, senha, telefone, perfil, cpf, creditos, data_nascimento, criado_em, id_instituicao)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
       [
         nome,
@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         cpf,
         creditos || 0,
         data_nascimento,
-        id_empresa || null,
+        id_instituicao || null,
       ]
     );
 

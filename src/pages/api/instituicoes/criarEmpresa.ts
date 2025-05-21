@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         : null;
 
       const {
-        nomeEmpresa,
+        nomeInstituicao,
         nomeFantasia,
         email,
         cnpj,
@@ -53,12 +53,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } = fields;
 
       await pool.query(
-        `INSERT INTO tb_empresas (
-          nomeEmpresa, nomeFantasia, email, cnpj, celular, cep,
+        `INSERT INTO tb_instituicao (
+          nomeInstituicao, nomeFantasia, email, cnpj, celular, cep,
           endereco, uf, cidade, ativo, valor_plano, imagem_perfil
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          getField(nomeEmpresa),
+          getField(nomeInstituicao),
           getField(nomeFantasia),
           getField(email),
           getField(cnpj),
@@ -73,10 +73,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ]
       );
 
-      return res.status(201).json({ success: true, message: "Empresa criada com sucesso" });
+      return res.status(201).json({ success: true, message: "Instituicao criada com sucesso" });
     } catch (error) {
-      console.error("Erro ao salvar empresa:", error);
-      return res.status(500).json({ success: false, message: "Erro ao salvar empresa" });
+      console.error("Erro ao salvar instituicao:", error);
+      return res.status(500).json({ success: false, message: "Erro ao salvar instituicao" });
     }
   });
 }

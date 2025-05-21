@@ -13,22 +13,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log("🔹 Recebendo requisição de login para CPF:", cpf);
 
-    // Busca o usuário com join na empresa
+    // Busca o usuário com join na instituicao
     const [usuarios]: any = await pool.query(
       `SELECT 
          u.idUsuario AS id, 
          u.nome, 
          u.senha, 
          u.perfil AS role, 
-         u.id_empresa, 
-         e.nomeEmpresa, 
+         u.id_instituicao, 
+         e.nomeInstituicao, 
          e.imagem_perfil 
        FROM tb_usuarios u
-       LEFT JOIN tb_empresas e ON u.id_empresa = e.idEmpresa
+       LEFT JOIN tb_instituicao e ON u.id_instituicao = e.idInstituicao
        WHERE u.cpf = ?`,
       [cpf]
     );
-
+    console.log(usuarios)
     if (usuarios.length === 0) {
       console.error("❌ Usuário não encontrado:", cpf);
       return res.status(401).json({ error: "Usuário não encontrado" });
@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const token = jwt.sign(
-      { id: user.id, nome: user.nome, role: user.role, id_empresa: user.id_empresa },
+      { id: user.id, nome: user.nome, role: user.role, id_instituicao: user.id_instituicao },
       process.env.JWT_SECRET as string,
       { expiresIn: "1d" }
     );
@@ -57,9 +57,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         id: user.id,
         nome: user.nome,
         role: user.role,
-        id_empresa: user.id_empresa,
-        empresa: {
-          nomeEmpresa: user.nomeEmpresa,
+        id_instituicao: user.id_instituicao,
+        instituicao: {
+          nomeInstituicao: user.nomeInstituicao,
           imagem_perfil: user.imagem_perfil,
         },
       },

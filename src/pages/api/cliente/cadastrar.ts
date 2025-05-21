@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { nome, cpf, telefone, email, data_nascimento } = req.body;
   console.log("🔹 Recebendo requisição de cadastro de cliente:", nome, telefone, email, data_nascimento);
 
-  const idEmpresaFixa = 1;
+  const idInstituicaoFixa = 1;
 
   if (!nome || !cpf || !telefone || !email) {
     return res.status(400).json({ error: "Todos os campos são obrigatórios." });
@@ -25,13 +25,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const idCliente = result.insertId;
 
     await pool.query(
-      "INSERT INTO tb_relacao_cliente_empresa (id_cliente, id_empresa) VALUES (?, ?)",
-      [idCliente, idEmpresaFixa]
+      "INSERT INTO tb_relacao_cliente_empresa (id_cliente, id_instituicao) VALUES (?, ?)",
+      [idCliente, idInstituicaoFixa]
     );
 
     return res.status(201).json({
       success: true,
-      message: "Cliente cadastrado e vinculado à empresa com sucesso.",
+      message: "Cliente cadastrado e vinculado à instituicao com sucesso.",
     });
   } catch (error) {
     console.error("🔥 Erro ao cadastrar cliente:", error);

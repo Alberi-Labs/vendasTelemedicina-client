@@ -17,7 +17,7 @@ export default function Sidebar() {
   const [empresaNome, setEmpresaNome] = useState<string | null>(null);
   const [empresaImagem, setEmpresaImagem] = useState<string | null>(null);
   const { user } = useAuth();
-
+  
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const empresaNome = user?.dsc_instituicao ?? null;
@@ -37,7 +37,7 @@ export default function Sidebar() {
       if (empresaNome) setEmpresaNome(empresaNome);
       if (empresaImagem) setEmpresaImagem(empresaImagem);
     } catch (error) {
-      console.error("Erro ao parsear JSON do usuário ou dados da empresa:", error);
+      console.error("Erro ao parsear JSON do usuário ou dados da instituicao:", error);
     }
   }, []);
 
@@ -117,7 +117,7 @@ export default function Sidebar() {
                     <a onClick={handleMenuClick} style={{ textDecoration: "none" }}>
                       <img
                         src={empresaImagem}
-                        alt="Logo da empresa"
+                        alt="Logo da instituicao"
                         style={{ width: 120, height: 145, objectFit: "contain", borderRadius: 8 }}
                         className="mb-2"
                       />
@@ -126,7 +126,7 @@ export default function Sidebar() {
                   </Link>
                 ) : (
                   <p style={{ color: "#ccc", fontStyle: "italic", fontSize: "0.9rem" }}>
-                    Sem empresa vinculada
+                    Sem instituicao vinculada
                   </p>
                 )}
               </div>

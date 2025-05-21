@@ -25,11 +25,9 @@ export default function PaginaApolice() {
     let nascimento: Date;
   
     if (dataNascimento.includes("/")) {
-      // Formato: dd/mm/yyyy
       const [dia, mes, ano] = dataNascimento.split("/").map(Number);
       nascimento = new Date(ano, mes - 1, dia);
     } else if (dataNascimento.includes("-")) {
-      // Formato: yyyy-mm-dd
       nascimento = new Date(dataNascimento);
     } else {
       console.warn("Formato de data inválido:", dataNascimento);

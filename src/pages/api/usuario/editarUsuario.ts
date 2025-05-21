@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       cpf,
       creditos,
       data_nascimento,
-      id_empresa,
+      id_instituicao,
     } = req.body;
 
     if (!id) {
@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         cpf = ?, 
         creditos = ?, 
         data_nascimento = ?, 
-        id_empresa = ? 
+        id_instituicao = ? 
       WHERE idUsuario = ?`,
       [
         nome,
@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         cpf,
         creditos,
         data_nascimento,
-        id_empresa, 
+        id_instituicao, 
         id
       ]
     );

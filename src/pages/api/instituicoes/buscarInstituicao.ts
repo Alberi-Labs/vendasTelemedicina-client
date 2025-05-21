@@ -9,12 +9,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const [rows] = await pool.query(`
       SELECT *
-      FROM tb_empresas
+      FROM tb_instituicao
     `);
-    console.log("Empresas:", rows); // Log para verificar os dados retornados
-    return res.status(200).json({ success: true, empresas: rows });
+    return res.status(200).json({ success: true, instituicoes: rows });
   } catch (error) {
-    console.error("Erro ao buscar empresas:", error);
-    return res.status(500).json({ success: false, message: "Erro ao buscar empresas" });
+    console.error("Erro ao buscar instituicoes:", error);
+    return res.status(500).json({ success: false, message: "Erro ao buscar instituicoes" });
   }
 }
