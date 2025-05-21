@@ -12,8 +12,6 @@ export default function LoginForm() {
     ? "/uploads/vita.png"
     : "/image.png";
 
-  console.log("Current domain:", currentDomain);
-
   const mapearImagemEmpresa = (nome: string): string | null => {
     const nomeNormalizado = nome
       .normalize("NFD")
@@ -87,8 +85,8 @@ export default function LoginForm() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-
-      if (data.usuario?.instituicao) {
+      
+      if (data.usuario?.dsc_instituicao) {
         localStorage.setItem("nome_empresa", data.usuario.instituicao.nomeInstituicao);
         const imagem = mapearImagemEmpresa(data.usuario.instituicao.nomeInstituicao);
         localStorage.setItem("imagem_empresa", imagem || "")
