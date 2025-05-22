@@ -9,9 +9,10 @@ import Paper from "@mui/material/Paper";
 import Container from "@mui/material/Container";
 import TelaCarregamento from "@/components/telaCarregamento/TelaCarregamento";
 import PaymentLinkPopup from "@/components/paymentLinkPopup/PaymentLinkPopup";
+import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 
 export default function CadastroPf() {
-    const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
     const [formData, setFormData] = useState({
         nome: "",
         email: "",
@@ -32,7 +33,9 @@ export default function CadastroPf() {
     const [loading, setLoading] = useState(false);
     const [showPopup, setShowPopup] = useState(false);
     const [paymentLink, setPaymentLink] = useState("");
-    let idUsuario: string = ""; 
+    const [mensagemDeErro, setMensagemDeErro] = useState<string | null>(null);
+
+    let idUsuario: string = "";
 
     useEffect(() => {
         fetch("https://servicodados.ibge.gov.br/api/v1/localidades/estados")
@@ -73,7 +76,6 @@ export default function CadastroPf() {
         }
     }, [formData.cep]);
 
-    // Função para formatar CPF
     const formatCpf = (value: string) => {
         return value
             .replace(/\D/g, "") // Remove tudo que não é número
@@ -82,7 +84,6 @@ export default function CadastroPf() {
             .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
     };
 
-    // Função para formatar Telefone
     const formatTelefone = (value: string) => {
         return value
             .replace(/\D/g, "") // Remove tudo que não é número
@@ -91,7 +92,6 @@ export default function CadastroPf() {
             .slice(0, 15);
     };
 
-    // Função para formatar Data de Nascimento
     const formatNascimento = (value: string) => {
         return value
             .replace(/\D/g, "") // Remove tudo que não é número
@@ -99,14 +99,6 @@ export default function CadastroPf() {
             .replace(/(\d{2})(\d)/, "$1/$2")
             .slice(0, 10);
     };
-
-    const formatCep = (value: string) => {
-        return value
-            .replace(/\D/g, "") // Remove tudo que não é número
-            .replace(/(\d{5})(\d)/, "$1-$2")
-            .slice(0, 9); // Garante que o CEP não tenha mais de 9 caracteres
-    };
-
 
     const handleChangeFormat = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         let { name, value } = e.target;
@@ -126,42 +118,53 @@ export default function CadastroPf() {
         if (currentStep === 1) {
             setLoading(true);
             try {
-                const response = await fetch('/api/vendaPlanoPf/cadastroClientePf', {
+                const sexoFormatado = formData.sexo.toLowerCase() === 'feminino' ? 'F' : 'M';
+    
+                const response = await fetch('/api/vendaPlanoPf/vendaClienteOnlline', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
+                        nomeCliente: formData.nome,
                         email: formData.email,
                         cpf: formData.cpf,
                         celular: formData.celular,
+                        dataNascimento: formData.nascimento,
                         cep: formData.cep,
                         endereco: formData.endereco,
+                        casa: formData.casa,
+                        sexo: sexoFormatado,
                         uf: formData.uf,
                         cidade: formData.cidade,
-                        nome: formData.nome,
-                        sexo: formData.sexo,
-                        dataNascimento: formData.nascimento,
+                        formaDePagamento: formData.formaPagamento,
                     }),
                 });
- 
+    
+                const data = await response.json();
+    
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Erro ao enviar os dados');
+                    throw new Error(data.error || 'Erro ao enviar os dados');
                 }
-
-                idUsuario = await response.json();
-
-            } catch (error) {
-                console.error('Erro ao enviar os dados para /api/saudeECorCadastroPF:', error);
+    
+                if (data.pagamentoLink) {
+                    setPaymentLink(data.pagamentoLink);
+                    setShowPopup(true);
+                } else {
+                    setMensagemDeErro('Erro: o link de pagamento não foi retornado.');
+                }
+            } catch (error: any) {
+                console.error('Erro ao enviar os dados para /api/vendaPlanoPf/vendaClienteOnlline:', error);
+                setMensagemDeErro(error.message || 'Erro inesperado.');
                 return;
             } finally {
-                setLoading(false); 
+                setLoading(false);
             }
         }
-
+    
         setCurrentStep((prev) => prev + 1);
     };
+    
 
     const prevStep = () => setCurrentStep((prev) => prev - 1);
 
@@ -171,7 +174,7 @@ export default function CadastroPf() {
         <Container maxWidth="md">
             <Paper elevation={3} sx={{ p: 4, mt: 5 }}>
                 <Typography variant="h4" align="center" gutterBottom>
-                    Venda Individual
+                    Venda Cartão Saúde e Cor
                 </Typography>
 
                 <Stepper activeStep={currentStep} alternativeLabel>
@@ -356,7 +359,7 @@ export default function CadastroPf() {
                                                 body: JSON.stringify({
                                                     nomeCliente: formData.nome,
                                                     formaDePagamento: formData.formaPagamento,
-                                                    idUsuario: idUsuario
+                                                    idUsuario: idUsuario,
                                                 }),
                                             });
 
@@ -402,12 +405,30 @@ export default function CadastroPf() {
                     )}
                 </Box>
             </Paper>
-            {loading && <TelaCarregamento />}
+            {loading && (
+                <TelaCarregamento
+                    mensagem={
+                        currentStep === 1
+                            ? "Cadastrando dados do cliente..."
+                            : currentStep === 2
+                                ? "Enviando dados de cobrança..."
+                                : "Carregando..."
+                    }
+                />
+            )}
             <PaymentLinkPopup
                 show={showPopup}
                 onClose={() => setShowPopup(false)}
                 paymentLink={paymentLink}
             />
+            {mensagemDeErro && (
+                <AvisoAlerta
+                    mensagem={mensagemDeErro}
+                    tipo="danger"
+                    duracao={5000}
+                    onClose={() => setMensagemDeErro(null)}
+                />
+            )}
         </Container>
     );
 }

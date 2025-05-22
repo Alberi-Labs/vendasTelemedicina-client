@@ -18,12 +18,13 @@ export default function PaginaApolice() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+  const dscEmpresa = encodeURIComponent(user?.dsc_instituicao || "");
 
   const calcularIdade = (dataNascimento: string | undefined): number => {
     if (!dataNascimento) return 0;
-  
+
     let nascimento: Date;
-  
+
     if (dataNascimento.includes("/")) {
       const [dia, mes, ano] = dataNascimento.split("/").map(Number);
       nascimento = new Date(ano, mes - 1, dia);
@@ -33,35 +34,35 @@ export default function PaginaApolice() {
       console.warn("Formato de data inválido:", dataNascimento);
       return 0;
     }
-  
+
     const hoje = new Date();
     let idade = hoje.getFullYear() - nascimento.getFullYear();
     const mesAtual = hoje.getMonth();
     const diaAtual = hoje.getDate();
-  
+
     if (
       mesAtual < nascimento.getMonth() ||
       (mesAtual === nascimento.getMonth() && diaAtual < nascimento.getDate())
     ) {
       idade--;
     }
-  
+
     return idade;
   };
-  
+
   const formatarDataNascimento = (data: string | undefined): string => {
     if (!data) return "—";
-  
+
     if (data.includes("/")) return data;
-  
+
     if (data.includes("-")) {
       const [ano, mes, dia] = data.split("-");
       return `${dia}/${mes}/${ano}`;
     }
-  
+
     return "Formato inválido";
   };
-  
+
 
   if (!isMounted) return null;
 
@@ -70,7 +71,7 @@ export default function PaginaApolice() {
       setShowAviso(true);
       return;
     }
-  
+
     const dadosApolice = {
       nomeseg: user.nome,
       cpf: user.cpf,
@@ -81,32 +82,32 @@ export default function PaginaApolice() {
       numsorteio: "0",
       numapolice: user.num_contrato_retorno_apolice,
       dataemissao: new Date().toLocaleDateString("pt-BR"),
-      valorplano: "R$29,90",
+      valorplano: user.dsc_instituicao?.toLowerCase().includes("Vita") ? "39,90" : "49,90",
     };
-   
+
     try {
       const response = await fetch("/api/apolices/gerarApolice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dadosApolice),
       });
-  
+
       if (!response.ok) {
         console.error("Erro ao gerar PDF");
         setShowAviso(true);
         return;
       }
-  
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-        window.open(url, "_blank");
+      window.open(url, "_blank");
 
     } catch (err) {
       console.error("Erro ao baixar apólice:", err);
       setShowAviso(true);
     }
   };
-  
+
   return (
     <div className="container py-5">
       <motion.h1
@@ -119,10 +120,10 @@ export default function PaginaApolice() {
       </motion.h1>
 
       {showAviso && (
-        <AvisoAlerta 
-          mensagem="Apólice em processamento de geração, tente mais tarde." 
-          tipo="warning" 
-          duracao={5000} 
+        <AvisoAlerta
+          mensagem="Apólice em processamento de geração, tente mais tarde."
+          tipo="warning"
+          duracao={5000}
         />
       )}
 
@@ -189,7 +190,7 @@ export default function PaginaApolice() {
           </Button>
 
           <a
-            href="/api/arquivo/downloadArquivo"
+            href={`/api/arquivo/downloadArquivo?dscEmpresa=${dscEmpresa}`}
             className="btn btn-danger d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
           >
             <i className="bi bi-file-earmark-pdf fs-5"></i>

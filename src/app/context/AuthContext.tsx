@@ -44,21 +44,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthLoaded, setIsAuthLoaded] = useState(false); 
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user"); 
-
-    if (token && storedUser) {
+    const storedUser = localStorage.getItem("user");
+  
+    if (storedUser) {
       try {
-        const decodedUser = JSON.parse(storedUser); 
-        setUser(decodedUser);
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
       } catch (error) {
-        console.error("Erro ao recuperar usuário do localStorage:", error);
+        console.error("Erro ao recuperar usuário:", error);
         logout();
       }
     }
-
-    setIsAuthLoaded(true); 
+  
+    setIsAuthLoaded(true);
   }, []);
+  
 
   const login = (tokenOrUserData: string | User, isCliente: boolean = false) => {
     try {

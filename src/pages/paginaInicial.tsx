@@ -30,10 +30,10 @@ export default function PaginaInicial() {
   const cards = [
     { path: "/paginaCadastroPf", icon: "bi-person", text: "Venda de Consulta", allowedRoles: ["admin", "vendedor", "gerente"] },
     { path: "/paginaVendaPj", icon: "bi-briefcase", text: "Venda Empresarial", allowedRoles: ["admin", "vendedor", "gerente"] },
-    { path: "/paginaVendaPf", icon: "bi-cash-coin", text: "Venda Plano Telemedicina", allowedRoles: ["admin", "vendedor", "gerente"] },
+    { path: "/paginaVendaPf", icon: "bi-cash-coin", text: "Venda Plano Telemedicina", allowedRoles: ["admin", "vendedorFarmacia", "gerente"] },
     { path: "/paginaRelatorioVendas", icon: "bi-file-earmark-bar-graph", text: "Relatório de Vendas", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoClientes", icon: "bi-people", text: "Gestão de Clientes", allowedRoles: ["admin", "vendedor",  "gerente"] },
-    { path: "/paginaTelemedicina", icon: "bi-clipboard-heart", text: "Consultar com médico online", allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"] },
+    { path: "/paginaTelemedicina", icon: "bi-clipboard-heart", text: "Consultar com médico online", allowedRoles: ["admin", "cliente", "clientePJ", "gerente"] },
     { path: "/paginaApolice", icon: "bi-download", text: "Baixar Apólice/Guia Explicativo", allowedRoles: ["admin", "cliente", "clientePJ"] },
     { path: "/paginaControleDependentes", icon: "bi-people-fill", text: "Controle de Dependentes", allowedRoles: ["admin", "clientePJ", "cliente"] },
     { path: "/paginaControlePagamento", icon: "bi-credit-card", text: "Controle de Pagamento", allowedRoles: ["admin", "gerente", "cliente"] },

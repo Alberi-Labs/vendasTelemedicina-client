@@ -13,13 +13,14 @@ export default function LoginForm() {
     : "/image.png";
 
   const mapearImagemEmpresa = (nome: string): string | null => {
+    console.log("nome", nome)
     const nomeNormalizado = nome
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
     console.log("nome",nomeNormalizado)
 
-    if (nomeNormalizado.includes("vita")) return "/uploads/vita.png";
+    if (nomeNormalizado.includes("vita")) return "/vita.png";
     if (nomeNormalizado.includes("clinica abc")) return "/uploads/clinicaabc.png";
     if (nomeNormalizado.includes("medic center")) return "/uploads/mediccenter.png";
 
@@ -86,11 +87,7 @@ export default function LoginForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      if (data.usuario?.dsc_instituicao) {
-        localStorage.setItem("nome_empresa", data.usuario.instituicao.nomeInstituicao);
-        const imagem = mapearImagemEmpresa(data.usuario.instituicao.nomeInstituicao);
-        localStorage.setItem("imagem_empresa", imagem || "")
-      }
+      console.log("res",data)
 
       const clienteRaw = data.find((c: any) =>
         c.data_contrato_vigencia_inicio ||
@@ -100,6 +97,14 @@ export default function LoginForm() {
         c.cod_contrato_retorno_operacao
       ) || data[0];
 
+      if (clienteRaw.dsc_instituicao) {
+        localStorage.setItem("nome_empresa", clienteRaw.dsc_instituicao);
+        const imagem = mapearImagemEmpresa(clienteRaw.dsc_instituicao);
+        console.log("imagem", imagem)
+        localStorage.setItem("imagem_empresa", imagem || "")
+      }
+
+      
       if (!clienteRaw) throw new Error("Cliente não encontrado na resposta da API.");
 
       localStorage.setItem("cliente", JSON.stringify(clienteRaw));

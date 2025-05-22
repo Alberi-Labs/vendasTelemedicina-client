@@ -1,17 +1,20 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import path from "path";
 import fs from "fs";
-import { useAuth } from "@/app/context/AuthContext";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { user } = useAuth();
+  const { dscEmpresa } = req.query;
 
-  const dscEmpresa = user?.dsc_instituicao?.toLowerCase() || "";
+  if (!dscEmpresa || typeof dscEmpresa !== "string") {
+    return res.status(400).json({ error: "Parâmetro 'dscEmpresa' é obrigatório." });
+  }
 
+  const empresaLower = dscEmpresa.toLowerCase();
   const fileName =
-    dscEmpresa.includes("vita")
+    empresaLower.includes("vita")
       ? "Guia Explicativo + Anexo(VITA).pdf"
       : "Guia Explicativo + Anexo.pdf";
+
   const filePath = path.resolve("./public", fileName);
 
   if (!fs.existsSync(filePath)) {
