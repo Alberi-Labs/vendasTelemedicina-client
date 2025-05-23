@@ -21,6 +21,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          u.senha, 
          u.perfil AS role, 
          u.id_instituicao, 
+         u.login_sistema,
+         u.senha_sistema,
          e.nomeInstituicao, 
          e.imagem_perfil 
        FROM tb_usuarios u
@@ -62,6 +64,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           nomeInstituicao: user.nomeInstituicao,
           imagem_perfil: user.imagem_perfil,
         },
+        login_sistema: user.login_sistema || null,
+        senha_sistema: user.senha_sistema || null,
       },
     });
   } catch (error) {

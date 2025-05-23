@@ -1,3 +1,4 @@
+import { decrypt } from "@/lib/cryptoHelper";
 import { NextApiRequest, NextApiResponse } from "next";
 import puppeteer, { Page } from "puppeteer";
 
@@ -17,9 +18,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sexo,
         uf,
         cidade,
+        instituicao,
+        login_sistema,
+        senha_sistema,
     } = req.body;
 
-    const instituicao = "Fernando Card";
     const produto = "Plano Telemedicina Básico";
 
     try {
@@ -50,8 +53,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         console.log("Realizando login...");
-        await page.type('input[name="usuario"]', '020.314.821-57');
-        await page.type('input[name="senha"]', '102030');
+         const senhaDescriptografada = decrypt(senha_sistema) ?? "";
+        await page.type('input[name="usuario"]', login_sistema);
+        await page.type('input[name="senha"]', senhaDescriptografada);
         await Promise.all([
             page.click('button[type="submit"]'),
             page.waitForNavigation({ waitUntil: "networkidle2" }),

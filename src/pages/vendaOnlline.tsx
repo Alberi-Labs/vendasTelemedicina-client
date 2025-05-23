@@ -138,6 +138,9 @@ export default function CadastroPf() {
                         uf: formData.uf,
                         cidade: formData.cidade,
                         formaDePagamento: formData.formaPagamento,
+                        instituicao: "Fernando Card",
+                        login_sistema: "02031482157",
+                        senha_sistema: "43e5d561c14b7a5815d18b5bb2976cf9:d40164ccb2097c3dd75c2969b4118eba",
                     }),
                 });
     

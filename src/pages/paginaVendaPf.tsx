@@ -10,6 +10,7 @@ import Container from "@mui/material/Container";
 import TelaCarregamento from "@/components/telaCarregamento/TelaCarregamento";
 import PaymentLinkPopup from "@/components/paymentLinkPopup/PaymentLinkPopup";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
+import { useAuth } from "@/app/context/AuthContext";
 
 export default function CadastroPf() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -34,6 +35,7 @@ export default function CadastroPf() {
     const [showPopup, setShowPopup] = useState(false);
     const [paymentLink, setPaymentLink] = useState("");
     const [mensagemDeErro, setMensagemDeErro] = useState<string | null>(null);
+    const { user } = useAuth(); 
 
     let idUsuario: string = "";
 
@@ -113,7 +115,7 @@ export default function CadastroPf() {
     const handleUfChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setFormData({ ...formData, uf: e.target.value, cidade: "" });
     };
-
+    
     const nextStep = async () => {
         if (currentStep === 1) {
             setLoading(true);
@@ -138,6 +140,9 @@ export default function CadastroPf() {
                         uf: formData.uf,
                         cidade: formData.cidade,
                         formaDePagamento: formData.formaPagamento,
+                        instituicao: user?.dsc_instituicao,
+                        login_sistema: user?.login_sistema,
+                        senha_sistema: user?.senha_sistema,
                     }),
                 });
     

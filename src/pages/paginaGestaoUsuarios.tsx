@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Button, Modal, Form, Table } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { Usuario } from "./api/usuario/buscarUsuario";
+import { useAuth } from "@/app/context/AuthContext";
+import { decrypt } from "@/lib/cryptoHelper";
 
 type Instituicao = {
   idInstituicao: number;
@@ -9,6 +11,7 @@ type Instituicao = {
 };
 
 export default function PaginaGestaoUsuario() {
+  const { user } = useAuth();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [instituicoes, setInstituicoes] = useState<Instituicao[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -19,7 +22,11 @@ export default function PaginaGestaoUsuario() {
     cpf: "",
     role: "",
     id_instituicao: "",
+    login_sistema: "",
+    senha_sistema: "",
   });
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+
 
   useEffect(() => {
     fetchUsuarios();
@@ -37,6 +44,8 @@ export default function PaginaGestaoUsuario() {
         cpf: u.cpf,
         perfil: u.perfil,
         id_instituicao: u.id_instituicao,
+        login_sistema: u.login_sistema,
+        senha_sistema: u.senha_sistema,
       }));
       setUsuarios(adaptado);
     }
@@ -51,7 +60,7 @@ export default function PaginaGestaoUsuario() {
   const handleClose = () => {
     setShowModal(false);
     setEditing(null);
-    setFormData({ nome: "", email: "", cpf: "", role: "", id_instituicao: "" });
+    setFormData({ nome: "", email: "", cpf: "", role: "", id_instituicao: "", login_sistema: "", senha_sistema: "" });
   };
 
   const handleShow = (usuario?: Usuario) => {
@@ -63,9 +72,12 @@ export default function PaginaGestaoUsuario() {
         cpf: usuario.cpf,
         role: usuario.perfil.toLowerCase(),
         id_instituicao: usuario.id_instituicao?.toString() ?? "",
+        login_sistema: usuario.login_sistema || "",
+        senha_sistema: usuario.senha_sistema || "",
       });
+
     } else {
-      setFormData({ nome: "", email: "", cpf: "", role: "", id_instituicao: "" });
+      setFormData({ nome: "", email: "", cpf: "", role: "", id_instituicao: "", login_sistema: "", senha_sistema: "" });
     }
     setShowModal(true);
   };
@@ -81,7 +93,12 @@ export default function PaginaGestaoUsuario() {
       creditos: 0,
       data_nascimento: null,
       id_instituicao: parseInt(formData.id_instituicao),
+      ...(user?.role === "admin" && {
+        login_sistema: formData.login_sistema,
+        senha_sistema: formData.senha_sistema,
+      }),
     };
+
 
     const isEditando = !!editing;
 
@@ -238,6 +255,45 @@ export default function PaginaGestaoUsuario() {
                 ))}
               </Form.Select>
             </Form.Group>
+
+            {user?.role === "admin" && (
+              <>
+                <Form.Group className="mb-3">
+                  <Form.Label>Login do Sistema</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.login_sistema}
+                    onChange={(e) =>
+                      setFormData({ ...formData, login_sistema: e.target.value })
+                    }
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Senha do Sistema</Form.Label>
+                  <div className="input-group">
+                    <Form.Control
+                      type={mostrarSenha ? "text" : "password"}
+                      value={formData.senha_sistema}
+                      onChange={(e) =>
+                        setFormData({ ...formData, senha_sistema: e.target.value })
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => setMostrarSenha(!mostrarSenha)}
+                      tabIndex={-1}
+                    >
+                      {mostrarSenha ? "Ocultar" : "Mostrar"}
+                    </button>
+
+                  </div>
+                </Form.Group>
+              </>
+
+            )}
+
           </Form>
 
         </Modal.Body>

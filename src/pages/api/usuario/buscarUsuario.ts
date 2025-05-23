@@ -1,6 +1,7 @@
 // pages/api/usuarios/buscarUsuario.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import pool from "@/lib/db";
+import { decrypt } from "@/lib/cryptoHelper";
 
 // Interface do usuário
 export interface Usuario {
@@ -21,6 +22,8 @@ export interface Usuario {
   uf: string | null;
   cidade: string | null;
   sexo: string | null;
+  login_sistema?: string | null;
+  senha_sistema?: string | null;
 }
 
 
@@ -75,9 +78,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       endereco: u.endereco,
       uf: u.uf,
       cidade: u.cidade,
-      sexo: u.sexo
+      sexo: u.sexo,
+      login_sistema: u.login_sistema || null,
+      senha_sistema: decrypt(u.senha_sistema) || null,
     }));
-    
+
+
     return res.status(200).json({ success: true, usuarios });
   } catch (error) {
     console.error("Erro ao buscar usuários:", error);

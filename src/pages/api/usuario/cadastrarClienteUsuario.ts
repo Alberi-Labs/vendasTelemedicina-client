@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import bcrypt from "bcryptjs";
 import pool from "@/lib/db";
+import { encrypt } from "@/lib/cryptoHelper";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -17,7 +18,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     creditos,
     data_nascimento,
     id_instituicao,
-
+    login_sistema,
+    senha_sistema,
   } = req.body;
 
   if (!nome || !email) {
@@ -39,21 +41,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const senhaFinal = senha || "123456";
-    const senhaCriptografada = await bcrypt.hash(senhaFinal, 10);
+
+    const senhaSistemaCriptografada = senha_sistema
+      ? encrypt(senha_sistema)
+      : null;
+
     const roleFinal = role || "cliente";
+
     const [resultado] = await pool.query(
-      `INSERT INTO tb_usuarios (nome, email, senha, telefone, perfil, cpf, creditos, data_nascimento, criado_em, id_instituicao)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
+      `INSERT INTO tb_usuarios (nome, email, senha, telefone, perfil, cpf, creditos, data_nascimento, criado_em, id_instituicao, login_sistema, senha_sistema)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)`,
       [
         nome,
         email,
-        senhaCriptografada,
+        senhaSistemaCriptografada,
         telefone || null,
         roleFinal,
         cpf,
         creditos || 0,
         data_nascimento,
         id_instituicao || null,
+        login_sistema || null,
+        senhaSistemaCriptografada,
       ]
     );
 
@@ -68,6 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         cpf,
         creditos: creditos || 0,
         data_nascimento,
+        login_sistema,
       },
     });
   } catch (error) {
