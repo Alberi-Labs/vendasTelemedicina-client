@@ -71,7 +71,6 @@ export default function PaginaApolice() {
       setShowAviso(true);
       return;
     }
-
     const dadosApolice = {
       nomeseg: user.nome,
       cpf: user.cpf,
@@ -82,7 +81,7 @@ export default function PaginaApolice() {
       numsorteio: "0",
       numapolice: user.num_contrato_retorno_apolice,
       dataemissao: new Date().toLocaleDateString("pt-BR"),
-      valorplano: user.dsc_instituicao?.toLowerCase().includes("Vita") ? "39,90" : "49,90",
+      valorplano: user.dsc_instituicao?.includes("Vita") ? "39,90" : "49,90",
     };
 
     try {
