@@ -146,64 +146,64 @@ export default function PaginaControleDependentes() {
       </motion.h2>
 
       {loading ? (
-  <div className="text-center my-5">
-    <div className="spinner-border text-primary" role="status">
-      <span className="visually-hidden">Carregando dependentes...</span>
-    </div>
-    <p className="mt-2">Carregando dependentes...</p>
-  </div>
-) : erroBusca ? (
-  <div className="text-center text-danger fw-bold">Erro ao buscar dependentes</div>
-) : (
-  <>
-    {dependentes?.length === 0 && (
-      <div className="text-center text-muted fw-semibold mb-4">
-        Nenhum dependente encontrado!
-      </div>
-    )}
-
-    <div className="row justify-content-center">
-      {dependentes?.map((dep, index) => (
-        <motion.div
-          key={dep.id}
-          className="col-12 col-md-6 col-lg-4 mb-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.2 }}
-        >
-          <div className="card shadow border-0 h-100">
-            <div className="card-body">
-              <h5 className="fw-semibold">{dep.nome}</h5>
-              <p className="mb-1"><strong>CPF:</strong> {dep.cpf}</p>
-              <p className="mb-3"><strong>Nascimento:</strong> {dep.nascimento}</p>
-              <div className="d-flex justify-content-end gap-2">
-                <Button variant="outline-primary" size="sm" onClick={() => handleShow(dep)}>
-                  <i className="bi bi-pencil"></i>
-                </Button>
-                <Button variant="outline-danger" size="sm" onClick={() => handleDelete(dep.id)}>
-                  <i className="bi bi-trash"></i>
-                </Button>
-              </div>
-            </div>
+        <div className="text-center my-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Carregando dependentes...</span>
           </div>
-        </motion.div>
-      ))}
-    </div>
+          <p className="mt-2">Carregando dependentes...</p>
+        </div>
+      ) : erroBusca ? (
+        <div className="text-center text-danger fw-bold">Erro ao buscar dependentes</div>
+      ) : (
+        <>
+          {dependentes?.length === 0 && (
+            <div className="text-center text-muted fw-semibold mb-4">
+              Nenhum dependente encontrado!
+            </div>
+          )}
 
-    {(dependentes === null || dependentes.length < 3) && (
-      <motion.div
-        className="text-center mt-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Button variant="success" size="lg" onClick={() => handleShow()}>
-          <i className="bi bi-person-plus me-2"></i> Adicionar Dependente
-        </Button>
-      </motion.div>
-    )}
-  </>
-)}
+          <div className="row justify-content-center">
+            {dependentes?.map((dep, index) => (
+              <motion.div
+                key={dep.id}
+                className="col-12 col-md-6 col-lg-4 mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.2 }}
+              >
+                <div className="card shadow border-0 h-100">
+                  <div className="card-body">
+                    <h5 className="fw-semibold">{dep.nome}</h5>
+                    <p className="mb-1"><strong>CPF:</strong> {dep.cpf}</p>
+                    <p className="mb-3"><strong>Nascimento:</strong> {dep.nascimento}</p>
+                    <div className="d-flex justify-content-end gap-2">
+                      <Button variant="outline-primary" size="sm" onClick={() => handleShow(dep)}>
+                        <i className="bi bi-pencil"></i>
+                      </Button>
+                      <Button variant="outline-danger" size="sm" onClick={() => handleDelete(dep.id)}>
+                        <i className="bi bi-trash"></i>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {(dependentes === null || dependentes.length < 3) && (
+            <motion.div
+              className="text-center mt-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Button variant="success" size="lg" onClick={() => handleShow()}>
+                <i className="bi bi-person-plus me-2"></i> Adicionar Dependente
+              </Button>
+            </motion.div>
+          )}
+        </>
+      )}
 
 
       {/* Modal */}

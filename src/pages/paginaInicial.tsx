@@ -41,6 +41,7 @@ export default function PaginaInicial() {
     { path: "/paginaGestaoUsuarios", icon: "bi-person-gear", text: "Gestão de Usuários", allowedRoles: ["admin"] },
     { path: "/paginaDashboardFinanceiro", icon: "bi-bar-chart-line", text: "Dashboard Financeiro", allowedRoles: ["admin", "gerente"] },
     { path: "/paginaGestaoEmpresas", icon: "bi-buildings", text: "Pagina Gestão de Empresas", allowedRoles: ["admin"] },
+    { path: "/relatorioAsass", icon: "bi-file-earmark-medical", text: "Gestão de Pagamento Asaas", allowedRoles: ["admin"] },
     { href: "https://wa.me/5561996364787", icon: "bi-question-circle", text: "Suporte e Ajuda", allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"] },
   ];
 
