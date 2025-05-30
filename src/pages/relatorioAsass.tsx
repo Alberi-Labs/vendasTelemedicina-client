@@ -55,14 +55,17 @@ export default function RelatorioAsaasUpload() {
 
         const cobrancas: Cobranca[] = json.map((row) => {
           const venc = row["Vencimento"];
-          const dataVenc = dayjs(venc, "DD/MM/YYYY");
+const pagamento = row["Data de crédito"];
+const dataRef = pagamento || venc;
+const dataMes = dayjs(dataRef, "DD/MM/YYYY");
 
-          return {
-            nome: String(row["Nome"] || "").trim().toUpperCase(),
-            mes: dataVenc.isValid() ? dataVenc.format("MM/YYYY") : "Desconhecido",
-            vencimento: venc || "",
-            pagamento: row["Data de crédito"] || undefined,
-          };
+return {
+  nome: String(row["Nome"] || "").trim().toUpperCase(),
+  mes: dataMes.isValid() ? dataMes.format("MM/YYYY") : "Desconhecido",
+  vencimento: venc || "",
+  pagamento: pagamento || undefined,
+};
+
         });
 
         const mesesUnicos = Array.from(new Set(cobrancas.map((c) => c.mes)))
