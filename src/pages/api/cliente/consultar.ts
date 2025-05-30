@@ -40,7 +40,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (cpf && rows.length === 0) {
             return res.status(404).json({ error: "Cliente não encontrado." });
         }
-        console.log(rows)
         const clientesFormatados: Cliente[] = rows.map((cliente: any) => ({
             idCliente: cliente.idCliente,
             nome: cliente.nome,
@@ -54,7 +53,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 : null,
             creditos: cliente.creditos,
         }));
-        console.log(clientesFormatados)
         return res.status(200).json({ success: true, clientes: clientesFormatados });
     } catch (error) {
         console.error("🔥 Erro ao consultar clientes:", error);

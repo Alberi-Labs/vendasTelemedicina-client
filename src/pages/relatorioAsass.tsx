@@ -5,6 +5,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import QuadroComparativo from "@/components/quadroComparativo/QuadroComparativo";
 
 dayjs.extend(customParseFormat);
 
@@ -17,8 +18,12 @@ type Cobranca = {
 
 type ClienteCobrancas = {
   nome: string;
-  [mes: string]: string | undefined;
+  documento?: string;
+  valor?: number;
+  valor_liquido?: number;
+  [mes: string]: string | string[] | number | undefined;
 };
+
 
 const gerarStatus = (vencimento: string, pagamento?: string) => {
   const dataVenc = dayjs(vencimento, "DD/MM/YYYY");
@@ -53,48 +58,61 @@ export default function RelatorioAsaasUpload() {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const json: any[] = XLSX.utils.sheet_to_json(sheet);
 
-        const cobrancas: Cobranca[] = json.map((row) => {
+        const mesesUnicos = new Set<string>();
+        const agrupado: { [chave: string]: ClienteCobrancas } = {};
+
+        json.forEach((row) => {
+          const nome = String(row["Nome"] || "").trim().toUpperCase();
+          const documentoBruto = String(row["CPF ou CNPJ"] || "").replace(/\D/g, "");
           const venc = row["Vencimento"];
-const pagamento = row["Data de crédito"];
-const dataRef = pagamento || venc;
-const dataMes = dayjs(dataRef, "DD/MM/YYYY");
+          const pagamento = row["Data de crédito"];
+          const dataRef = pagamento || venc;
+          const dataMes = dayjs(dataRef, "DD/MM/YYYY");
+          const mes = dataMes.isValid() ? dataMes.format("MM/YYYY") : "Desconhecido";
 
-return {
-  nome: String(row["Nome"] || "").trim().toUpperCase(),
-  mes: dataMes.isValid() ? dataMes.format("MM/YYYY") : "Desconhecido",
-  vencimento: venc || "",
-  pagamento: pagamento || undefined,
-};
+          const valorBruto = parseFloat(String(row["Valor"] || "0").replace(",", "."));
+          const valorLiquido = parseFloat(String(row["Valor Líquido"] || "0").replace(",", "."));
 
-        });
+          const chave = `${nome}_${documentoBruto}`;
 
-        const mesesUnicos = Array.from(new Set(cobrancas.map((c) => c.mes)))
-          .filter((mes) => dayjs("01/" + mes, "DD/MM/YYYY").isValid())
-          .sort((a, b) =>
-            dayjs("01/" + a, "DD/MM/YYYY").isAfter(dayjs("01/" + b, "DD/MM/YYYY")) ? 1 : -1
-          );
-
-        const agrupado: { [nome: string]: ClienteCobrancas } = {};
-        cobrancas.forEach(({ nome, mes, vencimento, pagamento }) => {
-          if (!agrupado[nome]) agrupado[nome] = { nome };
-
-          const status = gerarStatus(vencimento, pagamento);
-          const novaLinha = `Venc: ${vencimento}\nPag: ${pagamento || "-"}\n${status}`;
-
-          if (agrupado[nome][mes]) {
-            agrupado[nome][mes] += `\n\n${novaLinha}`;
-          } else {
-            agrupado[nome][mes] = novaLinha;
+          if (!agrupado[chave]) {
+            agrupado[chave] = {
+              nome,
+              documento: documentoBruto,
+              valor: 0,
+              valor_liquido: 0,
+            };
           }
+
+          agrupado[chave].valor = (agrupado[chave].valor || 0) + valorBruto;
+          agrupado[chave].valor_liquido = (agrupado[chave].valor_liquido || 0) + valorLiquido;
+
+          const status = gerarStatus(venc, pagamento);
+          const novaLinha = `Venc: ${venc}\nPag: ${pagamento || "-"}\n${status}`;
+
+          if (agrupado[chave][mes]) {
+            agrupado[chave][mes] += `\n\n${novaLinha}`;
+          } else {
+            agrupado[chave][mes] = novaLinha;
+          }
+
+          mesesUnicos.add(mes);
         });
 
-        const resultado = Object.values(agrupado).sort((a, b) => a.nome.localeCompare(b.nome));
-        setMeses(mesesUnicos);
+        const resultado = Object.values(agrupado).sort((a, b) =>
+          a.nome.localeCompare(b.nome)
+        );
+
+        setMeses(
+          Array.from(mesesUnicos).sort((a, b) =>
+            dayjs("01/" + a, "DD/MM/YYYY").isAfter(dayjs("01/" + b, "DD/MM/YYYY")) ? 1 : -1
+          )
+        );
+
         setDados(resultado);
       })
       .catch((err) => {
         console.warn("Nenhum arquivo XLSX encontrado ainda ou inválido.");
-        // Aqui podemos limpar os dados se desejar:
         setMeses([]);
         setDados([]);
       });
@@ -110,6 +128,7 @@ return {
         setUltimaAtualizacao(null);
       });
   }, []);
+
 
 
 
@@ -179,19 +198,193 @@ return {
     }
   };
 
+  const copiarDadosDosClientes = async () => {
+    const documentos = new Set<string>();
+
+    dados.forEach((cliente) => {
+      const doc = cliente.documento?.replace(/\D/g, "");
+      if (doc) documentos.add(doc);
+    });
+
+    const todosDocumentos = Array.from(documentos);
+
+    const cpfs = todosDocumentos.filter((doc) => doc.length === 11).slice(0, 10);
+    const cnpjs = todosDocumentos.filter((doc) => doc.length === 14).slice(0, 5);
+    const documentosLimitados = [...cpfs, ...cnpjs];
+
+    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const clientesParaInserir: any[] = [];
+
+    let clientesExistentes: string[] = [];
+    let empresasExistentes: string[] = [];
+
+    try {
+      // Busca todos os clientes já cadastrados
+      const resClientes = await fetch("/api/cliente/consultar");
+      const jsonClientes = await resClientes.json();
+      clientesExistentes = jsonClientes.clientes?.map((c: any) => c.cpf?.replace(/\D/g, "")) || [];
+
+      // Busca todas as empresas já cadastradas
+      const resEmpresas = await fetch("/api/empresas/listarEmpresas");
+      const jsonEmpresas = await resEmpresas.json();
+      empresasExistentes = jsonEmpresas.empresas?.map((e: any) => e.cnpj?.replace(/\D/g, "")) || [];
+    } catch (err) {
+      console.error("❌ Erro ao buscar dados existentes:", err);
+      alert("Erro ao buscar dados existentes. Veja o console.");
+      return;
+    }
+
+    for (const doc of documentosLimitados) {
+      const isCNPJ = doc.length === 14;
+
+      const jaExiste = isCNPJ
+        ? empresasExistentes.includes(doc)
+        : clientesExistentes.includes(doc);
+
+      if (jaExiste) {
+        console.log(`🔁 Já existente: ${doc}`);
+        continue;
+      }
+      console.log(doc)
+      try {
+        const res = await fetch("/api/clienteSaudeecor/buscarDados", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cpf: doc }),
+        });
+
+        if (!res.ok) throw new Error("Erro na requisição");
+
+        const dadosCompletosArray = await res.json();
+        const dadosCompletos = Array.isArray(dadosCompletosArray)
+          ? dadosCompletosArray[0]
+          : dadosCompletosArray;
+
+        const clienteParaVincular = {
+          nom_cliente: dadosCompletos.nom_cliente || dadosCompletos.nom_empresa,
+          num_cpf: isCNPJ ? null : dadosCompletos.num_cpf?.replace(/\D/g, ""),
+          num_cnpj: isCNPJ ? dadosCompletos.num_cnpj?.replace(/\D/g, "") : null,
+          dsc_email: dadosCompletos.dsc_email || null,
+          num_celular: dadosCompletos.num_celular || null,
+          dsc_instituicao: dadosCompletos.dsc_instituicao || dadosCompletos.dsc_empresa,
+        };
+
+
+        clientesParaInserir.push(clienteParaVincular);
+        console.log(`✅ Processado: ${doc}`);
+      } catch (err) {
+        console.error(`❌ Erro ao buscar ${doc}`, err);
+      }
+
+      await delay(2000); // evitar rate limit
+    }
+
+    if (clientesParaInserir.length === 0) {
+      alert("Nenhum novo cliente ou empresa para inserir.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/relatorioAsaas/vincularCliente", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(clientesParaInserir),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      console.log("📌 Dados vinculados com sucesso.");
+      alert("Clientes e empresas vinculados com sucesso!");
+    } catch (err) {
+      console.error("❌ Erro ao enviar dados para vincularCliente", err);
+      alert("Erro ao vincular dados. Veja o console.");
+    }
+  };
+
+
+
+
+  const sincronizarCobrancas = async () => {
+    const cobrancasParaInserir: any[] = [];
+
+    dados.forEach((cliente) => {
+      const documento = cliente.documento?.replace(/\D/g, "");
+      if (!documento) return;
+
+      meses.forEach((mes) => {
+        const info = cliente[mes];
+        if (typeof info !== "string") return;
+
+        const linhas = info.split("\n\n");
+        linhas.forEach((linha) => {
+          const vencMatch = linha.match(/Venc:\s*(\d{2}\/\d{2}\/\d{4})/);
+          const pagMatch = linha.match(/Pag:\s*(\d{2}\/\d{2}\/\d{4}|-)/);
+
+          const vencimento = vencMatch?.[1];
+          const pagamento = pagMatch?.[1] === "-" ? null : pagMatch?.[1];
+
+          if (vencimento) {
+            const mesReferencia = dayjs(vencimento, "DD/MM/YYYY").format("MM/YYYY");
+            cobrancasParaInserir.push({
+              cpf: documento,
+              mesReferencia,
+              dt_vencimento: vencimento,
+              dt_pagamento: pagamento,
+              valor_pg: cliente.valor || 0,
+              valor_pg_asaas: cliente.valor_liquido || 0,
+            });
+          }
+        });
+      });
+    });
+
+    if (cobrancasParaInserir.length === 0) {
+      alert("Nenhuma cobrança encontrada para sincronizar.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/cobranca/uploadCobranca", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cobrancasParaInserir),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      console.log("✅ Cobranças sincronizadas com sucesso.");
+      alert("Cobranças sincronizadas com sucesso!");
+    } catch (err) {
+      console.error("❌ Erro ao sincronizar cobranças:", err);
+      alert("Erro ao sincronizar cobranças. Veja o console.");
+    }
+  };
+
+
+
   const mesesVisiveis = filtrosMeses.length > 0 ? filtrosMeses : meses;
 
   const clientesFiltrados = dados
     .map((cliente) => {
-      const novoCliente: ClienteCobrancas = { nome: cliente.nome };
+      const novoCliente: ClienteCobrancas = {
+        nome: cliente.nome,
+        documento: cliente.documento,
+        valor: cliente.valor,               // 🔹 mantém o valor bruto
+        valor_liquido: cliente.valor_liquido, // 🔹 mantém o valor líquido
+      };
+
       mesesVisiveis.forEach((mes) => {
         const conteudo = cliente[mes];
         if (!conteudo) return;
-        if (filtrosStatus.length === 0 || filtrosStatus.some((status) => conteudo.includes(status))) {
+        if (
+          filtrosStatus.length === 0 ||
+          (typeof conteudo === "string" && filtrosStatus.some((status) => conteudo.includes(status))) ||
+          (Array.isArray(conteudo) && conteudo.some((item) => typeof item === "string" && filtrosStatus.some((status) => item.includes(status))))
+        ) {
           novoCliente[mes] = conteudo;
         }
-
       });
+
       return novoCliente;
     })
     .filter((cliente) => {
@@ -201,9 +394,22 @@ return {
     })
     .slice(0, limite);
 
+  const formatarDocumento = (doc: string) => {
+    if (doc.length === 11) {
+      return doc.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4"); // CPF
+    } else if (doc.length === 14) {
+      return doc.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5"); // CNPJ
+    }
+    return doc;
+  };
+
   return (
     <div className="container mt-4">
-      <h4 className="text-center mb-4">📋 Relatório de Cobranças</h4>
+            <h4 className="text-center mb-4 mt-5">📋 Relatório de Split de Pagamento </h4>
+
+            <QuadroComparativo />
+
+      <h4 className="text-center mb-4 mt-5">📋 Relatório de Cobranças</h4>
 
       <div className="row mb-2">
         <div className="col-md-3 mb-2">
@@ -223,10 +429,25 @@ return {
           )}
         </div>
       </div>
+      <button
+        className="btn btn-outline-primary mb-3"
+        onClick={async () => {
+          console.log("Iniciando cópia de dados...");
+          await copiarDadosDosClientes();
+        }}
+      >
+        📋 Sincronizar Clientes
+      </button>
 
-      <div className="d-flex justify-content-end mb-3">
-
-      </div>
+      <button
+        className="btn btn-outline-success mb-3 ms-2"
+        onClick={async () => {
+          console.log("🔄 Iniciando sincronização de cobranças...");
+          await sincronizarCobrancas();
+        }}
+      >
+        🔄 Sincronizar Cobranças
+      </button>
 
       <div className="row mb-3">
         <div className="col-md-3 mb-2">
@@ -334,15 +555,31 @@ return {
           <thead className="table-dark">
             <tr>
               <th>Cliente</th>
+              <th>CPF/CNPJ</th>
+              <th>Valor</th>
+              <th>Valor com desconto</th>
+
+
               {mesesVisiveis.map((mes) => (
                 <th key={mes}>{mes}</th>
               ))}
             </tr>
           </thead>
+
           <tbody>
             {clientesFiltrados.map((cliente, i) => (
               <tr key={i}>
                 <td className="text-start fw-semibold">{cliente.nome}</td>
+                <td style={{ fontSize: "0.85rem" }}>
+                  {cliente.documento ? formatarDocumento(cliente.documento) : "-"}
+                </td>
+                <td>
+                  {cliente.valor ? `R$ ${cliente.valor.toFixed(2).replace(".", ",")}` : "-"}
+                </td>
+                <td>
+                  {cliente.valor_liquido ? `R$ ${cliente.valor_liquido.toFixed(2).replace(".", ",")}` : "-"}
+                </td>
+
                 {mesesVisiveis.map((mes) => (
                   <td key={mes} style={{ whiteSpace: "pre-line", fontSize: "0.85rem" }}>
                     {cliente[mes] || "-"}
