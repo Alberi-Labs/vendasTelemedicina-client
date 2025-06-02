@@ -128,6 +128,25 @@ export default function QuadroComparativo() {
                             </td>
                             <td>= Bruto - Desconto</td>
                         </tr>
+                        <tr>
+                            <th>5. Repasse Instituição</th>
+                            <td>{(dados.qtdVidas * 20).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                            <td>= Número de vidas × Valor <span className="text-danger">(20,00)</span></td>
+                        </tr>
+                        <tr>
+                            <th>6. Comissão Contrato</th>
+                            <td>{(dados.qtdVidas * 4).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                            <td>= Número de vidas × Valor <span className="text-danger">(4,00)</span></td>
+                        </tr>
+                        <tr>
+                            <th>7. Administrativo</th>
+                            <td>
+                                {(dados.qtdVidas * 39.90 - dados.qtdVidas * 4 - dados.descontoAsaas)
+                                    .toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </td>
+                            <td>= Número de vidas × Valor <span className="text-danger">(39,90)</span> - (6.) - (3.)</td>
+                        </tr>
+
                     </tbody>
                 </table>
             ) : (

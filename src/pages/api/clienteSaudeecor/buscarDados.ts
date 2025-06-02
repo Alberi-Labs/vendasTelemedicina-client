@@ -20,9 +20,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const docNumeros = cpf.replace(/\D/g, "");
+  console.log("Documento sem formatação:", docNumeros);
   const isCPF = docNumeros.length === 11;
   const endpoint = isCPF ? SaudeECorURL : SaudeECorURLPJ;
-
+console.log("Endpoint:", endpoint);
   const payload = isCPF
     ? {
         app: "backend",
@@ -38,6 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       };
 
   try {
+    console.log(payload)
     const response = await fetch(endpoint as string, {
       method: "POST",
       headers: {
@@ -55,7 +57,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const data: DadosSaudeECor = await response.json();
       return res.status(200).json(data);
     } else {
-      const data: DadosSaudeECorPJ[] = await response.json(); // Geralmente retorna um array
+      const data = await response.json(); // Geralmente retorna um array
+      console.log(data);
       return res.status(200).json(data);
     }
 

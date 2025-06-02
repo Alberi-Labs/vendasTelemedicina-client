@@ -72,17 +72,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 
         if (num_cnpj?.length === 14) {
+            const quantidade_vidas = parseInt(dados.quantidade_vidas) || 0;
+
             insertEmpresas.push([
-                nom_cliente, // nomeEmpresa
+                nom_cliente,       // nomeEmpresa
                 dsc_email,
                 num_celular,
                 num_cnpj,
                 id_instituicao,
+                quantidade_vidas
             ]);
 
             resultados.push({ status: "ok", entidade: nom_cliente, tipo: "empresa" });
         } else if (num_cpf?.length === 11) {
-            insertClientes.push([nom_cliente, num_cpf, dsc_email, num_celular, id_instituicao]);
+            insertClientes.push([
+                nom_cliente,
+                num_cpf,
+                dsc_email,
+                num_celular,
+                id_instituicao
+            ]);
             resultados.push({ status: "ok", entidade: nom_cliente, tipo: "cliente" });
         } else {
             resultados.push({
@@ -91,6 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 motivo: "CPF ou CNPJ inválido.",
             });
         }
+
     }
     console.log(insertClientes)
     console.log(insertEmpresas)
@@ -117,15 +127,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 4. Inserir empresas
     if (insertEmpresas.length > 0) {
         const sqlEmpresas = `
-  INSERT INTO tb_empresas (
-    nomeEmpresa, email, celular, cnpj, id_instituicao
-  )
-  VALUES ${insertEmpresas.map(() => "(?, ?, ?, ?, ?)").join(", ")}
-  ON DUPLICATE KEY UPDATE
-    nomeEmpresa = VALUES(nomeEmpresa),
-    email = VALUES(email),
-    celular = VALUES(celular),
-    id_instituicao = VALUES(id_instituicao)
+ INSERT INTO tb_empresas (
+  nomeEmpresa, email, celular, cnpj, id_instituicao, quantidade_vidas
+)
+VALUES ${insertEmpresas.map(() => "(?, ?, ?, ?, ?, ?)").join(", ")}
+ON DUPLICATE KEY UPDATE
+  nomeEmpresa = VALUES(nomeEmpresa),
+  email = VALUES(email),
+  celular = VALUES(celular),
+  id_instituicao = VALUES(id_instituicao),
+  quantidade_vidas = VALUES(quantidade_vidas)
+
 `;
 
 

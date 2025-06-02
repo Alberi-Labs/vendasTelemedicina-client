@@ -6,6 +6,7 @@ import html2canvas from "html2canvas";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import QuadroComparativo from "@/components/quadroComparativo/QuadroComparativo";
+import Loading from "@/components/loading/loading";
 
 dayjs.extend(customParseFormat);
 
@@ -45,6 +46,7 @@ export default function RelatorioAsaasUpload() {
   const [filtrosMeses, setFiltrosMeses] = useState<string[]>([]);
   const [limite, setLimite] = useState(1000);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(false);
 
   useEffect(() => {
     // Carrega o arquivo XLSX se existir
@@ -130,8 +132,6 @@ export default function RelatorioAsaasUpload() {
   }, []);
 
 
-
-
   const exportarExcel = () => {
     const linhas = clientesFiltrados.map((cliente) => {
       const linha: any = { Cliente: cliente.nome };
@@ -199,6 +199,7 @@ export default function RelatorioAsaasUpload() {
   };
 
   const copiarDadosDosClientes = async () => {
+    setCarregando(true);
     const documentos = new Set<string>();
 
     dados.forEach((cliente) => {
@@ -207,9 +208,8 @@ export default function RelatorioAsaasUpload() {
     });
 
     const todosDocumentos = Array.from(documentos);
-
-    const cpfs = todosDocumentos.filter((doc) => doc.length === 11).slice(0, 10);
-    const cnpjs = todosDocumentos.filter((doc) => doc.length === 14).slice(0, 5);
+    const cpfs = todosDocumentos.filter((doc) => doc.length === 11).slice(0, 1000);
+    const cnpjs = todosDocumentos.filter((doc) => doc.length === 14).slice(0, 5000);
     const documentosLimitados = [...cpfs, ...cnpjs];
 
     const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -219,24 +219,22 @@ export default function RelatorioAsaasUpload() {
     let empresasExistentes: string[] = [];
 
     try {
-      // Busca todos os clientes já cadastrados
       const resClientes = await fetch("/api/cliente/consultar");
       const jsonClientes = await resClientes.json();
       clientesExistentes = jsonClientes.clientes?.map((c: any) => c.cpf?.replace(/\D/g, "")) || [];
 
-      // Busca todas as empresas já cadastradas
       const resEmpresas = await fetch("/api/empresas/listarEmpresas");
       const jsonEmpresas = await resEmpresas.json();
       empresasExistentes = jsonEmpresas.empresas?.map((e: any) => e.cnpj?.replace(/\D/g, "")) || [];
     } catch (err) {
       console.error("❌ Erro ao buscar dados existentes:", err);
       alert("Erro ao buscar dados existentes. Veja o console.");
+      setCarregando(false);
       return;
     }
 
     for (const doc of documentosLimitados) {
       const isCNPJ = doc.length === 14;
-
       const jaExiste = isCNPJ
         ? empresasExistentes.includes(doc)
         : clientesExistentes.includes(doc);
@@ -245,7 +243,7 @@ export default function RelatorioAsaasUpload() {
         console.log(`🔁 Já existente: ${doc}`);
         continue;
       }
-      console.log(doc)
+
       try {
         const res = await fetch("/api/clienteSaudeecor/buscarDados", {
           method: "POST",
@@ -260,6 +258,11 @@ export default function RelatorioAsaasUpload() {
           ? dadosCompletosArray[0]
           : dadosCompletosArray;
 
+        if (!dadosCompletos || (!dadosCompletos.nom_cliente && !dadosCompletos.nom_empresa)) {
+          console.warn(`⚠️ Documento ${doc} não retornou dados válidos.`);
+          continue;
+        }
+
         const clienteParaVincular = {
           nom_cliente: dadosCompletos.nom_cliente || dadosCompletos.nom_empresa,
           num_cpf: isCNPJ ? null : dadosCompletos.num_cpf?.replace(/\D/g, ""),
@@ -267,8 +270,8 @@ export default function RelatorioAsaasUpload() {
           dsc_email: dadosCompletos.dsc_email || null,
           num_celular: dadosCompletos.num_celular || null,
           dsc_instituicao: dadosCompletos.dsc_instituicao || dadosCompletos.dsc_empresa,
+          quantidade_vidas: dadosCompletos.qtd_vidas || 0
         };
-
 
         clientesParaInserir.push(clienteParaVincular);
         console.log(`✅ Processado: ${doc}`);
@@ -276,11 +279,12 @@ export default function RelatorioAsaasUpload() {
         console.error(`❌ Erro ao buscar ${doc}`, err);
       }
 
-      await delay(2000); // evitar rate limit
+      await delay(2000);
     }
 
     if (clientesParaInserir.length === 0) {
       alert("Nenhum novo cliente ou empresa para inserir.");
+      setCarregando(false);
       return;
     }
 
@@ -299,12 +303,11 @@ export default function RelatorioAsaasUpload() {
       console.error("❌ Erro ao enviar dados para vincularCliente", err);
       alert("Erro ao vincular dados. Veja o console.");
     }
+    setCarregando(false);
   };
 
-
-
-
   const sincronizarCobrancas = async () => {
+    setCarregando(true);
     const cobrancasParaInserir: any[] = [];
 
     dados.forEach((cliente) => {
@@ -340,6 +343,7 @@ export default function RelatorioAsaasUpload() {
 
     if (cobrancasParaInserir.length === 0) {
       alert("Nenhuma cobrança encontrada para sincronizar.");
+      setCarregando(false);
       return;
     }
 
@@ -358,8 +362,8 @@ export default function RelatorioAsaasUpload() {
       console.error("❌ Erro ao sincronizar cobranças:", err);
       alert("Erro ao sincronizar cobranças. Veja o console.");
     }
+    setCarregando(false);
   };
-
 
 
   const mesesVisiveis = filtrosMeses.length > 0 ? filtrosMeses : meses;
@@ -403,11 +407,14 @@ export default function RelatorioAsaasUpload() {
     return doc;
   };
 
+
   return (
     <div className="container mt-4">
-            <h4 className="text-center mb-4 mt-5">📋 Relatório de Split de Pagamento </h4>
+          {carregando && <Loading />}
 
-            <QuadroComparativo />
+      <h4 className="text-center mb-4 mt-5">📋 Relatório de Split de Pagamento </h4>
+
+      <QuadroComparativo />
 
       <h4 className="text-center mb-4 mt-5">📋 Relatório de Cobranças</h4>
 
@@ -432,8 +439,10 @@ export default function RelatorioAsaasUpload() {
       <button
         className="btn btn-outline-primary mb-3"
         onClick={async () => {
+          setCarregando(true);
           console.log("Iniciando cópia de dados...");
           await copiarDadosDosClientes();
+          setCarregando(false);
         }}
       >
         📋 Sincronizar Clientes
@@ -442,12 +451,15 @@ export default function RelatorioAsaasUpload() {
       <button
         className="btn btn-outline-success mb-3 ms-2"
         onClick={async () => {
+          setCarregando(true);
           console.log("🔄 Iniciando sincronização de cobranças...");
           await sincronizarCobrancas();
+          setCarregando(false);
         }}
       >
         🔄 Sincronizar Cobranças
       </button>
+
 
       <div className="row mb-3">
         <div className="col-md-3 mb-2">
