@@ -10,7 +10,7 @@ import { useAuth } from "@/app/context/AuthContext";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, isAuthLoaded } = useAuth(); 
+  const { user, isAuthLoaded } = useAuth();
 
   // Verifica se a página é uma das que não devem exibir o Sidebar ou FooterBar
   const isLoginPage = router.pathname === '/' || router.pathname === '/loginCliente' || router.pathname === '/loginFuncionario' || router.pathname === '/vendaOnlline';
@@ -22,11 +22,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       router.push("/");
     }
   }, [user, isAuthLoaded, router, isLoginPage]);
-  
+
   if (!isAuthLoaded) {
     return <div style={{ textAlign: "center", paddingTop: "50px" }}>Carregando...</div>;
   }
-  
+
   if (!user && !isLoginPage) {
     return <div style={{ textAlign: "center", paddingTop: "50px" }}>Redirecionando...</div>;
   }
@@ -36,9 +36,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div style={{ display: "flex", minHeight: "100vh", width: "100vw", backgroundColor: "white" }}>
         {!isLoginPage && <Sidebar />}
         <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-          <Container style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <div style={{ backgroundColor: "#f1f5f9", flex: 1, display: "flex", flexDirection: "column" }}>
             {children}
-          </Container>
+          </div>
+
           {!isLoginPage && <FooterBar />}
         </div>
       </div>

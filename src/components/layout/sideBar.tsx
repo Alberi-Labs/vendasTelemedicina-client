@@ -10,7 +10,7 @@ export default function Sidebar() {
   const [vendasOpen, setVendasOpen] = useState(false);
   const [relatoriosOpen, setRelatoriosOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [bgColor, setBgColor] = useState("#161621");
+  const [bgColor, setBgColor] = useState("#0d1b2a");
   const [userName, setUserName] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,7 @@ export default function Sidebar() {
 
   const handleToggleMenu = () => {
     if (!menuOpen) {
-      setBgColor("#161621");
+      setBgColor("#0d1b2a");
     }
     setMenuOpen(!menuOpen);
   };
@@ -86,7 +86,7 @@ export default function Sidebar() {
             width: "250px",
             height: "100vh",
             backgroundColor: bgColor,
-            padding: "20px",
+  padding: "1.5rem 1rem",
             boxShadow: "2px 0 5px rgba(0,0,0,0.1)",
             position: "fixed",
             left: menuOpen ? "0" : "-250px",
@@ -97,6 +97,8 @@ export default function Sidebar() {
             flexDirection: "column",
             justifyContent: "space-between",
             zIndex: 999,
+              borderTopRightRadius: "12px"
+
           }}
         >
           <div>
@@ -370,7 +372,7 @@ export default function Sidebar() {
             className="btn btn-light d-flex align-items-center"
             onClick={handleToggleMenu}
             style={{
-              backgroundColor: "rgb(22 22 33)",
+              backgroundColor: "#0d1b2a",
               borderColor: "rgb(22 22 33)",
             }}
           >

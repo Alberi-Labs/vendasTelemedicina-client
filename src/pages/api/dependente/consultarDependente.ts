@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import puppeteer from "puppeteer";
 
 function formatDate(dateString: string) {
+  console.log("🔄 Formatando data:", dateString);
   const [year, month, day] = dateString.split("-");
   return `${day}/${month}/${year}`;
 }

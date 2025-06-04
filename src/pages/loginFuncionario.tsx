@@ -48,56 +48,110 @@ export default function LoginForm() {
     }
   };
 
-  return (
-    <div className="container d-flex justify-content-center align-items-center vh-100">
-      <div className="row shadow rounded overflow-hidden" style={{ width: "1000px", height: "600px", background: "white" }}>
-        <div className="col-md-6 d-none d-md-block p-0" style={{ background: "url('/image.png') center/cover no-repeat" }}></div>
-        <div className="col-md-6 p-4 d-flex flex-column justify-content-center" style={{ minHeight: "100%" }}>
-          {error && <AvisoAlerta mensagem={error} tipo="danger" />}
-          <h2 className="mb-5">Login</h2>
-          <form onSubmit={handleLogin}>
-            <div className="mb-3">
-              <label htmlFor="cpf" className="form-label">CPF</label>
-              <input
-                type="text"
-                id="cpf"
-                className="form-control"
-                value={cpf}
-                onChange={(e) => setCpf(e.target.value)}
-                required
-                placeholder="Digite seu CPF"
-              />
-            </div>
+return (
+  <div
+    className="d-flex justify-content-center align-items-center"
+    style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #0f172a, #1e293b)",
+      padding: "1rem",
+    }}
+  >
+    <div
+      className="row shadow-lg rounded overflow-hidden"
+      style={{
+        width: "960px",
+        backgroundColor: "white",
+        borderRadius: "12px",
+        height: "660px",
+      }}
+    >
+      {/* Lado da imagem */}
+      <div
+        className="col-md-6 d-none d-md-block p-0"
+        style={{
+          backgroundImage: "url('/image.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      ></div>
 
-            <div className="mb-3">
-              <label htmlFor="password" className="form-label">Senha</label>
-              <input
-                type="password"
-                id="password"
-                className="form-control"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Digite sua senha"
-              />
-            </div>
+      {/* Formulário */}
+      <div
+        className="col-md-6 p-5 d-flex flex-column justify-content-center"
+        style={{ minHeight: "100%", height: "100%" }}
+      >
+        <div className="mb-3">
+  <button
+    type="button"
+    onClick={() => router.back()}
+    className="btn btn-link text-primary text-decoration-none d-flex align-items-center gap-1 p-0"
+  >
+    <i className="bi bi-arrow-left"></i>
+    Voltar
+  </button>
+</div>
 
-            <button
-              type="submit"
-              className="btn w-100 text-white"
-              style={{
-                backgroundColor: "rgb(181, 205, 0)",
-                transition: "background-color 0.3s ease",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(150, 180, 0)")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-              disabled={loading}
-            >
-              {loading ? <Loading /> : "Entrar"}
-            </button>
-          </form>
+        {error && <AvisoAlerta mensagem={error} tipo="danger" />}
+
+        <div className="text-center mb-3">
+          <i className="bi bi-person-badge" style={{ fontSize: "2rem", color: "#2563eb" }}></i>
+        </div>
+
+        <h4 className="fw-bold text-center mb-2">Login Colaborador</h4>
+        <p className="text-muted text-center mb-4">Acesse com seu CPF e senha.</p>
+
+        <form onSubmit={handleLogin}>
+          <div className="mb-3">
+            <input
+              type="text"
+              id="cpf"
+              className="form-control"
+              value={cpf}
+              onChange={(e) => setCpf(e.target.value)}
+              required
+              placeholder="Digite seu CPF"
+            />
+          </div>
+
+          <div className="mb-3">
+            <input
+              type="password"
+              id="password"
+              className="form-control"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="Digite sua senha"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn w-100 d-flex justify-content-center align-items-center gap-2 text-white"
+            style={{
+              backgroundColor: "#8dc63f",
+              height: "45px",
+              fontWeight: 500,
+              borderRadius: "8px",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#79b92f")}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#8dc63f")}
+            disabled={loading}
+          >
+            <i className="bi bi-box-arrow-in-right"></i>
+            {loading ? <Loading /> : "Entrar"}
+          </button>
+        </form>
+
+        <div className="text-center mt-4">
+          <a href="#" className="small text-primary text-decoration-none">
+            <i className="bi bi-question-circle me-1"></i>Precisa de ajuda?
+          </a>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
+
 }

@@ -89,8 +89,8 @@ export default function PaginaControleDependentes() {
     setShowModal(true);
   };
 
-  const handleSave = () => {
-    if (!formData.nascimento) return;
+  const handleSave = async () => {
+    if (!formData.nascimento || !formData.nome || !formData.cpf) return;
 
     const novoDependente: Dependente = {
       id: editing ? editing.id : Date.now(),
@@ -100,35 +100,81 @@ export default function PaginaControleDependentes() {
     };
 
     if (editing) {
-      setDependentes((prev) => prev?.map((d) => (d.id === editing.id ? novoDependente : d)) || []);
+      setDependentes((prev) =>
+        prev?.map((d) => (d.id === editing.id ? novoDependente : d)) || []
+      );
     } else {
+      try {
+        console.log(user)
+        const response = await fetch("/api/dependente/cadastrarSulamerica", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            nomeDependente: formData.nome,
+            cpfDependente: formData.cpf,
+            nascimentoDependente: formData.nascimento,
+            cpfTitular: user?.cpf,
+            nascimentoTitular: user?.dt_nascimento,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          console.error("❌ Erro ao cadastrar dependente:", result.error);
+          alert("Erro ao cadastrar dependente na SulAmérica: " + result.error);
+          return;
+        }
+        await cadastrarBanco(novoDependente);
+
+        console.log("✅ Dependente cadastrado com sucesso!");
+      } catch (error: any) {
+        console.error("❌ Erro ao chamar a API de cadastro:", error);
+        alert("Erro ao cadastrar dependente: " + error.message);
+        return;
+      }
+
       setDependentes((prev) => [...(prev || []), novoDependente]);
     }
 
     handleClose();
   };
 
-  const handleNascimentoChange = (value: string) => {
-    let nome = "";
-    let cpf = "";
-
-    if (value === "2010-01-01") {
-      nome = "Carlos Junior";
-      cpf = "111.111.111-11";
-    } else if (value === "2012-06-15") {
-      nome = "Marina Silva";
-      cpf = "222.222.222-22";
-    } else if (value === "2014-12-30") {
-      nome = "Beatriz Souza";
-      cpf = "333.333.333-33";
-    }
-
-    setFormData({ nome, cpf, nascimento: value });
-  };
-
   const handleDelete = (id: number) => {
     setDependentes((prev) => prev?.filter((d) => d.id !== id) || []);
   };
+
+  const cadastrarBanco = async (dependente: Dependente) => {
+    try {
+      const response = await fetch("/api/dependente/cadastrarBanco", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cpf: dependente.cpf,
+          nascimento: dependente.nascimento,
+          nome: dependente.nome,
+          cpfTitular: user?.cpf,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("❌ Erro ao cadastrar no banco:", result.error);
+        alert("Erro ao cadastrar dependente no banco: " + result.error);
+      } else {
+        console.log("✅ Cadastro no banco realizado com sucesso!");
+      }
+    } catch (err: any) {
+      console.error("❌ Erro ao chamar cadastrarBanco:", err);
+      alert("Erro ao cadastrar banco: " + err.message);
+    }
+  };
+
 
   useEffect(() => {
     buscarDependentesDoServidor();
@@ -218,17 +264,26 @@ export default function PaginaControleDependentes() {
               <Form.Control
                 type="date"
                 value={formData.nascimento}
-                onChange={(e) => handleNascimentoChange(e.target.value)}
+                onChange={(e) => setFormData({ ...formData, nascimento: e.target.value })}
               />
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Nome</Form.Label>
-              <Form.Control type="text" value={formData.nome} readOnly />
+              <Form.Control
+                type="text"
+                value={formData.nome}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+              />
             </Form.Group>
             <Form.Group>
               <Form.Label>CPF</Form.Label>
-              <Form.Control type="text" value={formData.cpf} readOnly />
+              <Form.Control
+                type="text"
+                value={formData.cpf}
+                onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+              />
             </Form.Group>
+
           </Form>
         </Modal.Body>
         <Modal.Footer>

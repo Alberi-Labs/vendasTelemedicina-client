@@ -18,7 +18,7 @@ export default function LoginForm() {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
-    console.log("nome",nomeNormalizado)
+    console.log("nome", nomeNormalizado)
 
     if (nomeNormalizado.includes("vita")) return "/vita.png";
     if (nomeNormalizado.includes("clinica abc")) return "/uploads/clinicaabc.png";
@@ -86,8 +86,8 @@ export default function LoginForm() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      
-      console.log("res",data)
+
+      console.log("res", data)
 
       const clienteRaw = data.find((c: any) =>
         c.data_contrato_vigencia_inicio ||
@@ -104,7 +104,7 @@ export default function LoginForm() {
         localStorage.setItem("imagem_empresa", imagem || "")
       }
 
-      
+
       if (!clienteRaw) throw new Error("Cliente não encontrado na resposta da API.");
 
       localStorage.setItem("cliente", JSON.stringify(clienteRaw));
@@ -139,72 +139,111 @@ export default function LoginForm() {
   };
 
   return (
-<div
-  className="container d-flex justify-content-center align-items-center vh-100"
->
-      <div className="row shadow rounded overflow-hidden" style={{ width: "1100px", height: "600px", background: "white" }}>
+    <div
+      className="d-flex justify-content-center align-items-center"
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #0f172a, #1e293b)",
+        padding: "1rem",
+
+      }}
+    >
+      <div
+        className="row shadow-lg rounded overflow-hidden"
+        style={{
+          width: "960px",
+          backgroundColor: "white",
+          borderRadius: "12px",
+          height: "660px", // AQUI: aumenta altura
+        }}
+      >
+
+        {/* Lado da imagem */}
         <div
-          className="col-md-7 d-none d-md-block p-0"
+          className="col-md-6 d-none d-md-block p-0"
           style={{
             backgroundImage: `url('${imagemFundo}')`,
+            backgroundSize: "cover",
             backgroundPosition: "center",
-            backgroundSize: "80%",
-            backgroundRepeat: "no-repeat",
-            backgroundColor: currentDomain === "vitaclinica.saudeecor.com" ? "rgb(22, 22, 33)" : "white",
-
           }}
         ></div>
 
-        <div className="col-md-5 p-4 d-flex flex-column justify-content-center" style={{ minHeight: "100%" }}>
+        {/* Lado do formulário */}
+        <div
+          className="col-md-6 p-5 d-flex flex-column justify-content-center"
+          style={{ minHeight: "100%" }}
+        >
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="btn btn-link text-primary text-decoration-none d-flex align-items-center gap-1 p-0"
+            >
+              <i className="bi bi-arrow-left"></i>
+              Voltar
+            </button>
+          </div>
+
           {error && <AvisoAlerta mensagem={error} tipo="danger" />}
 
-          {/* Título de boas-vindas */}
-          <h2 className="mb-4">Bem-vindo à área do cliente</h2>
+          <div className="text-center mb-3">
+            <i className="bi bi-person-circle" style={{ fontSize: "2rem", color: "#2563eb" }}></i>
+          </div>
+
+          <h4 className="fw-bold text-center mb-2">Bem-vindo à área do cliente</h4>
+          <p className="text-muted text-center mb-4">Acesse sua conta para continuar.</p>
 
           <form onSubmit={handleLogin}>
             <div className="mb-3">
-              <label htmlFor="cpf" className="form-label">CPF</label>
               <input
                 type="text"
-                id="cpf"
                 className="form-control"
+                placeholder="Digite seu CPF"
                 value={cpf}
                 onChange={(e) => setCpf(e.target.value)}
                 required
-                placeholder="Digite seu CPF"
               />
             </div>
 
             <div className="mb-3">
-              <label htmlFor="dataNascimento" className="form-label">Data de Nascimento</label>
               <input
                 type="text"
-                id="dataNascimento"
                 className="form-control"
+                placeholder="DD/MM/YYYY"
                 value={dataNascimento}
                 onChange={handleDataNascimentoChange}
                 required
-                placeholder="Digite sua data de nascimento (DD/MM/YYYY)"
-                maxLength={10} // Limita a entrada a 10 caracteres (DD/MM/YYYY)
+                maxLength={10}
               />
             </div>
 
             <button
               type="submit"
-              className="btn w-100 text-white"
+              className="btn w-100 d-flex justify-content-center align-items-center gap-2 text-white"
               style={{
-                backgroundColor: "rgb(181, 205, 0)",
-                transition: "background-color 0.3s ease",
+                backgroundColor: "#8dc63f", // verde parecido
+                height: "45px",
+                fontWeight: 500,
+                borderRadius: "8px",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(150, 180, 0)")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#79b92f")}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#8dc63f")}
               disabled={loading}
             >
+              <i className="bi bi-box-arrow-in-right"></i>
               {loading ? <Loading /> : "Entrar"}
             </button>
           </form>
+
+          <div className="text-center mt-4">
+            <a href="#" className="me-3 small text-primary text-decoration-none">
+              <i className="bi bi-question-circle me-1"></i>Precisa de ajuda?
+            </a>
+
+          </div>
         </div>
       </div>
     </div>
   );
+
 }

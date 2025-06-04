@@ -26,32 +26,126 @@ export default function PaginaInicial() {
       setLoading(false);
     }
   };
-  
+
   const cards = [
-    { path: "/paginaCadastroPf", icon: "bi-person", text: "Venda de Consulta", allowedRoles: ["admin", "vendedorFarmacia", "gerente"] },
-    { path: "/paginaVendaPj", icon: "bi-briefcase", text: "Venda Empresarial", allowedRoles: ["admin", "vendedor", "gerente"] },
-    { path: "/paginaVendaPf", icon: "bi-cash-coin", text: "Venda Plano Telemedicina", allowedRoles: ["admin", "vendedor", "gerente"] },
-    { path: "/paginaRelatorioVendas", icon: "bi-file-earmark-bar-graph", text: "Relatório de Vendas", allowedRoles: ["admin", "gerente"] },
-    { path: "/paginaGestaoClientes", icon: "bi-people", text: "Gestão de Clientes", allowedRoles: ["admin", "vendedor",  "gerente"] },
-    { path: "/paginaTelemedicina", icon: "bi-clipboard-heart", text: "Consultar com médico online", allowedRoles: ["admin", "cliente", "clientePJ", "gerente"] },
-    { path: "/paginaApolice", icon: "bi-download", text: "Baixar Apólice/Guia Explicativo", allowedRoles: ["admin", "cliente", "clientePJ"] },
-    { path: "/paginaControleDependentes", icon: "bi-people-fill", text: "Controle de Dependentes", allowedRoles: ["admin", "clientePJ", "cliente"] },
-    { path: "/paginaControlePagamento", icon: "bi-credit-card", text: "Controle de Pagamento", allowedRoles: ["admin", "gerente", "cliente"] },
-    { path: "/paginaCancelamento", icon: "bi-x-circle", text: "Cancelamento", allowedRoles: ["admin", "gerente", "cliente"] },
-    { path: "/paginaGestaoUsuarios", icon: "bi-person-gear", text: "Gestão de Usuários", allowedRoles: ["admin"] },
-    { path: "/paginaDashboardFinanceiro", icon: "bi-bar-chart-line", text: "Dashboard Financeiro", allowedRoles: ["admin", "gerente"] },
-    { path: "/paginaGestaoEmpresas", icon: "bi-buildings", text: "Pagina Gestão de Empresas", allowedRoles: ["admin"] },
-    { path: "/relatorioAsass", icon: "bi-file-earmark-medical", text: "Gestão de Pagamento Asaas", allowedRoles: ["admin"] },
-    { href: "https://wa.me/5561996364787", icon: "bi-question-circle", text: "Suporte e Ajuda", allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"] },
+    {
+      path: "/paginaCadastroPf",
+      icon: "bi-person",
+      text: "Venda de Consulta",
+      allowedRoles: ["admin", "vendedorFarmacia", "gerente"],
+      description: "Cadastre clientes e realize vendas de consultas avulsas."
+    },
+    {
+      path: "/paginaVendaPj",
+      icon: "bi-briefcase",
+      text: "Venda Empresarial",
+      allowedRoles: ["admin", "vendedor", "gerente"],
+      description: "Gerencie vendas de planos para empresas com CNPJ."
+    },
+    {
+      path: "/paginaVendaPf",
+      icon: "bi-cash-coin",
+      text: "Venda Plano Telemedicina",
+      allowedRoles: ["admin", "vendedor", "gerente"],
+      description: "Venda planos mensais com acesso à telemedicina."
+    },
+    {
+      path: "/paginaRelatorioVendas",
+      icon: "bi-file-earmark-bar-graph",
+      text: "Relatório de Vendas",
+      allowedRoles: ["admin", "gerente"],
+      description: "Acompanhe os resultados das vendas por período e vendedor."
+    },
+    {
+      path: "/paginaGestaoClientes",
+      icon: "bi-people",
+      text: "Gestão de Clientes",
+      allowedRoles: ["admin", "vendedor", "gerente"],
+      description: "Visualize, edite ou remova dados de clientes cadastrados."
+    },
+    {
+      path: "/paginaTelemedicina",
+      icon: "bi-clipboard-heart",
+      text: "Consultar com médico online",
+      allowedRoles: ["admin", "cliente", "clientePJ", "gerente"],
+      description: "Acesse consultas online com médicos da plataforma."
+    },
+    {
+      path: "/paginaApolice",
+      icon: "bi-download",
+      text: "Baixar Apólice/Guia Explicativo",
+      allowedRoles: ["admin", "cliente", "clientePJ"],
+      description: "Faça o download da sua apólice ou do guia do usuário."
+    },
+    {
+      path: "/paginaControleDependentes",
+      icon: "bi-people-fill",
+      text: "Controle de Dependentes",
+      allowedRoles: ["admin", "clientePJ", "cliente"],
+      description: "Adicione e edite dependentes vinculados ao seu plano."
+    },
+    {
+      path: "/paginaControlePagamento",
+      icon: "bi-credit-card",
+      text: "Controle de Pagamento",
+      allowedRoles: ["admin", "gerente", "cliente"],
+      description: "Visualize boletos, comprovantes e status de pagamentos."
+    },
+    {
+      path: "/paginaCancelamento",
+      icon: "bi-x-circle",
+      text: "Cancelamento",
+      allowedRoles: ["admin", "gerente", "cliente"],
+      description: "Solicite o cancelamento do plano ou serviço contratado."
+    },
+    {
+      path: "/paginaGestaoUsuarios",
+      icon: "bi-person-gear",
+      text: "Gestão de Usuários",
+      allowedRoles: ["admin"],
+      description: "Gerencie permissões e dados dos usuários do sistema."
+    },
+    {
+      path: "/paginaDashboardFinanceiro",
+      icon: "bi-bar-chart-line",
+      text: "Dashboard Financeiro",
+      allowedRoles: ["admin", "gerente"],
+      description: "Visualize gráficos e indicadores financeiros atualizados."
+    },
+    {
+      path: "/paginaGestaoEmpresas",
+      icon: "bi-buildings",
+      text: "Página Gestão de Empresas",
+      allowedRoles: ["admin"],
+      description: "Gerencie dados das empresas clientes com CNPJ."
+    },
+    {
+      path: "/relatorioAsass",
+      icon: "bi-file-earmark-medical",
+      text: "Gestão de Pagamento Asaas",
+      allowedRoles: ["admin"],
+      description: "Visualize e sincronize pagamentos via plataforma Asaas."
+    },
+    {
+      href: "https://wa.me/5561996364787",
+      icon: "bi-question-circle",
+      text: "Suporte e Ajuda",
+      allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"],
+      description: "Fale com nosso suporte via WhatsApp para tirar dúvidas."
+    }
   ];
+
 
   const visibleCards = cards.filter(card => card.allowedRoles.includes(user?.role || ""));
 
   return (
-    <div className="container text-center d-flex flex-column justify-content-center min-vh-100">
+  <div
+    className="container text-center d-flex flex-column justify-content-center min-vh-100"
+    
+  >
       {loading && (
         <div
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          className=" position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
           style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 1050 }}
         >
           <Loading />
@@ -119,22 +213,40 @@ export default function PaginaInicial() {
           <motion.div
             key={item.path || item.href}
             className="card p-4 text-center shadow-lg border-0"
-            style={{ width: "250px", cursor: "pointer" }}
+            style={{
+              width: "250px",
+              cursor: "pointer",
+              borderRadius: "12px",
+              backgroundColor: "#f8f9fa",
+              transition: "transform 0.2s, background-color 0.2s",
+            }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: index * 0.2 }}
             onClick={() => handleNavigation(item)}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)";
-              e.currentTarget.style.transform = "scale(1.05)";
+              e.currentTarget.style.backgroundColor = "#e9ecef";
+              e.currentTarget.style.transform = "scale(1.03)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "";
+              e.currentTarget.style.backgroundColor = "#f8f9fa";
               e.currentTarget.style.transform = "scale(1)";
             }}
+
           >
-            <i className={`bi ${item.icon} fs-1`} style={{ color: "#1a1b29" }}></i>
-            <h5 className="mt-3">{item.text}</h5>
+            <i
+              className={`bi ${item.icon} fs-1 mb-2`}
+              style={{
+                color:
+                  item.text === "Cancelamento"
+                    ? "#dc3545" // vermelho
+                    : item.text === "Suporte e Ajuda"
+                      ? "#ffc107" // amarelo
+                      : "#0d6efd" // padrão azul
+              }}
+            ></i>
+            <h6 className="fw-semibold" style={{ fontSize: "16px" }}>{item.text}</h6>
+            <p className="text-sm text-slate-500">{item.description}</p>
           </motion.div>
         ))}
       </div>
