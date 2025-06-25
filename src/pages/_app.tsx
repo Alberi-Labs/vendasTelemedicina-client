@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
-  const hideSidebarRoutes = ["/"];
+  const hideSidebarRoutes = ["/", "/manutencao"];
   const [pageTitle, setPageTitle] = useState("Sistema de Vendas");
 
   const isVita = typeof window !== "undefined" && window.location.hostname === "vitaclinica.saudeecor.com";
@@ -22,6 +22,14 @@ export default function App({ Component, pageProps }: AppProps) {
     import("bootstrap/dist/js/bootstrap.bundle.min.js");
   }, []);
 
+  useEffect(() => {
+    if (
+      process.env.NEXT_PUBLIC_MAINTENANCE_MODE === "true" &&
+      router.pathname !== "/manutencao"
+    ) {
+      router.push("/manutencao");
+    }
+  }, [router]);
 
   return (
     <AuthProvider>
