@@ -19,55 +19,83 @@ export default function PaginaControleDependentes() {
   const [editing, setEditing] = useState<Dependente | null>(null);
   const [formData, setFormData] = useState({ nome: "", cpf: "", nascimento: "" });
 
-  const buscarDependentesDoServidor = async () => {
-    setLoading(true);
+const buscarDependentesDoServidor = async () => {
+  setLoading(true);
+  try {
+    const response = await fetch("/api/dependente/consultarDependente", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        titularCpf: user?.cpf,
+        titularNascimento: user?.dt_nascimento,
+      }),
+    });
+
+    const responseText = await response.text();
+    let result;
+
     try {
-      const response = await fetch("/api/dependente/consultarDependente", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          titularCpf: user?.cpf,
-          titularNascimento: user?.dt_nascimento,
-        }),
-      });
+      result = JSON.parse(responseText);
+    } catch (err) {
+      setErroBusca("⚠️ Resposta inválida do servidor (não é JSON).");
+      return;
+    }
 
-      const responseText = await response.text();
-      let result;
+    if (!response.ok) {
+      setErroBusca(result?.error || "⚠️ Erro ao buscar dependentes do servidor.");
+      return;
+    }
 
-      try {
-        result = JSON.parse(responseText);
-      } catch (err) {
-        setErroBusca("⚠️ Resposta inválida do servidor (não é JSON).");
-        return;
-      }
+    let dependentesAPI: any[] = [];
 
-      if (!response.ok) {
-        setErroBusca(result?.error || "⚠️ Erro ao buscar dependentes do servidor.");
-        return;
-      }
+    if (Array.isArray(result.dependentes)) {
+      dependentesAPI = result.dependentes.map((dep: any, i: number) => ({
+        id: i + 1,
+        nome: dep.nome,
+        cpf: dep.cpf,
+        nascimento: dep.nascimento,
+      }));
+    }
 
-      if (Array.isArray(result.dependentes)) {
-        const dependentesFormatados = result.dependentes.map((dep: any, i: number) => ({
-          id: i + 1,
+    // 🔄 Consulta os dependentes salvos no banco
+    const bancoResponse = await fetch("/api/dependente/consultarBanco", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cpfTitular: user?.cpf }),
+    });
+
+    const bancoJson = await bancoResponse.json();
+    const dependentesBanco = Array.isArray(bancoJson.dependentes)
+      ? bancoJson.dependentes.map((dep: any) => ({
           nome: dep.nome,
           cpf: dep.cpf,
           nascimento: dep.nascimento,
-        }));
+        }))
+      : [];
 
-        setDependentes(dependentesFormatados);
-      } else {
-        setDependentes([]);
-      }
+    // 🔀 Junta os dois, evitando CPFs duplicados
+    const mapa = new Map();
+    [...dependentesAPI, ...dependentesBanco].forEach((d) => {
+      mapa.set(d.cpf, d);
+    });
 
-    } catch (error: any) {
-      console.error("❌ Erro ao buscar dependentes:", error);
-      setErroBusca("❌ Erro ao buscar dependentes: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const dependentesUnificados = Array.from(mapa.values()).map((d, i) => ({
+      id: i + 1,
+      nome: d.nome,
+      cpf: d.cpf,
+      nascimento: d.nascimento,
+    }));
+
+    setDependentes(dependentesUnificados);
+  } catch (error: any) {
+    console.error("❌ Erro ao buscar dependentes:", error);
+    setErroBusca("❌ Erro ao buscar dependentes: " + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleClose = () => {
     setShowModal(false);
@@ -119,8 +147,8 @@ export default function PaginaControleDependentes() {
             nascimentoTitular: user?.dt_nascimento,
           }),
         });
-
         const result = await response.json();
+        console.log(result)
 
         if (!response.ok || !result.success) {
           console.error("❌ Erro ao cadastrar dependente:", result.error);

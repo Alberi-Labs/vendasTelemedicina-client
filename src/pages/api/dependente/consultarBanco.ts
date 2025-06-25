@@ -1,31 +1,51 @@
+import { NextApiRequest, NextApiResponse } from "next";
 import pool from "@/lib/db";
 
-interface ConsultaDependenteParams {
-  idTitular?: number;
-  cpfTitular?: string;
+// Formata CPF para 999.999.999-99
+function formatarCPF(cpf: string): string {
+  const num = cpf.replace(/\D/g, "");
+  return num.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
-export async function consultarDependente({ idTitular, cpfTitular }: ConsultaDependenteParams) {
-  if (!idTitular && !cpfTitular) {
-    throw new Error("É necessário informar o idTitular ou cpfTitular.");
+// Converte para DD/MM/AAAA
+function formatarDataParaBR(data: any): string {
+  const d = new Date(data);
+  if (isNaN(d.getTime())) return "";
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const ano = d.getFullYear();
+  return `${dia}/${mes}/${ano}`;
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Método não permitido. Use POST." });
   }
 
-  let query = `
-    SELECT d.idDependente, d.nome, d.cpf, d.dt_nascimento
-    FROM tb_dependentes d
-    JOIN tb_clientes c ON d.id_titular = c.idCliente
-  `;
-  const params: any[] = [];
+  const { cpfTitular } = req.body;
 
-  if (idTitular) {
-    query += ` WHERE d.id_titular = ?`;
-    params.push(idTitular);
-  } else if (cpfTitular) {
-    query += ` WHERE c.cpf = ?`;
-    params.push(cpfTitular);
+  if (!cpfTitular) {
+    return res.status(400).json({ error: "CPF do titular é obrigatório." });
   }
 
-  const [rows]: any = await pool.query(query, params);
+  try {
+    const [rows]: any = await pool.query(
+      `SELECT idDependente, nome, cpf, dt_nascimento
+       FROM tb_dependentes
+       WHERE cpf_titular = ?`,
+      [cpfTitular]
+    );
 
-  return rows; // array de dependentes
+    const dependentes = rows.map((row: any) => ({
+      id: row.idDependente,
+      nome: row.nome,
+      cpf: formatarCPF(row.cpf),
+      nascimento: formatarDataParaBR(row.dt_nascimento),
+    }));
+
+    return res.status(200).json({ dependentes });
+  } catch (error: any) {
+    console.error("Erro ao consultar dependentes no banco:", error);
+    return res.status(500).json({ error: "Erro ao consultar dependentes no banco." });
+  }
 }

@@ -1,45 +1,48 @@
+// pages/api/dependente/cadastrarBanco.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import pool from "@/lib/db";
+
+// Utilitário para formatar a data
+function formatarDataParaMySQL(data: string): string {
+  const [dia, mes, ano] = data.split("/");
+  return `${ano}-${mes}-${dia}`; // Ex: "2003-12-14"
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido. Use POST." });
   }
 
-  const { idTitular, cpfTitular } = req.body;
+  const { cpf, nome, nascimento, cpfTitular } = req.body;
 
-  if (!idTitular && !cpfTitular) {
-    return res.status(400).json({ error: "Informe o idTitular ou cpfTitular." });
+  if (!cpf || !nome || !nascimento || !cpfTitular) {
+    return res.status(400).json({ error: "Todos os campos são obrigatórios." });
   }
 
   try {
-    let query = `
-      SELECT d.idDependente, d.nome, d.cpf, d.dt_nascimento
-      FROM tb_dependentes d
-      JOIN tb_clientes c ON d.id_titular = c.idCliente
-    `;
-    const params: any[] = [];
+    // Verifica duplicidade de CPF
+    const [[cpfExiste]]: any = await pool.query(
+      `SELECT 1 FROM tb_dependentes WHERE cpf = ? LIMIT 1`,
+      [cpf]
+    );
 
-    if (idTitular) {
-      query += ` WHERE d.id_titular = ?`;
-      params.push(idTitular);
-    } else if (cpfTitular) {
-      query += ` WHERE c.cpf = ?`;
-      params.push(cpfTitular);
+    if (cpfExiste) {
+      return res.status(409).json({ error: "CPF do dependente já está cadastrado." });
     }
 
-    const [rows]: any = await pool.query(query, params);
+    // Converte data de nascimento para o formato YYYY-MM-DD
+    const nascimentoFormatado = formatarDataParaMySQL(nascimento);
 
-    const dependentes = rows.map((row: any) => ({
-      id: row.idDependente,
-      nome: row.nome,
-      cpf: row.cpf,
-      nascimento: row.dt_nascimento,
-    }));
+    // Inserção no banco
+    await pool.query(
+      `INSERT INTO tb_dependentes (nome, cpf, dt_nascimento, cpf_titular)
+       VALUES (?, ?, ?, ?)`,
+      [nome, cpf, nascimentoFormatado, cpfTitular]
+    );
 
-    res.status(200).json({ dependentes });
+    return res.status(200).json({ success: true });
   } catch (error: any) {
-    console.error("Erro ao consultar dependentes:", error);
-    res.status(500).json({ error: "Erro ao consultar dependentes." });
+    console.error("❌ Erro ao cadastrar dependente:", error);
+    return res.status(500).json({ error: "Erro ao cadastrar dependente." });
   }
 }
