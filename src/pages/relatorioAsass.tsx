@@ -7,24 +7,19 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import QuadroComparativo from "@/components/quadroComparativo/QuadroComparativo";
 import Loading from "@/components/loading/loading";
+import axios from "axios";
+import PreviewUpload from "@/components/previewUpload/PreviewUpload";
 
 dayjs.extend(customParseFormat);
-
-type Cobranca = {
-  nome: string;
-  mes: string;
-  vencimento: string;
-  pagamento?: string;
-};
 
 type ClienteCobrancas = {
   nome: string;
   documento?: string;
   valor?: number;
   valor_liquido?: number;
-  [mes: string]: string | string[] | number | undefined;
+  transacoes?: any[];
+  [mes: string]: string | string[] | number | any[] | undefined;
 };
-
 
 const gerarStatus = (vencimento: string, pagamento?: string) => {
   const dataVenc = dayjs(vencimento, "DD/MM/YYYY");
@@ -39,66 +34,80 @@ const gerarStatus = (vencimento: string, pagamento?: string) => {
 };
 
 export default function RelatorioAsaasUpload() {
+  const [instituicoes, setInstituicoes] = useState<any[]>([]); // Para armazenar as instituições
   const [dados, setDados] = useState<ClienteCobrancas[]>([]);
   const [meses, setMeses] = useState<string[]>([]);
+  const [instituicaoSelecionada, setInstituicaoSelecionada] = useState<string>(""); // Para armazenar a instituição selecionada
+  const [mes, setMes] = useState<string>(""); // Para armazenar o mês selecionado
+  const [ano, setAno] = useState<string>(""); // Para armazenar o ano selecionado
   const [filtroNome, setFiltroNome] = useState("");
-  const [filtrosStatus, setFiltrosStatus] = useState<string[]>([]);
-  const [filtrosMeses, setFiltrosMeses] = useState<string[]>([]);
-  const [limite, setLimite] = useState(1000);
+  const [filtrosStatus, setFiltrosStatus] = useState<string[]>([]); 
+  const [filtrosMeses, setFiltrosMeses] = useState<string[]>([]); 
+  const [limite, setLimite] = useState(1000); 
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
+  const [fileUploaded, setFileUploaded] = useState<File | null>(null); // Guardar o arquivo carregado
 
   useEffect(() => {
-    // Carrega o arquivo XLSX se existir
-    fetch("/uploads/relatorio_cobrancas.xlsx")
-      .then((res) => {
-        if (!res.ok) throw new Error("Arquivo não encontrado");
-        return res.arrayBuffer();
-      })
-      .then((buffer) => {
-        const workbook = XLSX.read(buffer, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json: any[] = XLSX.utils.sheet_to_json(sheet);
+    axios.get("/api/instituicoes/buscarInstituicao").then(res => {
+      setInstituicoes(res.data.instituicoes); // <- extrai corretamente o array
+    });
+  }, []);
+
+  useEffect(() => {
+    const carregarDados = async () => {
+      setCarregando(true);
+
+      try {
+        // Busca os dados dos clientes via API
+        const resClientes = await fetch("/api/cliente/consultar");
+        const jsonClientes = await resClientes.json();
+
+        // Busca os dados de cobranças via API com os filtros de instituição, mês e ano
+        const resCobrancas = await fetch(`/api/cobranca/buscarCobranca?mes=${mes}&ano=${ano}&idEmpresa=${instituicaoSelecionada}`);
+        const jsonCobrancas = await resCobrancas.json();
 
         const mesesUnicos = new Set<string>();
         const agrupado: { [chave: string]: ClienteCobrancas } = {};
 
-        json.forEach((row) => {
-          const nome = String(row["Nome"] || "").trim().toUpperCase();
-          const documentoBruto = String(row["CPF ou CNPJ"] || "").replace(/\D/g, "");
-          const venc = row["Vencimento"];
-          const pagamento = row["Data de crédito"];
-          const dataRef = pagamento || venc;
-          const dataMes = dayjs(dataRef, "DD/MM/YYYY");
-          const mes = dataMes.isValid() ? dataMes.format("MM/YYYY") : "Desconhecido";
+        jsonClientes.clientes.forEach((cliente: any) => {
+          const nome = cliente.nome.trim().toUpperCase();
+          const documentoBruto = cliente.cpf.replace(/\D/g, "");
 
-          const valorBruto = parseFloat(String(row["Valor"] || "0").replace(",", "."));
-          const valorLiquido = parseFloat(String(row["Valor Líquido"] || "0").replace(",", "."));
+          jsonCobrancas.forEach((cobranca: any) => {
+            if (cobranca.id_cliente === cliente.idCliente || cobranca.id_empresa === cliente.idCliente) {
+              const venc = cobranca.dt_vencimento;
+              const pagamento = cobranca.dt_pagamento;
+              const dataRef = pagamento || venc;
+              const dataMes = dayjs(dataRef, "DD/MM/YYYY");
+              const mes = dataMes.isValid() ? dataMes.format("MM/YYYY") : "Desconhecido";
 
-          const chave = `${nome}_${documentoBruto}`;
+              const chave = `${nome}_${documentoBruto}`;
 
-          if (!agrupado[chave]) {
-            agrupado[chave] = {
-              nome,
-              documento: documentoBruto,
-              valor: 0,
-              valor_liquido: 0,
-            };
-          }
+              if (!agrupado[chave]) {
+                agrupado[chave] = {
+                  nome,
+                  documento: documentoBruto,
+                  valor: 0,
+                  valor_liquido: 0,
+                };
+              }
 
-          agrupado[chave].valor = (agrupado[chave].valor || 0) + valorBruto;
-          agrupado[chave].valor_liquido = (agrupado[chave].valor_liquido || 0) + valorLiquido;
+              agrupado[chave].valor = (agrupado[chave].valor || 0) + cobranca.valor_pg;
+              agrupado[chave].valor_liquido = (agrupado[chave].valor_liquido || 0) + cobranca.valor_pg_asass;
 
-          const status = gerarStatus(venc, pagamento);
-          const novaLinha = `Venc: ${venc}\nPag: ${pagamento || "-"}\n${status}`;
+              const status = gerarStatus(venc, pagamento);
+              const novaLinha = `Venc: ${venc}\nPag: ${pagamento || "-"}\n${status}`;
 
-          if (agrupado[chave][mes]) {
-            agrupado[chave][mes] += `\n\n${novaLinha}`;
-          } else {
-            agrupado[chave][mes] = novaLinha;
-          }
+              if (agrupado[chave][mes]) {
+                agrupado[chave][mes] += `\n\n${novaLinha}`;
+              } else {
+                agrupado[chave][mes] = novaLinha;
+              }
 
-          mesesUnicos.add(mes);
+              mesesUnicos.add(mes);
+            }
+          });
         });
 
         const resultado = Object.values(agrupado).sort((a, b) =>
@@ -112,30 +121,25 @@ export default function RelatorioAsaasUpload() {
         );
 
         setDados(resultado);
-      })
-      .catch((err) => {
-        console.warn("Nenhum arquivo XLSX encontrado ainda ou inválido.");
-        setMeses([]);
+        setUltimaAtualizacao(new Date().toLocaleString());
+      } catch (err) {
+        console.warn("Erro ao carregar dados", err);
         setDados([]);
-      });
+        setMeses([]);
+      }
 
-    // Carrega o timestamp da última atualização, se existir
-    fetch("/uploads/relatorio_cobrancas_timestamp.txt")
-      .then((res) => {
-        if (!res.ok) throw new Error("Sem timestamp");
-        return res.text();
-      })
-      .then(setUltimaAtualizacao)
-      .catch(() => {
-        setUltimaAtualizacao(null);
-      });
-  }, []);
+      setCarregando(false);
+    };
 
+    if (instituicaoSelecionada && mes && ano) {
+      carregarDados();
+    }
+  }, [instituicaoSelecionada, mes, ano]);
 
   const exportarExcel = () => {
-    const linhas = clientesFiltrados.map((cliente) => {
+    const linhas = dados.map((cliente) => {
       const linha: any = { Cliente: cliente.nome };
-      mesesVisiveis.forEach((mes) => {
+      meses.forEach((mes) => {
         linha[mes] = cliente[mes] || "-";
       });
       return linha;
@@ -176,7 +180,6 @@ export default function RelatorioAsaasUpload() {
     );
   };
 
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -192,211 +195,11 @@ export default function RelatorioAsaasUpload() {
     if (res.ok) {
       const { timestamp } = await res.json();
       setUltimaAtualizacao(timestamp);
-      location.reload();
+      setFileUploaded(file); // Atualiza o arquivo carregado
     } else {
       alert("Erro ao fazer upload.");
     }
   };
-
-  const copiarDadosDosClientes = async () => {
-    setCarregando(true);
-    const documentos = new Set<string>();
-
-    dados.forEach((cliente) => {
-      const doc = cliente.documento?.replace(/\D/g, "");
-      if (doc) documentos.add(doc);
-    });
-
-    const todosDocumentos = Array.from(documentos);
-    const cpfs = todosDocumentos.filter((doc) => doc.length === 11).slice(0, 1000);
-    const cnpjs = todosDocumentos.filter((doc) => doc.length === 14).slice(0, 5000);
-    const documentosLimitados = [...cpfs, ...cnpjs];
-
-    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-    const clientesParaInserir: any[] = [];
-
-    let clientesExistentes: string[] = [];
-    let empresasExistentes: string[] = [];
-
-    try {
-      const resClientes = await fetch("/api/cliente/consultar");
-      const jsonClientes = await resClientes.json();
-      clientesExistentes = jsonClientes.clientes?.map((c: any) => c.cpf?.replace(/\D/g, "")) || [];
-
-      const resEmpresas = await fetch("/api/empresas/listarEmpresas");
-      const jsonEmpresas = await resEmpresas.json();
-      empresasExistentes = jsonEmpresas.empresas?.map((e: any) => e.cnpj?.replace(/\D/g, "")) || [];
-    } catch (err) {
-      console.error("❌ Erro ao buscar dados existentes:", err);
-      alert("Erro ao buscar dados existentes. Veja o console.");
-      setCarregando(false);
-      return;
-    }
-
-    for (const doc of documentosLimitados) {
-      const isCNPJ = doc.length === 14;
-      const jaExiste = isCNPJ
-        ? empresasExistentes.includes(doc)
-        : clientesExistentes.includes(doc);
-
-      if (jaExiste) {
-        console.log(`🔁 Já existente: ${doc}`);
-        continue;
-      }
-
-      try {
-        const res = await fetch("/api/clienteSaudeecor/buscarDados", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cpf: doc }),
-        });
-
-        if (!res.ok) throw new Error("Erro na requisição");
-
-        const dadosCompletosArray = await res.json();
-        const dadosCompletos = Array.isArray(dadosCompletosArray)
-          ? dadosCompletosArray[0]
-          : dadosCompletosArray;
-
-        if (!dadosCompletos || (!dadosCompletos.nom_cliente && !dadosCompletos.nom_empresa)) {
-          console.warn(`⚠️ Documento ${doc} não retornou dados válidos.`);
-          continue;
-        }
-
-        const clienteParaVincular = {
-          nom_cliente: dadosCompletos.nom_cliente || dadosCompletos.nom_empresa,
-          num_cpf: isCNPJ ? null : dadosCompletos.num_cpf?.replace(/\D/g, ""),
-          num_cnpj: isCNPJ ? dadosCompletos.num_cnpj?.replace(/\D/g, "") : null,
-          dsc_email: dadosCompletos.dsc_email || null,
-          num_celular: dadosCompletos.num_celular || null,
-          dsc_instituicao: dadosCompletos.dsc_instituicao || dadosCompletos.dsc_empresa,
-          quantidade_vidas: dadosCompletos.qtd_vidas || 0
-        };
-
-        clientesParaInserir.push(clienteParaVincular);
-        console.log(`✅ Processado: ${doc}`);
-      } catch (err) {
-        console.error(`❌ Erro ao buscar ${doc}`, err);
-      }
-
-      await delay(2000);
-    }
-
-    if (clientesParaInserir.length === 0) {
-      alert("Nenhum novo cliente ou empresa para inserir.");
-      setCarregando(false);
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/relatorioAsaas/vincularCliente", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(clientesParaInserir),
-      });
-
-      if (!res.ok) throw new Error(await res.text());
-
-      console.log("📌 Dados vinculados com sucesso.");
-      alert("Clientes e empresas vinculados com sucesso!");
-    } catch (err) {
-      console.error("❌ Erro ao enviar dados para vincularCliente", err);
-      alert("Erro ao vincular dados. Veja o console.");
-    }
-    setCarregando(false);
-  };
-
-  const sincronizarCobrancas = async () => {
-    setCarregando(true);
-    const cobrancasParaInserir: any[] = [];
-
-    dados.forEach((cliente) => {
-      const documento = cliente.documento?.replace(/\D/g, "");
-      if (!documento) return;
-
-      meses.forEach((mes) => {
-        const info = cliente[mes];
-        if (typeof info !== "string") return;
-
-        const linhas = info.split("\n\n");
-        linhas.forEach((linha) => {
-          const vencMatch = linha.match(/Venc:\s*(\d{2}\/\d{2}\/\d{4})/);
-          const pagMatch = linha.match(/Pag:\s*(\d{2}\/\d{2}\/\d{4}|-)/);
-
-          const vencimento = vencMatch?.[1];
-          const pagamento = pagMatch?.[1] === "-" ? null : pagMatch?.[1];
-
-          if (vencimento) {
-            const mesReferencia = dayjs(vencimento, "DD/MM/YYYY").format("MM/YYYY");
-            cobrancasParaInserir.push({
-              cpf: documento,
-              mesReferencia,
-              dt_vencimento: vencimento,
-              dt_pagamento: pagamento,
-              valor_pg: cliente.valor || 0,
-              valor_pg_asaas: cliente.valor_liquido || 0,
-            });
-          }
-        });
-      });
-    });
-
-    if (cobrancasParaInserir.length === 0) {
-      alert("Nenhuma cobrança encontrada para sincronizar.");
-      setCarregando(false);
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/cobranca/uploadCobranca", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cobrancasParaInserir),
-      });
-
-      if (!res.ok) throw new Error(await res.text());
-
-      console.log("✅ Cobranças sincronizadas com sucesso.");
-      alert("Cobranças sincronizadas com sucesso!");
-    } catch (err) {
-      console.error("❌ Erro ao sincronizar cobranças:", err);
-      alert("Erro ao sincronizar cobranças. Veja o console.");
-    }
-    setCarregando(false);
-  };
-
-
-  const mesesVisiveis = filtrosMeses.length > 0 ? filtrosMeses : meses;
-
-  const clientesFiltrados = dados
-    .map((cliente) => {
-      const novoCliente: ClienteCobrancas = {
-        nome: cliente.nome,
-        documento: cliente.documento,
-        valor: cliente.valor,               // 🔹 mantém o valor bruto
-        valor_liquido: cliente.valor_liquido, // 🔹 mantém o valor líquido
-      };
-
-      mesesVisiveis.forEach((mes) => {
-        const conteudo = cliente[mes];
-        if (!conteudo) return;
-        if (
-          filtrosStatus.length === 0 ||
-          (typeof conteudo === "string" && filtrosStatus.some((status) => conteudo.includes(status))) ||
-          (Array.isArray(conteudo) && conteudo.some((item) => typeof item === "string" && filtrosStatus.some((status) => item.includes(status))))
-        ) {
-          novoCliente[mes] = conteudo;
-        }
-      });
-
-      return novoCliente;
-    })
-    .filter((cliente) => {
-      const temMesComStatus = mesesVisiveis.some((mes) => cliente[mes]);
-      const nomeCombina = cliente.nome.includes(filtroNome.toUpperCase());
-      return temMesComStatus && nomeCombina;
-    })
-    .slice(0, limite);
 
   const formatarDocumento = (doc: string) => {
     if (doc.length === 11) {
@@ -407,59 +210,57 @@ export default function RelatorioAsaasUpload() {
     return doc;
   };
 
-
   return (
     <div className="container mt-4">
-          {carregando && <Loading />}
+      {carregando && <Loading />}
 
       <h4 className="text-center mb-4 mt-5">📋 Relatório de Split de Pagamento </h4>
 
-      <QuadroComparativo />
+      {/* Input de upload de arquivo */}
+       <input
+        type="file"
+        className="form-control"
+        accept=".xlsx"
+        onChange={handleFileUpload}
+      />
+      {ultimaAtualizacao && (
+        <div className="text-muted small">
+          📅 Último upload: <strong>{ultimaAtualizacao}</strong>
+        </div>
+      )}
 
-      <h4 className="text-center mb-4 mt-5">📋 Relatório de Cobranças</h4>
-
+      {/* Mostrar o componente PreviewUpload após o upload do arquivo */}
+      {fileUploaded && <PreviewUpload file={fileUploaded} />},
+      
       <div className="row mb-2">
         <div className="col-md-3 mb-2">
-          <input
-            type="file"
+          <select
             className="form-control"
-            accept=".xlsx"
-            onChange={handleFileUpload}
+            value={instituicaoSelecionada}
+            onChange={(e) => setInstituicaoSelecionada(e.target.value)}
+          >
+            <option value="">Selecione a Instituição</option>
+            {instituicoes.map(inst => (
+              <option key={inst.idInstituicao} value={inst.idInstituicao}>
+                {inst.nomeInstituicao}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="col-md-3 mb-2">
+          <input
+            type="month"
+            className="form-control"
+            value={mes && ano ? `${ano}-${mes.padStart(2, "0")}` : ""}
+            onChange={(e) => {
+              const [ano, mes] = e.target.value.split("-");
+              setMes(mes);
+              setAno(ano);
+            }}
           />
         </div>
-
-        <div className="col-md-9 mb-2 d-flex align-items-center">
-          {ultimaAtualizacao && (
-            <div className="text-muted small">
-              📅 Último upload: <strong>{ultimaAtualizacao}</strong>
-            </div>
-          )}
-        </div>
       </div>
-      <button
-        className="btn btn-outline-primary mb-3"
-        onClick={async () => {
-          setCarregando(true);
-          console.log("Iniciando cópia de dados...");
-          await copiarDadosDosClientes();
-          setCarregando(false);
-        }}
-      >
-        📋 Sincronizar Clientes
-      </button>
-
-      <button
-        className="btn btn-outline-success mb-3 ms-2"
-        onClick={async () => {
-          setCarregando(true);
-          console.log("🔄 Iniciando sincronização de cobranças...");
-          await sincronizarCobrancas();
-          setCarregando(false);
-        }}
-      >
-        🔄 Sincronizar Cobranças
-      </button>
-
 
       <div className="row mb-3">
         <div className="col-md-3 mb-2">
@@ -571,15 +372,14 @@ export default function RelatorioAsaasUpload() {
               <th>Valor</th>
               <th>Valor com desconto</th>
 
-
-              {mesesVisiveis.map((mes) => (
+              {meses.map((mes) => (
                 <th key={mes}>{mes}</th>
               ))}
             </tr>
           </thead>
 
           <tbody>
-            {clientesFiltrados.map((cliente, i) => (
+            {dados.map((cliente, i) => (
               <tr key={i}>
                 <td className="text-start fw-semibold">{cliente.nome}</td>
                 <td style={{ fontSize: "0.85rem" }}>
@@ -592,7 +392,7 @@ export default function RelatorioAsaasUpload() {
                   {cliente.valor_liquido ? `R$ ${cliente.valor_liquido.toFixed(2).replace(".", ",")}` : "-"}
                 </td>
 
-                {mesesVisiveis.map((mes) => (
+                {meses.map((mes) => (
                   <td key={mes} style={{ whiteSpace: "pre-line", fontSize: "0.85rem" }}>
                     {cliente[mes] || "-"}
                   </td>

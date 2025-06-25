@@ -23,7 +23,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.log("Documento sem formatação:", docNumeros);
   const isCPF = docNumeros.length === 11;
   const endpoint = isCPF ? SaudeECorURL : SaudeECorURLPJ;
-console.log("Endpoint:", endpoint);
+  console.log("Endpoint:", endpoint);
+
   const payload = isCPF
     ? {
         app: "backend",
@@ -39,7 +40,8 @@ console.log("Endpoint:", endpoint);
       };
 
   try {
-    console.log(payload)
+    console.log("Payload:", payload);
+
     const response = await fetch(endpoint as string, {
       method: "POST",
       headers: {
@@ -53,14 +55,17 @@ console.log("Endpoint:", endpoint);
       return res.status(response.status).json({ message: "Erro na requisição externa", error: errorText });
     }
 
-    if (isCPF) {
-      const data: DadosSaudeECor = await response.json();
-      return res.status(200).json(data);
-    } else {
-      const data = await response.json(); // Geralmente retorna um array
-      console.log(data);
-      return res.status(200).json(data);
+    const data = await response.json();
+
+    // Verifica se os dados retornados estão vazios
+    const isEmpty = !data || (Array.isArray(data) && data.length === 0) || (typeof data === "object" && Object.keys(data).length === 0);
+    if (isEmpty) {
+      return res.status(404).json({
+        message: "Cliente não encontrado na base de dados, por favor contate o suporte.",
+      });
     }
+
+    return res.status(200).json(data);
 
   } catch (error: any) {
     return res.status(500).json({ message: "Erro ao buscar os dados", error: error.message });

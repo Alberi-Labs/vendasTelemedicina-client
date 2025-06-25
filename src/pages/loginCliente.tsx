@@ -8,6 +8,7 @@ export default function LoginForm() {
   const router = useRouter();
   const { login } = useAuth();
   const currentDomain = typeof window !== "undefined" ? window.location.hostname : "";
+  console.log("currentDomain", currentDomain)
   const imagemFundo = currentDomain === "vitaclinica.saudeecor.com"
     ? "/uploads/vita.png"
     : "/image.png";
@@ -24,7 +25,7 @@ export default function LoginForm() {
     if (nomeNormalizado.includes("clinica abc")) return "/uploads/clinicaabc.png";
     if (nomeNormalizado.includes("medic center")) return "/uploads/mediccenter.png";
 
-    return null; // fallback se não encontrar
+    return null;
   };
 
   const [cpf, setCpf] = useState("");
@@ -44,14 +45,12 @@ export default function LoginForm() {
   };
 
   const formatarData = (data: string) => {
-    // Remove tudo o que não for número
     const numeros = data.replace(/\D/g, "");
 
-    // Restringe para 8 caracteres no máximo
     const dataFormatada = numeros
-      .slice(0, 8) // Limita o tamanho da string para 8 caracteres
-      .replace(/(\d{2})(\d)/, "$1/$2") // Adiciona "/" após os dois primeiros dígitos (dia)
-      .replace(/(\d{2})(\d{1,2})$/, "$1/$2"); // Adiciona a barra entre mês e ano (ex: 14/12/2003)
+      .slice(0, 8) 
+      .replace(/(\d{2})(\d)/, "$1/$2")
+      .replace(/(\d{2})(\d{1,2})$/, "$1/$2"); 
 
     return dataFormatada;
   };
@@ -73,9 +72,8 @@ export default function LoginForm() {
     };
 
     const cpfFormatado = formatarCpf(cpf);
-    const senhaFormatada = formatarData(dataNascimento); // Formata a data visualmente
-
-    const payload = { cpf: cpfFormatado, dataNascimento: dataNascimento }; // A data enviada deve ser sem formatação
+    const senhaFormatada = formatarData(dataNascimento); // apenas visual
+    const payload = { cpf: cpfFormatado, dataNascimento };
 
     try {
       const res = await fetch(rota, {
@@ -85,29 +83,33 @@ export default function LoginForm() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
 
-      console.log("res", data)
+      if (!res.ok) {
+        const erroMensagem = data?.message || data?.error || "Erro inesperado.";
+        throw new Error(erroMensagem);
+      }
 
-      const clienteRaw = data.find((c: any) =>
-        c.data_contrato_vigencia_inicio ||
-        c.data_contrato_vigencia_final ||
-        c.num_contrato_retorno_apolice ||
-        c.num_contrato_retorno_certificado ||
-        c.cod_contrato_retorno_operacao
-      ) || data[0];
+      // Verifica se a resposta é um array (CNPJ) ou objeto (CPF)
+      const clienteRaw = Array.isArray(data)
+        ? data.find((c: any) =>
+          c.data_contrato_vigencia_inicio ||
+          c.data_contrato_vigencia_final ||
+          c.num_contrato_retorno_apolice ||
+          c.num_contrato_retorno_certificado ||
+          c.cod_contrato_retorno_operacao
+        ) || data[0]
+        : data;
+
+      if (!clienteRaw) throw new Error("Cliente não encontrado na resposta da API.");
 
       if (clienteRaw.dsc_instituicao) {
         localStorage.setItem("nome_empresa", clienteRaw.dsc_instituicao);
         const imagem = mapearImagemEmpresa(clienteRaw.dsc_instituicao);
-        console.log("imagem", imagem)
-        localStorage.setItem("imagem_empresa", imagem || "")
+        localStorage.setItem("imagem_empresa", imagem || "");
       }
 
-
-      if (!clienteRaw) throw new Error("Cliente não encontrado na resposta da API.");
-
       localStorage.setItem("cliente", JSON.stringify(clienteRaw));
+
       const clienteData: User = {
         id: clienteRaw.seq_cliente,
         nome: clienteRaw.nom_cliente,
@@ -133,10 +135,12 @@ export default function LoginForm() {
         router.push("/paginaInicial");
       }, 100);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ocorreu um erro inesperado.");
+      const msg = err instanceof Error ? err.message : "Ocorreu um erro inesperado.";
+      setError(msg);
       setLoading(false);
     }
   };
+
 
   return (
     <div
@@ -149,21 +153,24 @@ export default function LoginForm() {
       }}
     >
       <div
-        className="row shadow-lg rounded overflow-hidden"
+        className="row shadow-lg rounded overflow-hidden w-100 mx-3 mx-md-0"
         style={{
-          width: "960px",
+          maxWidth: "960px",
           backgroundColor: "white",
           borderRadius: "12px",
-          height: "660px", // AQUI: aumenta altura
+          minHeight: "660px",
         }}
       >
+
 
         {/* Lado da imagem */}
         <div
           className="col-md-6 d-none d-md-block p-0"
           style={{
             backgroundImage: `url('${imagemFundo}')`,
-            backgroundSize: "cover",
+            backgroundColor: currentDomain === "vitaclinica.saudeecor.com" ? "rgb(22, 22, 33)" : "white",
+            backgroundSize: "80%",
+            backgroundRepeat: "no-repeat",
             backgroundPosition: "center",
           }}
         ></div>

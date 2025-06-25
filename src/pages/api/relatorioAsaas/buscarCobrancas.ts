@@ -1,7 +1,7 @@
 // pages/api/asaas/todasCobrancasPorCliente.ts
 import { NextApiRequest, NextApiResponse } from "next";
 
-const ASAAS_API_KEY = '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmEyY2QxYjQwLTA0ZTktNGU0Mi05ODQ3LTQzY2IwY2Q5OGNkNzo6JGFhY2hfNTRmY2U5YzktMjFhZC00NTIwLTkxYTMtZDM5OGYzZGNiY2Rm';
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY || "";
 
 async function getAllCustomers() {
     const allCustomers: any[] = [];

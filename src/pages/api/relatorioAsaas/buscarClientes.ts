@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 method: 'GET',
                 headers: {
                     accept: 'application/json',
-                    access_token: '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmEyY2QxYjQwLTA0ZTktNGU0Mi05ODQ3LTQzY2IwY2Q5OGNkNzo6JGFhY2hfNTRmY2U5YzktMjFhZC00NTIwLTkxYTMtZDM5OGYzZGNiY2Rm'
+                    access_token: ASAAS_API_KEY
                 }
             });
 

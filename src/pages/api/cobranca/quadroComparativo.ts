@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [rows]: any = await pool.query(
       `
       SELECT 
-        COUNT(CASE WHEN c.id_cliente IS NOT NULL THEN 1 END) AS qtdVidas,
+        COUNT(*) AS qtdVidas,
         SUM(c.valor_pg) AS valorBruto,
         SUM(c.valor_pg - c.valor_pg_asass) AS descontoAsaas,
         SUM(c.valor_pg_asass) AS valorLiquido
@@ -27,10 +27,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         (cl.id_instituicao = ? OR e.id_instituicao = ?)
         AND MONTH(c.dt_pagamento) = ?
         AND YEAR(c.dt_pagamento) = ?
+        AND c.dt_pagamento IS NOT NULL
       `,
       [idInstituicao, idInstituicao, mes, ano]
     );
-    console.log(rows[0])
+    console.log("rows", rows[0]);
     res.status(200).json(rows[0]);
   } catch (error: any) {
     console.error("Erro ao buscar quadro comparativo:", error);
