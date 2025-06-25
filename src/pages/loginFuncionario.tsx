@@ -4,7 +4,7 @@ import { useAuth, User } from "@/app/context/AuthContext";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 import Loading from "@/components/loading/loading";
 
-export default function LoginForm() {
+export default function LoginFuncionario() {
   const router = useRouter();
   const { login } = useAuth();
   const [cpf, setCpf] = useState("");
