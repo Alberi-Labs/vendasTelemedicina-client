@@ -18,6 +18,7 @@ export default function PaginaControleDependentes() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Dependente | null>(null);
   const [formData, setFormData] = useState({ nome: "", cpf: "", nascimento: "" });
+  const [loadingSave, setLoadingSave] = useState(false);
 
 const buscarDependentesDoServidor = async () => {
   setLoading(true);
@@ -120,6 +121,8 @@ const buscarDependentesDoServidor = async () => {
   const handleSave = async () => {
     if (!formData.nascimento || !formData.nome || !formData.cpf) return;
 
+    setLoadingSave(true);
+
     const novoDependente: Dependente = {
       id: editing ? editing.id : Date.now(),
       nome: formData.nome,
@@ -153,6 +156,7 @@ const buscarDependentesDoServidor = async () => {
         if (!response.ok || !result.success) {
           console.error("❌ Erro ao cadastrar dependente:", result.error);
           alert("Erro ao cadastrar dependente na SulAmérica: " + result.error);
+          setLoadingSave(false);
           return;
         }
         await cadastrarBanco(novoDependente);
@@ -161,12 +165,14 @@ const buscarDependentesDoServidor = async () => {
       } catch (error: any) {
         console.error("❌ Erro ao chamar a API de cadastro:", error);
         alert("Erro ao cadastrar dependente: " + error.message);
+        setLoadingSave(false);
         return;
       }
 
       setDependentes((prev) => [...(prev || []), novoDependente]);
     }
 
+    setLoadingSave(false);
     handleClose();
   };
 
@@ -315,8 +321,23 @@ const buscarDependentesDoServidor = async () => {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose}>Cancelar</Button>
-          <Button variant="primary" onClick={handleSave} disabled={!formData.nome}>Salvar</Button>
+          <Button variant="secondary" onClick={handleClose} disabled={loadingSave}>
+            Cancelar
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleSave} 
+            disabled={!formData.nome || loadingSave}
+          >
+            {loadingSave ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Salvando...
+              </>
+            ) : (
+              "Salvar"
+            )}
+          </Button>
         </Modal.Footer>
       </Modal>
     </div>

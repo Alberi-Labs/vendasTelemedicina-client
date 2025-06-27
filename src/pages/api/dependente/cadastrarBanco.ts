@@ -5,6 +5,7 @@ import pool from "@/lib/db";
 // Utilitário para formatar a data
 function formatarDataParaMySQL(data: string): string {
   const [dia, mes, ano] = data.split("/");
+  console.log(`Data recebida: ${ano}-${mes}-${dia} `);
   return `${ano}-${mes}-${dia}`; // Ex: "2003-12-14"
 }
 
@@ -31,13 +32,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Converte data de nascimento para o formato YYYY-MM-DD
-    const nascimentoFormatado = formatarDataParaMySQL(nascimento);
 
     // Inserção no banco
     await pool.query(
       `INSERT INTO tb_dependentes (nome, cpf, dt_nascimento, cpf_titular)
        VALUES (?, ?, ?, ?)`,
-      [nome, cpf, nascimentoFormatado, cpfTitular]
+      [nome, cpf, nascimento, cpfTitular]
     );
 
     return res.status(200).json({ success: true });
