@@ -16,7 +16,6 @@ export default function PaginaControleDependentes() {
   const [erroBusca, setErroBusca] = useState<string | null>(null);
   const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<Dependente | null>(null);
   const [formData, setFormData] = useState({ nome: "", cpf: "", nascimento: "" });
   const [loadingSave, setLoadingSave] = useState(false);
 
@@ -100,21 +99,11 @@ const buscarDependentesDoServidor = async () => {
 
   const handleClose = () => {
     setShowModal(false);
-    setEditing(null);
     setFormData({ nome: "", cpf: "", nascimento: "" });
   };
 
-  const handleShow = (dependente?: Dependente) => {
-    if (dependente) {
-      setEditing(dependente);
-      setFormData({
-        nome: dependente.nome,
-        cpf: dependente.cpf,
-        nascimento: dependente.nascimento,
-      });
-    } else {
-      setFormData({ nome: "", cpf: "", nascimento: "" });
-    }
+  const handleShow = () => {
+    setFormData({ nome: "", cpf: "", nascimento: "" });
     setShowModal(true);
   };
 
@@ -124,60 +113,50 @@ const buscarDependentesDoServidor = async () => {
     setLoadingSave(true);
 
     const novoDependente: Dependente = {
-      id: editing ? editing.id : Date.now(),
+      id: Date.now(),
       nome: formData.nome,
       cpf: formData.cpf,
       nascimento: formData.nascimento,
     };
 
-    if (editing) {
-      setDependentes((prev) =>
-        prev?.map((d) => (d.id === editing.id ? novoDependente : d)) || []
-      );
-    } else {
-      try {
-        console.log(user)
-        const response = await fetch("/api/dependente/cadastrarSulamerica", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            nomeDependente: formData.nome,
-            cpfDependente: formData.cpf,
-            nascimentoDependente: formData.nascimento,
-            cpfTitular: user?.cpf,
-            nascimentoTitular: user?.dt_nascimento,
-          }),
-        });
-        const result = await response.json();
-        console.log(result)
+    try {
+      console.log(user)
+      const response = await fetch("/api/dependente/cadastrarSulamerica", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nomeDependente: formData.nome,
+          cpfDependente: formData.cpf,
+          nascimentoDependente: formData.nascimento,
+          cpfTitular: user?.cpf,
+          nascimentoTitular: user?.dt_nascimento,
+        }),
+      });
+      const result = await response.json();
+      console.log(result)
 
-        if (!response.ok || !result.success) {
-          console.error("❌ Erro ao cadastrar dependente:", result.error);
-          alert("Erro ao cadastrar dependente na SulAmérica: " + result.error);
-          setLoadingSave(false);
-          return;
-        }
-        await cadastrarBanco(novoDependente);
-
-        console.log("✅ Dependente cadastrado com sucesso!");
-      } catch (error: any) {
-        console.error("❌ Erro ao chamar a API de cadastro:", error);
-        alert("Erro ao cadastrar dependente: " + error.message);
+      if (!response.ok || !result.success) {
+        console.error("❌ Erro ao cadastrar dependente:", result.error);
+        alert("Erro ao cadastrar dependente na SulAmérica: " + result.error);
         setLoadingSave(false);
         return;
       }
+      await cadastrarBanco(novoDependente);
 
-      setDependentes((prev) => [...(prev || []), novoDependente]);
+      console.log("✅ Dependente cadastrado com sucesso!");
+    } catch (error: any) {
+      console.error("❌ Erro ao chamar a API de cadastro:", error);
+      alert("Erro ao cadastrar dependente: " + error.message);
+      setLoadingSave(false);
+      return;
     }
+
+    setDependentes((prev) => [...(prev || []), novoDependente]);
 
     setLoadingSave(false);
     handleClose();
-  };
-
-  const handleDelete = (id: number) => {
-    setDependentes((prev) => prev?.filter((d) => d.id !== id) || []);
   };
 
   const cadastrarBanco = async (dependente: Dependente) => {
@@ -256,14 +235,6 @@ const buscarDependentesDoServidor = async () => {
                     <h5 className="fw-semibold">{dep.nome}</h5>
                     <p className="mb-1"><strong>CPF:</strong> {dep.cpf}</p>
                     <p className="mb-3"><strong>Nascimento:</strong> {dep.nascimento}</p>
-                    <div className="d-flex justify-content-end gap-2">
-                      <Button variant="outline-primary" size="sm" onClick={() => handleShow(dep)}>
-                        <i className="bi bi-pencil"></i>
-                      </Button>
-                      <Button variant="outline-danger" size="sm" onClick={() => handleDelete(dep.id)}>
-                        <i className="bi bi-trash"></i>
-                      </Button>
-                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -289,7 +260,7 @@ const buscarDependentesDoServidor = async () => {
       {/* Modal */}
       <Modal show={showModal} onHide={handleClose} centered>
         <Modal.Header closeButton>
-          <Modal.Title>{editing ? "Editar Dependente" : "Novo Dependente"}</Modal.Title>
+          <Modal.Title>Novo Dependente</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
