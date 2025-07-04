@@ -1,6 +1,4 @@
 import "bootstrap/dist/css/bootstrap.min.css";
-// Remova a importação direta do JS do Bootstrap
-// import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import type { AppProps } from "next/app";
 import { useRouter } from "next/router";
 import Layout from "@/components/layout/layout";

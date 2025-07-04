@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import pool from "@/lib/db";
 
-// 🔹 Interface para criação de venda
 interface NovaVenda {
     id_cliente: number;
     data: string;

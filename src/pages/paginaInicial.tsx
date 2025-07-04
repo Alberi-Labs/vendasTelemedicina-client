@@ -126,6 +126,13 @@ export default function PaginaInicial() {
       allowedRoles: ["admin"],
       description: "Visualize e sincronize pagamentos via plataforma Asaas."
     },
+        {
+      path: "/crmVendas",
+      icon: "bi-file-earmark-medical",
+      text: "CRM de Vendas",
+      allowedRoles: ["vendedor", "gerente", "admin"],
+      description: "Vizualize os dados de suas vendas."
+    },
     {
       href: "https://wa.me/5561996364787",
       icon: "bi-question-circle",
