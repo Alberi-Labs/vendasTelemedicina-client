@@ -85,14 +85,15 @@ export default function PaginaGestaoUsuario() {
   const handleSave = async () => {
     const payload = {
       nome: formData.nome,
-      email: formData.email,
-      perfil: formData.role,
+      email: formData.email || "",
+      role: formData.role,
+      senha: "123456", // senha padrão
       telefone: "",
       imagem: null,
       cpf: formData.cpf,
       creditos: 0,
       data_nascimento: null,
-      id_instituicao: parseInt(formData.id_instituicao),
+      id_instituicao: formData.id_instituicao ? parseInt(formData.id_instituicao) : null,
       ...(user?.role === "admin" && {
         login_sistema: formData.login_sistema,
         senha_sistema: formData.senha_sistema,
@@ -115,7 +116,9 @@ export default function PaginaGestaoUsuario() {
       fetchUsuarios();
       handleClose();
     } else {
-      console.error("Erro ao salvar usuário");
+      const errorData = await res.json();
+      console.error("Erro ao salvar usuário:", errorData);
+      alert(`Erro ao salvar usuário: ${errorData.error || "Erro desconhecido"}`);
     }
   };
 
@@ -304,7 +307,7 @@ export default function PaginaGestaoUsuario() {
           <Button
             variant="primary"
             onClick={handleSave}
-            disabled={!formData.nome || !formData.email || !formData.cpf || !formData.role}
+            disabled={!formData.nome || !formData.cpf || !formData.role}
           >
             Salvar
           </Button>

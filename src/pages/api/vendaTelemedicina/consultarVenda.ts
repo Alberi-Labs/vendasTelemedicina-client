@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { executeQuery } from "@/lib/db";
+import pool from "@/lib/db";
 
 interface VendaTelemedicina {
     idVenda: number;
@@ -35,29 +35,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
         const { id_usuario } = req.query;
-        
-        // Validar se o id_usuario foi fornecido
-        if (!id_usuario) {
-            return res.status(400).json({ error: "ID do usuário é obrigatório." });
-        }
-
-        // Consultar apenas as vendas do usuário específico
-        const query = `
+        let query = `
             SELECT v.*, u.nome AS nome_usuario 
             FROM tb_vendas_telemedicina v 
             JOIN tb_usuarios u ON v.id_usuario = u.id
-            WHERE v.id_usuario = ?
-            ORDER BY v.criado_em DESC
         `;
+        let params: any[] = [];
 
-        const rows: any = await executeQuery(query, [id_usuario]);
+        if (id_usuario) {
+            query += " WHERE v.id_usuario = ?";
+            params.push(id_usuario);
+        }
 
-        if (rows.length === 0) {
-            return res.status(200).json({ 
-                success: true, 
-                vendas: [], 
-                message: "Nenhuma venda de telemedicina encontrada para este usuário." 
-            });
+        query += " ORDER BY v.criado_em DESC";
+
+        const [rows]: any = await pool.query(query, params);
+
+        if (id_usuario && rows.length === 0) {
+            return res.status(404).json({ error: "Nenhuma venda de telemedicina encontrada para este usuário." });
         }
 
         const vendasFormatadas: VendaTelemedicina[] = rows.map((venda: any) => ({
@@ -72,7 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             criado_em: formatarDataParaBrasileiro(venda.criado_em),
         }));
 
-        console.log(`Vendas de telemedicina encontradas para usuário ${id_usuario}:`, vendasFormatadas.length);
+        console.log("Vendas de telemedicina formatadas:", vendasFormatadas);
         return res.status(200).json({ success: true, vendas: vendasFormatadas });
     } catch (error) {
         console.error("🔥 Erro ao consultar vendas de telemedicina:", error);

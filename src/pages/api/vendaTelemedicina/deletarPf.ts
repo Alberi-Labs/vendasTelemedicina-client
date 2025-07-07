@@ -6,22 +6,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ error: "Método não permitido" });
     }
 
-    const { id } = req.query;
+    const { idVenda } = req.query;
 
-    if (!id) {
+    if (!idVenda) {
         return res.status(400).json({ error: "ID da venda é obrigatório." });
     }
 
     try {
-        const [result]: any = await pool.query("DELETE FROM tb_crm_vendas WHERE id = ?", [id]);
+        const [result]: any = await pool.query("DELETE FROM tb_vendas_telemedicina WHERE idVenda = ?", [idVenda]);
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "Venda do CRM não encontrada." });
+            return res.status(404).json({ error: "Venda de telemedicina não encontrada." });
         }
 
-        return res.status(200).json({ success: true, message: "Venda do CRM deletada com sucesso." });
+        return res.status(200).json({ success: true, message: "Venda de telemedicina deletada com sucesso." });
     } catch (error) {
-        console.error("🔥 Erro ao deletar venda do CRM:", error);
+        console.error("🔥 Erro ao deletar venda de telemedicina:", error);
         return res.status(500).json({ error: "Erro interno no servidor." });
     }
 }

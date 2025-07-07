@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { executeQuery } from "@/lib/db";
+import pool from "@/lib/db";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "PUT") {
@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const result: any = await executeQuery(
+        const [result]: any = await pool.query(
             `UPDATE tb_crm_vendas SET 
             empresa = ?, local = ?, data = ?, horario = ?, 
             contatos = ?, numero_funcionarios = ?, descricao = ?, situacao = ?, observacoes = ?

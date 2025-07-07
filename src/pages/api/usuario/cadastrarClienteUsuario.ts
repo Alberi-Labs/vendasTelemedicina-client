@@ -22,10 +22,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     senha_sistema,
   } = req.body;
 
-  if (!nome || !email) {
+  if (!nome || !cpf) {
     return res
       .status(400)
-      .json({ error: "Nome, email, CPF e data de nascimento são obrigatórios." });
+      .json({ error: "Nome e CPF são obrigatórios." });
   }
 
   try {
@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       [
         nome,
         email,
-        senhaSistemaCriptografada,
+        bcrypt.hashSync(senhaFinal, 10),
         telefone || null,
         roleFinal,
         cpf,
