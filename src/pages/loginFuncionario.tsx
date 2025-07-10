@@ -58,34 +58,36 @@ return (
     }}
   >
     <div
-      className="row shadow-lg rounded overflow-hidden"
+      className="row shadow-lg rounded overflow-hidden w-100"
       style={{
-        width: "960px",
+        maxWidth: "960px",
         backgroundColor: "white",
         borderRadius: "12px",
-        height: "660px",
+        minHeight: "600px",
       }}
     >
       {/* Lado da imagem */}
       <div
-        className="col-md-6 d-none d-md-block p-0"
+        className="col-lg-6 d-none d-lg-block p-0"
         style={{
           backgroundImage: "url('/image.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
+          minHeight: "600px",
         }}
       ></div>
 
       {/* Formulário */}
       <div
-        className="col-md-6 p-5 d-flex flex-column justify-content-center"
-        style={{ minHeight: "100%", height: "100%" }}
+        className="col-lg-6 col-12 p-3 p-md-4 p-lg-5 d-flex flex-column justify-content-center"
+        style={{ minHeight: "600px" }}
       >
-        <div className="mb-3">
+        <div className="mb-2 mb-md-3">
   <button
     type="button"
     onClick={() => router.back()}
     className="btn btn-link text-primary text-decoration-none d-flex align-items-center gap-1 p-0"
+    style={{ fontSize: "0.9rem" }}
   >
     <i className="bi bi-arrow-left"></i>
     Voltar
@@ -94,15 +96,15 @@ return (
 
         {error && <AvisoAlerta mensagem={error} tipo="danger" />}
 
-        <div className="text-center mb-3">
-          <i className="bi bi-person-badge" style={{ fontSize: "2rem", color: "#2563eb" }}></i>
+        <div className="text-center mb-2 mb-md-3">
+          <i className="bi bi-person-badge" style={{ fontSize: "1.8rem", color: "#2563eb" }}></i>
         </div>
 
-        <h4 className="fw-bold text-center mb-2">Login Colaborador</h4>
-        <p className="text-muted text-center mb-4">Acesse com seu CPF e senha.</p>
+        <h4 className="fw-bold text-center mb-1 mb-md-2" style={{ fontSize: "1.5rem" }}>Login Colaborador</h4>
+        <p className="text-muted text-center mb-3 mb-md-4" style={{ fontSize: "0.9rem" }}>Acesse com seu CPF e senha.</p>
 
         <form onSubmit={handleLogin}>
-          <div className="mb-3">
+          <div className="mb-2 mb-md-3">
             <input
               type="text"
               id="cpf"
@@ -111,10 +113,11 @@ return (
               onChange={(e) => setCpf(e.target.value)}
               required
               placeholder="Digite seu CPF"
+              style={{ height: "45px", fontSize: "1rem" }}
             />
           </div>
 
-          <div className="mb-3">
+          <div className="mb-3 mb-md-4">
             <input
               type="password"
               id="password"
@@ -123,6 +126,7 @@ return (
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="Digite sua senha"
+              style={{ height: "45px", fontSize: "1rem" }}
             />
           </div>
 
@@ -134,6 +138,7 @@ return (
               height: "45px",
               fontWeight: 500,
               borderRadius: "8px",
+              fontSize: "1rem",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#79b92f")}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#8dc63f")}
@@ -144,8 +149,8 @@ return (
           </button>
         </form>
 
-        <div className="text-center mt-4">
-          <a href="#" className="small text-primary text-decoration-none">
+        <div className="text-center mt-3 mt-md-4">
+          <a href="#" className="small text-primary text-decoration-none" style={{ fontSize: "0.85rem" }}>
             <i className="bi bi-question-circle me-1"></i>Precisa de ajuda?
           </a>
         </div>
