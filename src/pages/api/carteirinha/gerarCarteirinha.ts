@@ -27,7 +27,6 @@ export default async function handler(
     // Criar canvas com as dimensões da carteirinha
     const canvas = createCanvas(800, 500);
     const ctx = canvas.getContext('2d');
-    dados.empresa = 'vita';
     // Determinar qual template usar baseado na empresa
     const isVita = dados.empresa?.toLowerCase().includes('vita');
     const templatePath = isVita 
@@ -115,10 +114,16 @@ export default async function handler(
     // Converter para buffer
     const buffer = canvas.toBuffer('image/png');
 
-    // Configurar headers para download
+    // Extrair primeiro nome para o arquivo
+    const primeiroNome = dados.nome.split(' ')[0];
+    const cpfLimpo = dados.cpf.replace(/[^\d]/g, ''); // Remove pontos e traços do CPF
+    const nomeArquivo = `${primeiroNome}-${cpfLimpo}`;
+
+    // Configurar headers para download forçado
     res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Content-Disposition', `attachment; filename="carteirinha-${dados.nome?.replace(/\s+/g, '-')}.png"`);
+    res.setHeader('Content-Disposition', `attachment; filename="carteirinha-${nomeArquivo}.png"`);
     res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
 
     // Enviar a imagem
     res.send(buffer);

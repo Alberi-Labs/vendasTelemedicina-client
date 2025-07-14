@@ -165,10 +165,23 @@ export default function PaginaApolice() {
       }
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, "_blank");
       
-      setAvisoMensagem("Carteirinha gerada com sucesso!");
+      // Criar nome do arquivo com primeiro nome + CPF
+      const primeiroNome = user.nome.split(' ')[0];
+      const cpfLimpo = (user.cpf ?? "").replace(/[^\d]/g, '');
+      const nomeArquivo = `carteirinha-${primeiroNome}-${cpfLimpo}.png`;
+      
+      // Forçar download da imagem
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = nomeArquivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      setAvisoMensagem("Carteirinha baixada com sucesso!");
       setAvisoTipo("success");
       setShowAviso(true);
 
