@@ -13,11 +13,15 @@ export default function PaginaApolice() {
   const [isMounted, setIsMounted] = useState(false);
   const [apolices, setApolices] = useState<Apolice[]>([]);
   const [showAviso, setShowAviso] = useState(false);
+  const [avisoMensagem, setAvisoMensagem] = useState("");
+  const [avisoTipo, setAvisoTipo] = useState<"success" | "warning" | "danger">("warning");
 
   const { user } = useAuth();
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  console.log(user)
   const dscEmpresa = encodeURIComponent(user?.dsc_instituicao || "");
 
   const calcularIdade = (dataNascimento: string | undefined): number => {
@@ -63,11 +67,26 @@ export default function PaginaApolice() {
     return "Formato inválido";
   };
 
+  const formatarDataVigencia = (data: string | undefined): string => {
+    if (!data) return "—";
+
+    if (data.includes("/")) return data;
+
+    if (data.includes("-")) {
+      const [ano, mes, dia] = data.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    return "Formato inválido";
+  };
+
 
   if (!isMounted) return null;
 
   const handleDownload = async () => {
     if (!user) {
+      setAvisoMensagem("Usuário não encontrado. Faça login novamente.");
+      setAvisoTipo("danger");
       setShowAviso(true);
       return;
     }
@@ -93,6 +112,8 @@ export default function PaginaApolice() {
 
       if (!response.ok) {
         console.error("Erro ao gerar PDF");
+        setAvisoMensagem("Erro ao gerar apólice. Tente novamente mais tarde.");
+        setAvisoTipo("danger");
         setShowAviso(true);
         return;
       }
@@ -103,6 +124,58 @@ export default function PaginaApolice() {
 
     } catch (err) {
       console.error("Erro ao baixar apólice:", err);
+      setAvisoMensagem("Apólice em processamento de geração, tente mais tarde.");
+      setAvisoTipo("warning");
+      setShowAviso(true);
+    }
+  };
+
+  const handlePreencherCarteirinha = async () => {
+    if (!user) {
+      setAvisoMensagem("Usuário não encontrado. Faça login novamente.");
+      setAvisoTipo("danger");
+      setShowAviso(true);
+      return;
+    }
+
+    const dadosCarteirinha = {
+      nome: user.nome,
+      cpf: user.cpf,
+      vigenciaInicio: formatarDataVigencia(user.data_contrato_vigencia_inicio),
+      vigenciaFinal: formatarDataVigencia(user.data_contrato_vigencia_final),
+      apolice: user.num_contrato_retorno_apolice || "—",
+      operacao: user.cod_contrato_retorno_operacao || "—",
+      certificado: user.num_contrato_retorno_certificado || "—",
+      empresa: user.dsc_instituicao
+    };
+
+    try {
+      const response = await fetch("/api/carteirinha/gerarCarteirinha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dadosCarteirinha),
+      });
+
+      if (!response.ok) {
+        console.error("Erro ao gerar carteirinha");
+        setAvisoMensagem("Erro ao gerar carteirinha. Tente novamente mais tarde.");
+        setAvisoTipo("danger");
+        setShowAviso(true);
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      
+      setAvisoMensagem("Carteirinha gerada com sucesso!");
+      setAvisoTipo("success");
+      setShowAviso(true);
+
+    } catch (err) {
+      console.error("Erro ao gerar carteirinha:", err);
+      setAvisoMensagem("Erro ao processar carteirinha. Tente novamente.");
+      setAvisoTipo("danger");
       setShowAviso(true);
     }
   };
@@ -120,8 +193,8 @@ export default function PaginaApolice() {
 
       {showAviso && (
         <AvisoAlerta
-          mensagem="Apólice em processamento de geração, tente mais tarde."
-          tipo="warning"
+          mensagem={avisoMensagem || "Processando solicitação..."}
+          tipo={avisoTipo}
           duracao={5000}
         />
       )}
@@ -158,13 +231,11 @@ export default function PaginaApolice() {
               <ul className="list-unstyled">
                 <li><strong>Situação:</strong> Contrato aprovado</li>
                 <li>
-                  <strong>Vigência:</strong> {user?.data_contrato_vigencia_inicio} - {user?.data_contrato_vigencia_final}
+                  <strong>Vigência:</strong> {formatarDataVigencia(user?.data_contrato_vigencia_inicio)} - {formatarDataVigencia(user?.data_contrato_vigencia_final)}
                 </li>
+                <li><strong>Apólice:</strong> {user?.num_contrato_retorno_apolice || "—"}</li>
                 <li><strong>Operação:</strong> {user?.cod_contrato_retorno_operacao || "—"}</li>
                 <li><strong>Certificado:</strong> {user?.num_contrato_retorno_certificado || "—"}</li>
-                <li>
-                  <strong>Links encontrados:</strong> {apolices.length}
-                </li>
               </ul>
             </div>
           </div>
@@ -186,6 +257,16 @@ export default function PaginaApolice() {
           >
             <i className="bi bi-download fs-5"></i>
             Baixar Apólice
+          </Button>
+
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={handlePreencherCarteirinha}
+            className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
+          >
+            <i className="bi bi-credit-card fs-5"></i>
+            Gerar Carteirinha
           </Button>
 
           <a

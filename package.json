@@ -20,6 +20,7 @@
     "bcryptjs": "^2.4.3",
     "bootstrap": "^5.3.6",
     "bootstrap-icons": "^1.11.3",
+    "canvas": "^3.1.2",
     "chart.js": "^4.4.8",
     "dayjs": "^1.11.13",
     "docxtemplater": "^3.61.1",
