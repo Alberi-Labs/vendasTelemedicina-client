@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Modal, Form } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { useAuth } from "@/app/context/AuthContext";
+import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 
 interface Dependente {
   id: number;
@@ -18,6 +19,9 @@ export default function PaginaControleDependentes() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ nome: "", cpf: "", nascimento: "" });
   const [loadingSave, setLoadingSave] = useState(false);
+  const [showAviso, setShowAviso] = useState(false);
+  const [avisoMensagem, setAvisoMensagem] = useState("");
+  const [avisoTipo, setAvisoTipo] = useState<"success" | "warning" | "danger">("warning");
 
 const buscarDependentesDoServidor = async () => {
   setLoading(true);
@@ -188,6 +192,63 @@ const buscarDependentesDoServidor = async () => {
     }
   };
 
+  const handleGerarCarteirinha = async (dependente: Dependente) => {
+    if (!user) {
+      setAvisoMensagem("Usuário não encontrado. Faça login novamente.");
+      setAvisoTipo("danger");
+      setShowAviso(true);
+      return;
+    }
+
+    const dadosCarteirinha = {
+      nome: dependente.nome,
+      cpf: dependente.cpf,
+      empresa: user.dsc_instituicao
+    };
+
+    try {
+      const response = await fetch("/api/carteirinha/gerarCarteirinhaDependente", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dadosCarteirinha),
+      });
+
+      if (!response.ok) {
+        console.error("Erro ao gerar carteirinha do dependente");
+        setAvisoMensagem("Erro ao gerar carteirinha. Tente novamente mais tarde.");
+        setAvisoTipo("danger");
+        setShowAviso(true);
+        return;
+      }
+
+      const blob = await response.blob();
+      
+      // Criar nome do arquivo com primeiro nome + CPF
+      const primeiroNome = dependente.nome.split(' ')[0];
+      const cpfLimpo = (dependente.cpf ?? "").replace(/[^\d]/g, '');
+      const nomeArquivo = `carteirinha-dependente-${primeiroNome}-${cpfLimpo}.png`;
+      
+      // Forçar download da imagem
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = nomeArquivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      setAvisoMensagem("Carteirinha do dependente baixada com sucesso!");
+      setAvisoTipo("success");
+      setShowAviso(true);
+
+    } catch (err) {
+      console.error("Erro ao gerar carteirinha do dependente:", err);
+      setAvisoMensagem("Erro ao processar carteirinha. Tente novamente.");
+      setAvisoTipo("danger");
+      setShowAviso(true);
+    }
+  };
 
   useEffect(() => {
     buscarDependentesDoServidor();
@@ -203,6 +264,14 @@ const buscarDependentesDoServidor = async () => {
       >
         Gestão de Dependentes
       </motion.h2>
+
+      {showAviso && (
+        <AvisoAlerta
+          mensagem={avisoMensagem || "Processando solicitação..."}
+          tipo={avisoTipo}
+          duracao={5000}
+        />
+      )}
 
       {loading ? (
         <div className="text-center my-5">
@@ -235,6 +304,18 @@ const buscarDependentesDoServidor = async () => {
                     <h5 className="fw-semibold">{dep.nome}</h5>
                     <p className="mb-1"><strong>CPF:</strong> {dep.cpf}</p>
                     <p className="mb-3"><strong>Nascimento:</strong> {dep.nascimento}</p>
+                    
+                    <div className="d-flex justify-content-center">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleGerarCarteirinha(dep)}
+                        className="d-inline-flex align-items-center gap-2"
+                      >
+                        <i className="bi bi-credit-card"></i>
+                        Gerar Carteirinha
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </motion.div>
