@@ -1,15 +1,56 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido" });
   }
 
-  try {
-    const { nomeEmpresa, nomeFantasia, email, cnpj, celular, cep, endereco, uf, cidade } = req.body;
+  let browser: any = null;
 
-    const browser = await puppeteer.launch({ headless: false });
+  try {
+    const { nomeEmpresa, nomeFantasia, email, cnpj, inscricaoMunicipal, inscricaoEstadual, celular, cep, endereco, uf, cidade } = req.body;
+
+    // Limpa CNPJ e CEP removendo pontos, barras e hífens para o banco
+    const cnpjLimpo = cnpj.replace(/[^\d]/g, '');
+    const cepLimpo = cep.replace(/[^\d]/g, '');
+
+    // Mapeamento de siglas para nomes completos dos estados
+    const estadosMap: { [key: string]: string } = {
+      'AC': 'ACRE',
+      'AL': 'ALAGOAS',
+      'AP': 'AMAPA',
+      'AM': 'AMAZONAS',
+      'BA': 'BAHIA',
+      'CE': 'CEARA',
+      'DF': 'DISTRITO FEDERAL',
+      'ES': 'ESPÍRITO SANTO',
+      'GO': 'GOIAS',
+      'MA': 'MARANHAO',
+      'MT': 'MATO GROSSO',
+      'MS': 'MATO GROSSO DO SUL',
+      'MG': 'MINAS GERAIS',
+      'PA': 'PARA',
+      'PB': 'PARAIBA',
+      'PR': 'PARANA',
+      'PE': 'PERNAMBUCO',
+      'PI': 'PIAUI',
+      'RJ': 'RIO DE JANEIRO',
+      'RN': 'RIO GRANDE DO NORTE',
+      'RS': 'RIO GRANDE DO SUL',
+      'RO': 'RONDONIA',
+      'RR': 'RORAIMA',
+      'SC': 'SANTA CATARINA',
+      'SP': 'SAO PAULO',
+      'SE': 'SERGIPE',
+      'TO': 'TOCANTINS'
+    };
+
+    const nomeEstado = estadosMap[uf] || uf;
+
+    browser = await puppeteer.launch({
+      headless: false, slowMo: 5,
+    });
     const page = await browser.newPage();
 
     await page.goto("https://saudeecor.i9.dev.br/white/login.php", { waitUntil: "networkidle2" });
@@ -70,13 +111,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await page.type("#dsc_email", email);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    await page.type("#num_cnpj", cnpj);
+    await page.type("#num_cnpj", cnpjLimpo);
     await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Preenche Inscrição Municipal se fornecida
+    if (inscricaoMunicipal) {
+      await page.type("#num_inscricao_minicipal", inscricaoMunicipal);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    // Preenche Inscrição Estadual se fornecida
+    if (inscricaoEstadual) {
+      await page.type("#num_inscricao_estadual", inscricaoEstadual);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
 
     await page.type("#num_celular", celular);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    await page.type("#num_cep", cep);
+    await page.type("#num_cep", cepLimpo);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     await page.type("#dsc_endereco", endereco);
@@ -87,39 +140,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     await page.waitForSelector("input.select2-search__field", { visible: true });
 
-    await page.type("input.select2-search__field", uf);
+    // Usa o nome completo do estado ao invés da sigla
+    await page.type("input.select2-search__field", nomeEstado);
 
     await page.keyboard.press("Enter");
-
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const selectedValue = await page.evaluate((cidade: string) => {
-      const normalize = (str: string) =>
-        str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-
-      const cidadeNormalized = normalize(cidade);
-      const options = Array.from(document.querySelectorAll("#ind_cidade option"));
-
-      const listaOpcoes = options.map(opt => opt.textContent?.trim() || "");
-      console.log("Opções disponíveis:", listaOpcoes);
-
-      const matchingOption = options.find(opt => normalize(opt.textContent || "") === cidadeNormalized);
-
-      return matchingOption ? (matchingOption as HTMLOptionElement).value : null;
-    }, cidade);
-
-    if (selectedValue) {
-      await page.select("#ind_cidade", selectedValue);
-      console.log(`Cidade "${cidade}" selecionada com sucesso!`);
-    } else {
-      console.error(`Cidade "${cidade}" não foi encontrada na lista.`);
-    }
 
     await page.waitForSelector("#btn_gravar", { visible: true });
     await page.click("#btn_gravar");
 
+    console.log("Cadastro concluído com sucesso!");
+
+    // Fecha o browser
+    await browser.close();
+
     return res.status(200).json({ message: "Integração concluída com sucesso!" });
   } catch (error) {
     console.error("Erro ao executar Puppeteer:", error);
+
+    // Fecha o browser em caso de erro
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (closeError) {
+        console.error("Erro ao fechar browser:", closeError);
+      }
+    }
+
     return res.status(500).json({ error: "Erro ao executar integração" });
   }
 }

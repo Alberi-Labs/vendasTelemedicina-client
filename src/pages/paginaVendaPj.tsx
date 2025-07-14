@@ -36,6 +36,9 @@ export default function CadastroPj() {
     const [showPopup, setShowPopup] = useState(false);
     const [paymentLink, setPaymentLink] = useState("");
     const [mensagemDeErro, setMensagemDeErro] = useState<string | null>(null);
+    const [empresasLista, setEmpresasLista] = useState<any[]>([]);
+    const [showEmpresasSuggestions, setShowEmpresasSuggestions] = useState(false);
+    const [empresaSelecionada, setEmpresaSelecionada] = useState<any>(null);
     const { user } = useAuth();
 
     let idUsuario: string = "";
@@ -109,10 +112,109 @@ export default function CadastroPj() {
         setFormData({ ...formData, uf: e.target.value, cidade: "" });
     };
 
+    // Busca empresas para autocomplete
+    const buscarEmpresas = async (searchTerm: string = "") => {
+        try {
+            const response = await fetch(`/api/empresas/listarEmpresas${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`);
+            const data = await response.json();
+            console.log(data)
+            if (data.success) {
+                setEmpresasLista(data.empresas);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar empresas:', error);
+        }
+    };
+
+    // Manipula o foco no campo nome da empresa
+    const handleNomeEmpresaFocus = () => {
+        buscarEmpresas();
+        setShowEmpresasSuggestions(true);
+    };
+
+    // Manipula a seleção de uma empresa da lista
+    const handleEmpresaSelect = (empresa: any) => {
+        setFormData({
+            ...formData,
+            nomeEmpresa: empresa.nomeEmpresa,
+            nomeFantasia: empresa.nomeFantasia || "",
+            email: empresa.email || "",
+            cnpj: empresa.cnpj || "",
+            inscricaoMunicipal: empresa.inscricaoMunicipal || "",
+            inscricaoEstadual: empresa.inscricaoEstadual || "",
+            celular: empresa.celular || "",
+            cep: empresa.cep || "",
+            endereco: empresa.endereco || "",
+            uf: empresa.uf || "",
+            cidade: empresa.cidade || "",
+            valorPlano: empresa.valor_plano || "",
+        });
+        setEmpresaSelecionada(empresa); // Marca que uma empresa foi selecionada
+        setShowEmpresasSuggestions(false);
+    };
+
+    // Manipula mudança no campo nome da empresa
+    const handleNomeEmpresaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setFormData({ ...formData, nomeEmpresa: value });
+        
+        // Se o usuário começar a digitar, limpa a empresa selecionada
+        if (empresaSelecionada && value !== empresaSelecionada.nomeEmpresa) {
+            setEmpresaSelecionada(null);
+        }
+        
+        // Sempre busca empresas quando digita (filtra conforme o texto)
+        buscarEmpresas(value);
+        
+        // Mantém a lista visível sempre que há foco no campo
+        if (showEmpresasSuggestions) {
+            // Lista já está visível, apenas filtra
+        }
+    };
+
     const nextStep = async () => {
         if (currentStep === 1) {
+            // Se uma empresa existente foi selecionada, pula o cadastro
+            if (empresaSelecionada) {
+                console.log('Empresa existente selecionada. Pulando cadastro...');
+                setCurrentStep((prev) => prev + 1);
+                return;
+            }
+
             setLoading(true);
             try {
+                // Primeiro, cadastra no sistema Saúde e Cor
+                console.log('Iniciando cadastro no sistema Saúde e Cor...');
+                const saudeECorResponse = await fetch('/api/empresas/cadastroSaudeECor', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        nomeEmpresa: formData.nomeEmpresa,
+                        nomeFantasia: formData.nomeFantasia,
+                        email: formData.email,
+                        cnpj: formData.cnpj,
+                        inscricaoMunicipal: formData.inscricaoMunicipal,
+                        inscricaoEstadual: formData.inscricaoEstadual,
+                        celular: formData.celular,
+                        cep: formData.cep,
+                        endereco: formData.endereco,
+                        uf: formData.uf,
+                        cidade: formData.cidade,
+                    }),
+                });
+
+                const saudeECorData = await saudeECorResponse.json();
+
+                if (!saudeECorResponse.ok) {
+                    throw new Error(saudeECorData.error || 'Erro ao cadastrar empresa no sistema Saúde e Cor');
+                }
+
+                console.log('Empresa cadastrada no sistema Saúde e Cor com sucesso!');
+
+                // Depois, cadastra no banco de dados local
+                console.log('Iniciando cadastro no banco de dados local...');
                 const response = await fetch('/api/empresas/adicionarEmpresa', {
                     method: 'POST',
                     headers: {
@@ -123,6 +225,8 @@ export default function CadastroPj() {
                         nomeFantasia: formData.nomeFantasia,
                         email: formData.email,
                         cnpj: formData.cnpj,
+                        inscricaoMunicipal: formData.inscricaoMunicipal,
+                        inscricaoEstadual: formData.inscricaoEstadual,
                         celular: formData.celular,
                         cep: formData.cep,
                         endereco: formData.endereco,
@@ -135,10 +239,10 @@ export default function CadastroPj() {
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.message || 'Erro ao cadastrar empresa');
+                    throw new Error(data.message || 'Erro ao cadastrar empresa no banco de dados');
                 }
 
-                console.log('Empresa cadastrada com sucesso!');
+                console.log('Empresa cadastrada no banco de dados com sucesso!');
             } catch (error: any) {
                 console.error('Erro ao cadastrar empresa:', error);
                 setMensagemDeErro(error.message || 'Erro inesperado ao cadastrar empresa.');
@@ -176,8 +280,114 @@ export default function CadastroPj() {
                             <Typography variant="h6" align="center" gutterBottom>
                                 Preencha as informações da empresa
                             </Typography>
+                            
+                            {/* Campo especial para Nome da Empresa com autocomplete */}
+                            <Box className="mb-3" style={{ position: 'relative' }}>
+                                <label className="form-label">
+                                    Nome da Empresa <span style={{ color: 'red' }}>*</span>
+                                    {empresaSelecionada && (
+                                        <span style={{ color: 'green', fontSize: '0.9em', marginLeft: '10px' }}>
+                                            (Empresa existente selecionada)
+                                        </span>
+                                    )}
+                                </label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    name="nomeEmpresa"
+                                    value={formData.nomeEmpresa}
+                                    onChange={handleNomeEmpresaChange}
+                                    onFocus={handleNomeEmpresaFocus}
+                                    onBlur={() => setTimeout(() => setShowEmpresasSuggestions(false), 200)}
+                                    required
+                                    placeholder="Digite o nome da empresa..."
+                                />
+                                
+                                {/* Lista de sugestões */}
+                                {showEmpresasSuggestions && (
+                                    <Box
+                                        style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            border: '1px solid #ccc',
+                                            borderRadius: '4px',
+                                            maxHeight: '200px',
+                                            overflowY: 'auto',
+                                            zIndex: 1000,
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                        }}
+                                    >
+                                        {empresasLista.length > 0 ? (
+                                            empresasLista.map((empresa, index) => (
+                                                <Box
+                                                    key={empresa.idEmpresa || index}
+                                                    onClick={() => handleEmpresaSelect(empresa)}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        cursor: 'pointer',
+                                                        borderBottom: index < empresasLista.length - 1 ? '1px solid #eee' : 'none'
+                                                    }}
+                                                    onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#f5f5f5'}
+                                                    onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'white'}
+                                                >
+                                                    <div style={{ fontWeight: 'bold' }}>{empresa.nomeEmpresa}</div>
+                                                    {empresa.nomeFantasia && (
+                                                        <div style={{ fontSize: '0.9em', color: '#666' }}>
+                                                            {empresa.nomeFantasia}
+                                                        </div>
+                                                    )}
+                                                    {empresa.cnpj && (
+                                                        <div style={{ fontSize: '0.8em', color: '#999' }}>
+                                                            CNPJ: {empresa.cnpj}
+                                                        </div>
+                                                    )}
+                                                </Box>
+                                            ))
+                                        ) : (
+                                            <Box style={{ padding: '8px 12px', color: '#999', fontStyle: 'italic' }}>
+                                                Nenhuma empresa encontrada
+                                            </Box>
+                                        )}
+                                    </Box>
+                                )}
+                            </Box>
+
+                            {/* Botão para limpar seleção */}
+                            {empresaSelecionada && (
+                                <Box className="mb-3 text-center">
+                                    <Button 
+                                        variant="outlined" 
+                                        color="warning" 
+                                        size="small"
+                                        onClick={() => {
+                                            setEmpresaSelecionada(null);
+                                            setFormData({
+                                                nomeEmpresa: "",
+                                                nomeFantasia: "",
+                                                email: "",
+                                                cnpj: "",
+                                                inscricaoMunicipal: "",
+                                                inscricaoEstadual: "",
+                                                celular: "",
+                                                cep: "",
+                                                endereco: "",
+                                                uf: "",
+                                                cidade: "",
+                                                formaPagamento: "",
+                                                valorPlano: "",
+                                            });
+                                        }}
+                                    >
+                                        Cadastrar Nova Empresa
+                                    </Button>
+                                </Box>
+                            )}
+
+                            {/* Outros campos */}
                             {[
-                                { label: "Nome da Empresa", name: "nomeEmpresa", type: "text", required: true },
                                 { label: "Nome Fantasia", name: "nomeFantasia", type: "text", required: false },
                                 { label: "E-mail", name: "email", type: "email", required: false },
                                 { label: "CNPJ", name: "cnpj", type: "text", required: true },
@@ -197,6 +407,8 @@ export default function CadastroPj() {
                                         onChange={handleChangeFormat}
                                         placeholder={placeholder}
                                         required={required}
+                                        disabled={!!empresaSelecionada} // Desabilita se empresa foi selecionada
+                                        style={empresaSelecionada ? { backgroundColor: '#f8f9fa', color: '#6c757d' } : {}}
                                     />
                                 </Box>
                             ))}
@@ -207,6 +419,11 @@ export default function CadastroPj() {
                         <>
                             <Typography variant="h6" align="center" gutterBottom>
                                 Preencha o endereço da empresa
+                                {empresaSelecionada && (
+                                    <span style={{ color: 'green', fontSize: '0.8em', display: 'block', marginTop: '5px' }}>
+                                        (Dados da empresa existente)
+                                    </span>
+                                )}
                             </Typography>
                             {[
                                 { label: "CEP", name: "cep", type: "text" },
@@ -227,7 +444,8 @@ export default function CadastroPj() {
                                                     : value;
                                             setFormData((prev) => ({ ...prev, [name]: formattedValue }));
                                         }}
-                                        disabled={disabled}
+                                        disabled={disabled || !!empresaSelecionada} // Desabilita se empresa selecionada
+                                        style={empresaSelecionada ? { backgroundColor: '#f8f9fa', color: '#6c757d' } : {}}
                                         required
                                     />
                                 </Box>
@@ -240,6 +458,8 @@ export default function CadastroPj() {
                                     name="uf"
                                     value={formData.uf}
                                     onChange={handleUfChange}
+                                    disabled={!!empresaSelecionada} // Desabilita se empresa selecionada
+                                    style={empresaSelecionada ? { backgroundColor: '#f8f9fa', color: '#6c757d' } : {}}
                                     required
                                 >
                                     <option value="">Selecione o Estado</option>
@@ -258,6 +478,8 @@ export default function CadastroPj() {
                                     name="cidade"
                                     value={formData.cidade}
                                     onChange={handleChangeFormat}
+                                    disabled={!!empresaSelecionada} // Desabilita se empresa selecionada
+                                    style={empresaSelecionada ? { backgroundColor: '#f8f9fa', color: '#6c757d' } : {}}
                                     required
                                 >
                                     <option value="">Selecione a Cidade</option>
@@ -413,7 +635,7 @@ export default function CadastroPj() {
                 <TelaCarregamento
                     mensagem={
                         currentStep === 1
-                            ? "Cadastrando dados da empresa..."
+                            ? "Cadastrando empresa no sistema Saúde e Cor e no banco de dados..."
                             : currentStep === 2
                                 ? "Enviando dados de cobrança..."
                                 : "Carregando..."

@@ -12,16 +12,24 @@ export default function LoginFuncionario() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Função para limpar CPF removendo pontos e traços
+  const cleanCpf = (cpf: string) => {
+    return cpf.replace(/[.\-]/g, '');
+  };
+
   const handleLogin = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
+      // Limpa o CPF antes de enviar para a API
+      const cleanedCpf = cleanCpf(cpf);
+      
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf, password }),
+        body: JSON.stringify({ cpf: cleanedCpf, password }),
       });
 
       const data = await res.json();
