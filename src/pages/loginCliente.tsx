@@ -83,7 +83,7 @@ export default function LoginCliente() {
       });
 
       const data = await res.json();
-
+      console.log("Resposta da API:", data);
       if (!res.ok) {
         const erroMensagem = data?.message || data?.error || "Erro inesperado.";
         throw new Error(erroMensagem);
@@ -110,6 +110,24 @@ export default function LoginCliente() {
 
       localStorage.setItem("cliente", JSON.stringify(clienteRaw));
 
+      // Adiciona a cobrança principal (pagamento inicial) ao array de cobranças, se não estiver presente
+      let cobrancas = Array.isArray(clienteRaw.cobranca) ? [...clienteRaw.cobranca] : [];
+      // Verifica se já existe cobrança RECEIVED igual ao pagamento inicial
+      const temCobrancaInicial = cobrancas.some(
+        (c: any) => c.ind_status_pagamento === "RECEIVED" && c.dat_vencimento === clienteRaw.dat_contrato_vigencia_inicio
+      );
+      if (!temCobrancaInicial && clienteRaw.ind_status_pagamento === "RECEIVED" && clienteRaw.dat_contrato_vigencia_inicio) {
+        cobrancas.unshift({
+          seq_cobranca: "contrato-inicial",
+          dat_vencimento: clienteRaw.dat_contrato_vigencia_inicio,
+          vlr_pagamento: clienteRaw.vlr_pagamento || "39,90",
+          ind_status_pagamento: "RECEIVED",
+          dsc_link_pagamento: clienteRaw.dsc_link_pagamento,
+          dsc_instituicao: clienteRaw.dsc_instituicao,
+          tip_pagamento: clienteRaw.tip_pagamento,
+        });
+      }
+
       const clienteData: User = {
         id: clienteRaw.seq_cliente,
         nome: clienteRaw.nom_cliente,
@@ -126,7 +144,7 @@ export default function LoginCliente() {
         cod_contrato_retorno_operacao: clienteRaw.cod_contrato_retorno_operacao,
         dsc_email: clienteRaw.dsc_email,
         num_celular: clienteRaw.num_celular,
-        cobrancas: clienteRaw.cobranca ?? [],
+        cobrancas,
       };
 
       login(clienteData, true);

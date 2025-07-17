@@ -305,17 +305,19 @@ const buscarDependentesDoServidor = async () => {
                     <p className="mb-1"><strong>CPF:</strong> {dep.cpf}</p>
                     <p className="mb-3"><strong>Nascimento:</strong> {dep.nascimento}</p>
                     
-                    <div className="d-flex justify-content-center">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleGerarCarteirinha(dep)}
-                        className="d-inline-flex align-items-center gap-2"
-                      >
-                        <i className="bi bi-credit-card"></i>
-                        Gerar Carteirinha
-                      </Button>
-                    </div>
+                    {user?.dsc_instituicao?.includes("Vita") && (
+                      <div className="d-flex justify-content-center">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleGerarCarteirinha(dep)}
+                          className="d-inline-flex align-items-center gap-2"
+                        >
+                          <i className="bi bi-credit-card"></i>
+                          Gerar Carteirinha
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>

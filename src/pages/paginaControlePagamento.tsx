@@ -17,9 +17,9 @@ export default function PaginaControlePagamento() {
   const { user } = useAuth(); 
   useEffect(() => {
     if (!user) return;
-  
+    console.log(user)
     const cobrancas = user.cobrancas || [];
-  
+
     const pagos: Pagamento[] = cobrancas
       .filter((cob) => cob.ind_status_pagamento === "RECEIVED")
       .map((cob) => ({
@@ -29,7 +29,7 @@ export default function PaginaControlePagamento() {
         situacao: "Pago",
         link: cob.dsc_link_pagamento,
       }));
-  
+
     if (user.ind_status_pagamento === "RECEIVED" && user.data_contrato_vigencia_inicio) {
       pagos.unshift({
         id: "contrato-inicial",
@@ -39,17 +39,22 @@ export default function PaginaControlePagamento() {
         link: user.dsc_link_pagamento,
       });
     }
-  
+
     const futuros: Pagamento[] = cobrancas
-      .filter((cob) => cob.ind_status_pagamento === "PENDING")
+      .filter((cob) => cob.ind_status_pagamento === "PENDING" || cob.ind_status_pagamento === "OVERDUE" || cob.ind_status_pagamento === null)
       .map((cob) => ({
         id: cob.seq_cobranca,
         data: cob.dat_vencimento,
         valor: `R$ ${cob.vlr_pagamento}`,
-        situacao: "Pendente",
+        situacao:
+          cob.ind_status_pagamento === "PENDING"
+            ? "Pendente"
+            : cob.ind_status_pagamento === "OVERDUE"
+            ? "Atrasado"
+            : "Pendente",
         link: cob.dsc_link_pagamento,
       }));
-  
+
     setPagamentosPassados(pagos);
     setPagamentosFuturos(futuros);
   }, [user]);
@@ -138,15 +143,19 @@ export default function PaginaControlePagamento() {
                 <td>{p.valor}</td>
                 <td>{renderBadge(p.situacao)}</td>
                 <td>
-                  {p.situacao === "Pendente" && (
+                  {(p.situacao === "Pendente" || p.situacao === "Atrasado") && (
                     <div className="d-flex gap-2 flex-wrap">
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => handleGerarLink(p.link)}
-                      >
-                        <i className="bi bi-link-45deg me-1"></i> Link
-                      </Button>
+                      {p.link ? (
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => handleGerarLink(p.link)}
+                        >
+                          <i className="bi bi-link-45deg me-1"></i> Link
+                        </Button>
+                      ) : (
+                        <span className="text-muted">Link não disponível</span>
+                      )}
                       {/* <Button
                         variant="outline-secondary"
                         size="sm"

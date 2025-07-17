@@ -272,15 +272,17 @@ export default function PaginaApolice() {
             Baixar Apólice
           </Button>
 
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={handlePreencherCarteirinha}
-            className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
-          >
-            <i className="bi bi-credit-card fs-5"></i>
-            Gerar Carteirinha
-          </Button>
+          {user?.dsc_instituicao?.includes("Vita") && (
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={handlePreencherCarteirinha}
+              className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
+            >
+              <i className="bi bi-credit-card fs-5"></i>
+              Gerar Carteirinha
+            </Button>
+          )}
 
           <a
             href={`/api/arquivo/downloadArquivo?dscEmpresa=${dscEmpresa}`}

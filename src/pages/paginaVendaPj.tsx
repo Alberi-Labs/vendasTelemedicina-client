@@ -36,9 +36,13 @@ export default function CadastroPj() {
     const [showPopup, setShowPopup] = useState(false);
     const [paymentLink, setPaymentLink] = useState("");
     const [mensagemDeErro, setMensagemDeErro] = useState<string | null>(null);
+    const [tipoMensagem, setTipoMensagem] = useState<"success" | "warning" | "danger">("danger");
     const [empresasLista, setEmpresasLista] = useState<any[]>([]);
     const [showEmpresasSuggestions, setShowEmpresasSuggestions] = useState(false);
     const [empresaSelecionada, setEmpresaSelecionada] = useState<any>(null);
+    const [arquivo, setArquivo] = useState<File | null>(null);
+    const [funcionarios, setFuncionarios] = useState<any[]>([]);
+    const [errosArquivo, setErrosArquivo] = useState<string[]>([]);
     const { user } = useAuth();
 
     let idUsuario: string = "";
@@ -245,6 +249,7 @@ export default function CadastroPj() {
                 console.log('Empresa cadastrada no banco de dados com sucesso!');
             } catch (error: any) {
                 console.error('Erro ao cadastrar empresa:', error);
+                setTipoMensagem("danger");
                 setMensagemDeErro(error.message || 'Erro inesperado ao cadastrar empresa.');
                 return;
             } finally {
@@ -257,7 +262,67 @@ export default function CadastroPj() {
 
     const prevStep = () => setCurrentStep((prev) => prev - 1);
 
-    const steps = ["Dados da Empresa", "Endereço", "Pagamento"];
+    // Função para processar arquivo CSV
+    const processarCSV = (texto: string) => {
+        const linhas = texto.split('\n').filter(linha => linha.trim());
+        const funcionariosProcessados: any[] = [];
+        const erros: string[] = [];
+
+        linhas.forEach((linha, index) => {
+            const campos = linha.split(';');
+            
+            if (campos.length !== 6) {
+                erros.push(`Linha ${index + 1}: Formato inválido - esperado 6 colunas separadas por ;`);
+                return;
+            }
+
+            const [nome, cpf, dataNascimento, codigoPlano, uf, sexo] = campos.map(campo => campo.trim());
+
+            // Validações básicas
+            if (!nome) erros.push(`Linha ${index + 1}: Nome é obrigatório`);
+            if (!cpf || cpf.length < 11) erros.push(`Linha ${index + 1}: CPF inválido`);
+            if (!dataNascimento) erros.push(`Linha ${index + 1}: Data de nascimento é obrigatória`);
+            if (!uf || uf.length !== 2) erros.push(`Linha ${index + 1}: UF inválida`);
+            if (!sexo || !['M', 'F'].includes(sexo.toUpperCase())) erros.push(`Linha ${index + 1}: Sexo deve ser M ou F`);
+
+            if (erros.length === 0 || !erros.some(erro => erro.includes(`Linha ${index + 1}`))) {
+                funcionariosProcessados.push({
+                    nome,
+                    cpf: cpf.replace(/\D/g, ''), // Remove caracteres não numéricos
+                    dataNascimento,
+                    codigoPlano: codigoPlano || '3', // Plano padrão 3
+                    uf: uf.toUpperCase(),
+                    sexo: sexo.toUpperCase()
+                });
+            }
+        });
+
+        setFuncionarios(funcionariosProcessados);
+        setErrosArquivo(erros);
+    };
+
+    // Função para lidar com upload de arquivo
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setArquivo(file);
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const texto = e.target?.result as string;
+            if (file.type.includes('csv') || file.name.endsWith('.csv')) {
+                processarCSV(texto);
+            } else if (file.type.includes('excel') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                // Para Excel, primeiro convertemos para CSV
+                setTipoMensagem("warning");
+                setMensagemDeErro('Arquivos Excel serão suportados em breve. Use CSV por enquanto.');
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const steps = ["Dados da Empresa", "Endereço", "Upload de Funcionários", "Pagamento"];
 
     return (
         <Container maxWidth="md">
@@ -510,6 +575,129 @@ export default function CadastroPj() {
                     {currentStep === 2 && (
                         <>
                             <Typography variant="h6" align="center" gutterBottom>
+                                Upload de Funcionários
+                            </Typography>
+                            <Typography align="center" sx={{ mb: 3 }}>
+                                Faça o upload de um arquivo CSV com os dados dos funcionários
+                            </Typography>
+
+                            <Box className="mb-4">
+                                <Typography variant="body2" sx={{ mb: 2, fontWeight: 'bold' }}>
+                                    Formato do arquivo CSV:
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 1 }}>
+                                    O arquivo deve conter as seguintes colunas separadas por ponto e vírgula (;):
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 2, fontFamily: 'monospace', backgroundColor: '#f5f5f5', p: 1, borderRadius: 1 }}>
+                                    Nome;CPF;Data de nascimento;Código do plano (opcional);UF;Sexo
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 1, fontSize: '0.9em', color: '#666' }}>
+                                    • Código do plano: Se não informado, será usado o plano padrão (3)
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 2, fontSize: '0.9em', color: '#666' }}>
+                                    • Sexo: M (Masculino) ou F (Feminino)
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 2, fontWeight: 'bold' }}>
+                                    Exemplo:
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', backgroundColor: '#f5f5f5', p: 1, borderRadius: 1 }}>
+                                    ANGELICA CRISTINA DA SILVA GOMES;12345678900;11/01/1983;3;AC;F
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', backgroundColor: '#f5f5f5', p: 1, borderRadius: 1, mt: 1 }}>
+                                    JOÃO CARLOS DOS SANTOS;98765432100;15/03/1990;;SP;M (sem código do plano - usará padrão 3)
+                                </Typography>
+                                
+                                <Box sx={{ textAlign: 'center', mt: 2, mb: 3 }}>
+                                    <a 
+                                        href="/exemplo-funcionarios.csv" 
+                                        download="exemplo-funcionarios.csv"
+                                        style={{ 
+                                            color: '#1976d2', 
+                                            textDecoration: 'none',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        📥 Baixar arquivo de exemplo CSV
+                                    </a>
+                                </Box>
+                            </Box>
+
+                            <Box className="mb-3">
+                                <input
+                                    type="file"
+                                    accept=".csv,.xlsx,.xls"
+                                    onChange={handleFileUpload}
+                                    className="form-control"
+                                    style={{ padding: '10px' }}
+                                />
+                            </Box>
+
+                            {arquivo && (
+                                <Box className="mb-3">
+                                    <Typography variant="body2" sx={{ color: 'green' }}>
+                                        Arquivo selecionado: {arquivo.name}
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            {errosArquivo.length > 0 && (
+                                <Box className="mb-3" sx={{ backgroundColor: '#ffebee', p: 2, borderRadius: 1 }}>
+                                    <Typography variant="body2" sx={{ color: 'red', fontWeight: 'bold', mb: 1 }}>
+                                        Erros encontrados no arquivo:
+                                    </Typography>
+                                    {errosArquivo.map((erro, index) => (
+                                        <Typography key={index} variant="body2" sx={{ color: 'red', fontSize: '0.85em' }}>
+                                            • {erro}
+                                        </Typography>
+                                    ))}
+                                </Box>
+                            )}
+
+                            {funcionarios.length > 0 && (
+                                <Box className="mb-3">
+                                    <Typography variant="body2" sx={{ color: 'green', fontWeight: 'bold', mb: 2 }}>
+                                        Funcionários processados: {funcionarios.length}
+                                    </Typography>
+                                    
+                                    <Box sx={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: 1 }}>
+                                        <table className="table table-sm table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nome</th>
+                                                    <th>CPF</th>
+                                                    <th>Nascimento</th>
+                                                    <th>Plano</th>
+                                                    <th>UF</th>
+                                                    <th>Sexo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {funcionarios.slice(0, 10).map((func, index) => (
+                                                    <tr key={index}>
+                                                        <td style={{ fontSize: '0.85em' }}>{func.nome}</td>
+                                                        <td style={{ fontSize: '0.85em' }}>{func.cpf}</td>
+                                                        <td style={{ fontSize: '0.85em' }}>{func.dataNascimento}</td>
+                                                        <td style={{ fontSize: '0.85em' }}>{func.codigoPlano}</td>
+                                                        <td style={{ fontSize: '0.85em' }}>{func.uf}</td>
+                                                        <td style={{ fontSize: '0.85em' }}>{func.sexo}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        {funcionarios.length > 10 && (
+                                            <Typography variant="body2" sx={{ textAlign: 'center', p: 1, fontStyle: 'italic' }}>
+                                                ... e mais {funcionarios.length - 10} funcionários
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </Box>
+                            )}
+                        </>
+                    )}
+
+                    {currentStep === 3 && (
+                        <>
+                            <Typography variant="h6" align="center" gutterBottom>
                                 Pagamento
                             </Typography>
                             <Typography align="center">Selecione uma forma de pagamento:</Typography>
@@ -557,28 +745,49 @@ export default function CadastroPj() {
                                     onClick={async () => {
                                         setLoading(true);
                                         try {
-                                            // Primeiro gera o link de pagamento (seria necessária uma rota específica para PJ)
-                                            const response = await fetch('/api/vendaPlanoPj/vendaClientePj', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                },
-                                                body: JSON.stringify({
-                                                    nomeEmpresa: formData.nomeEmpresa,
-                                                    formaDePagamento: formData.formaPagamento,
-                                                    valorPlano: formData.valorPlano,
-                                                    idUsuario: user?.id || idUsuario,
-                                                }),
-                                            });
+                                            let response;
+                                            
+                                            // Se há funcionários no upload, usa a nova API
+                                            if (funcionarios.length > 0) {
+                                                response = await fetch('/api/vendaPlanoPj/vendaPjSaudeECor', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                    },
+                                                    body: JSON.stringify({
+                                                        nomeEmpresa: formData.nomeEmpresa,
+                                                        cnpj: formData.cnpj,
+                                                        funcionarios: funcionarios,
+                                                        formaPagamento: formData.formaPagamento,
+                                                        valorPlano: formData.valorPlano,
+                                                        idUsuario: user?.id || idUsuario,
+                                                    }),
+                                                });
+                                            } else {
+                                                // Usa a API original para venda simples
+                                                response = await fetch('/api/vendaPlanoPj/vendaClientePj', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                    },
+                                                    body: JSON.stringify({
+                                                        nomeEmpresa: formData.nomeEmpresa,
+                                                        cnpj: formData.cnpj,
+                                                        formaPagamento: formData.formaPagamento,
+                                                        valorPlano: formData.valorPlano,
+                                                        idUsuario: user?.id || idUsuario,
+                                                    }),
+                                                });
+                                            }
 
                                             if (!response.ok) {
                                                 const errorData = await response.json();
-                                                throw new Error(errorData.message || 'Erro ao gerar o link de pagamento');
+                                                throw new Error(errorData.message || 'Erro ao processar venda');
                                             }
 
                                             const data = await response.json();
                                             if (data.paymentLink) {
-                                                // Depois registra a venda na tabela tb_vendas_telemedicina
+                                                // Registra a venda na tabela tb_vendas_telemedicina
                                                 try {
                                                     await fetch('/api/vendaTelemedicina/criarVenda', {
                                                         method: 'POST',
@@ -589,29 +798,45 @@ export default function CadastroPj() {
                                                             id_usuario: user?.id || idUsuario,
                                                             forma_pagamento: formData.formaPagamento,
                                                             link_pagamento: data.paymentLink,
-                                                            tipo_venda: "pj",
+                                                            tipo_venda: funcionarios.length > 0 ? "pj_grupo" : "pj",
                                                             situacao_pagamento: "pendente",
                                                             valor_venda: formData.valorPlano,
+                                                            observacoes: funcionarios.length > 0 ? 
+                                                                `${funcionarios.length} funcionários cadastrados` : 
+                                                                undefined,
                                                         }),
                                                     });
                                                 } catch (vendaError) {
                                                     console.error('Erro ao registrar venda na tabela telemedicina:', vendaError);
-                                                    // Não bloqueia o fluxo principal se houver erro no registro
                                                 }
 
                                                 setPaymentLink(data.paymentLink);
-                                                setShowPopup(true); // Mostra o popup
+                                                setShowPopup(true);
+                                                
+                                                // Mostra resumo se houve cadastro de funcionários
+                                                if (data.resumo) {
+                                                    setTipoMensagem("success");
+                                                    setMensagemDeErro(
+                                                        `Venda processada! ${data.resumo.sucessos} funcionários cadastrados com sucesso. ` +
+                                                        (data.resumo.erros > 0 ? `${data.resumo.erros} erros encontrados.` : '')
+                                                    );
+                                                }
                                             } else {
                                                 alert('Erro: o link de pagamento não foi retornado.');
                                             }
-                                        } catch (error) {
-                                            alert('Erro ao gerar o link de pagamento.');
+                                        } catch (error: any) {
+                                            setTipoMensagem("danger");
+                                            alert(`Erro ao processar venda: ${error.message}`);
                                         } finally {
                                             setLoading(false);
                                         }
                                     }}
+                                    disabled={!formData.formaPagamento}
                                 >
-                                    Gerar link de pagamento
+                                    {funcionarios.length > 0 
+                                        ? `Processar venda com ${funcionarios.length} funcionários`
+                                        : 'Gerar link de pagamento'
+                                    }
                                 </Button>
                             </Box>
                         </>
@@ -624,7 +849,7 @@ export default function CadastroPj() {
                             Voltar
                         </Button>
                     )}
-                    {currentStep < 2 && (
+                    {currentStep < 3 && (
                         <Button variant="contained" sx={{ backgroundColor: "rgb(181, 205, 0)" }} onClick={nextStep}>
                             Avançar
                         </Button>
@@ -636,8 +861,10 @@ export default function CadastroPj() {
                     mensagem={
                         currentStep === 1
                             ? "Cadastrando empresa no sistema Saúde e Cor e no banco de dados..."
-                            : currentStep === 2
-                                ? "Enviando dados de cobrança..."
+                            : currentStep === 3
+                                ? funcionarios.length > 0 
+                                    ? `Processando venda e cadastrando ${funcionarios.length} funcionários...`
+                                    : "Enviando dados de cobrança..."
                                 : "Carregando..."
                     }
                 />
@@ -650,9 +877,12 @@ export default function CadastroPj() {
             {mensagemDeErro && (
                 <AvisoAlerta
                     mensagem={mensagemDeErro}
-                    tipo="danger"
+                    tipo={tipoMensagem}
                     duracao={5000}
-                    onClose={() => setMensagemDeErro(null)}
+                    onClose={() => {
+                        setMensagemDeErro(null);
+                        setTipoMensagem("danger"); // Reset para o padrão
+                    }}
                 />
             )}
         </Container>

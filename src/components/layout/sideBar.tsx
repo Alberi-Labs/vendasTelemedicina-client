@@ -65,6 +65,7 @@ export default function Sidebar() {
     dashboard: userRole === "admin" || userRole === "gerente",
     gestaoUsuarios: userRole === "admin" || userRole === "gerente",
     gestaoDependentes: userRole === "admin" || userRole === "cliente" || userRole === "clientePJ",
+    notasFiscais: userRole === "admin" || userRole === "gerente",
     suporte: true,
   };
 
@@ -301,6 +302,21 @@ export default function Sidebar() {
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaGestaoUsuarios" ? "#b5cd00" : "transparent")}>
                   <i className="bi-person-gear me-2"></i> Gestão de Usuários
+                </Nav.Link>
+              )}
+
+              {canAccess.notasFiscais && (
+                <Nav.Link as={Link} href="/paginaNotasFiscais" onClick={handleMenuClick} style={{
+                  color: router.pathname === "/paginaNotasFiscais" ? "#000" : "#FFF",
+                  backgroundColor: router.pathname === "/paginaNotasFiscais" ? "#b5cd00" : "transparent",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  transition: "background-color 0.3s ease-in-out",
+                  marginBottom: "5px"
+                }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaNotasFiscais" ? "#b5cd00" : "transparent")}>
+                  <i className="bi-receipt me-2"></i>Notas Fiscais
                 </Nav.Link>
               )}
 
