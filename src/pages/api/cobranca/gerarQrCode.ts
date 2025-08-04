@@ -20,9 +20,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const response = await fetch(url, {
             method: 'POST',
             headers: {
-                accept: 'application/json',
+                'accept': 'application/json',
                 'content-type': 'application/json',
-                access_token: '$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjNkOWVhOGQ5LWNlNDEtNDViNC1iZTA1LTRjYTI0MGRkNTdiMzo6JGFhY2hfMjU5NzVmNjQtYTE5OS00MjA2LThlYzQtZjJjZGZjOGVjNmUz'
+                access_token: process.env.ASAAS_API_KEY || ''
             },
             body: JSON.stringify(body)
         });

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 // Configurações do Asaas para consultar assinaturas
-const ASAAS_API_KEY = "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjM2M2VkNzM3LTQ3ZDMtNDk4MC1iMzk1LWIwMWFiNTQ4NmQzZjo6JGFhY2hfYWMyZjg5ZmUtYTQ4MC00MDJhLTk5YzctOTRhM2MzZDFmOWIw";
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
 const ASAAS_BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://api.asaas.com/v3' 
   : 'https://sandbox.asaas.com/api/v3';
@@ -57,8 +57,8 @@ export default async function handler(
       method: 'GET',
       headers: {
         'accept': 'application/json',
-        'access_token': ASAAS_API_KEY
-      }
+        'access_token': ASAAS_API_KEY ?? ''
+      } as Record<string, string>
     });
 
     if (!assinaturasResponse.ok) {
@@ -78,8 +78,8 @@ export default async function handler(
           method: 'GET',
           headers: {
             'accept': 'application/json',
-            'access_token': ASAAS_API_KEY
-          }
+            'access_token': ASAAS_API_KEY ?? ''
+          } as Record<string, string>
         });
 
         let cliente: Cliente | null = null;
@@ -94,8 +94,8 @@ export default async function handler(
             method: 'GET',
             headers: {
               'accept': 'application/json',
-              'access_token': ASAAS_API_KEY
-            }
+              'access_token': ASAAS_API_KEY ?? ''
+            } as Record<string, string>
           });
           if (configResponse.ok) {
             notaFiscalConfig = await configResponse.json();

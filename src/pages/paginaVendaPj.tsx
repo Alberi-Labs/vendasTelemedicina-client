@@ -44,7 +44,7 @@ export default function CadastroPj() {
     const [funcionarios, setFuncionarios] = useState<any[]>([]);
     const [errosArquivo, setErrosArquivo] = useState<string[]>([]);
     const { user } = useAuth();
-
+    console.log(user)
     let idUsuario: string = "";
 
     useEffect(() => {
@@ -180,15 +180,13 @@ export default function CadastroPj() {
         if (currentStep === 1) {
             // Se uma empresa existente foi selecionada, pula o cadastro
             if (empresaSelecionada) {
-                console.log('Empresa existente selecionada. Pulando cadastro...');
                 setCurrentStep((prev) => prev + 1);
                 return;
             }
 
             setLoading(true);
             try {
-                // Primeiro, cadastra no sistema Saúde e Cor
-                console.log('Iniciando cadastro no sistema Saúde e Cor...');
+                // Cadastro empresa (mantém igual)
                 const saudeECorResponse = await fetch('/api/empresas/cadastroSaudeECor', {
                     method: 'POST',
                     headers: {
@@ -208,17 +206,10 @@ export default function CadastroPj() {
                         cidade: formData.cidade,
                     }),
                 });
-
                 const saudeECorData = await saudeECorResponse.json();
-
                 if (!saudeECorResponse.ok) {
                     throw new Error(saudeECorData.error || 'Erro ao cadastrar empresa no sistema Saúde e Cor');
                 }
-
-                console.log('Empresa cadastrada no sistema Saúde e Cor com sucesso!');
-
-                // Depois, cadastra no banco de dados local
-                console.log('Iniciando cadastro no banco de dados local...');
                 const response = await fetch('/api/empresas/adicionarEmpresa', {
                     method: 'POST',
                     headers: {
@@ -239,18 +230,55 @@ export default function CadastroPj() {
                         valor_plano: formData.valorPlano,
                     }),
                 });
-
                 const data = await response.json();
-
                 if (!response.ok) {
                     throw new Error(data.message || 'Erro ao cadastrar empresa no banco de dados');
                 }
-
-                console.log('Empresa cadastrada no banco de dados com sucesso!');
             } catch (error: any) {
-                console.error('Erro ao cadastrar empresa:', error);
                 setTipoMensagem("danger");
                 setMensagemDeErro(error.message || 'Erro inesperado ao cadastrar empresa.');
+                return;
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        if (currentStep === 2 && arquivo && funcionarios.length > 0) {
+            setLoading(true);
+            try {
+                // Lê o arquivo como texto base64 para enviar via JSON
+                const arquivoBase64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(arquivo);
+                });
+
+                const payload = {
+                    instituicao: formData.nomeEmpresa,
+                    login_sistema: user?.login_sistema || '',
+                    senha_sistema: user?.senha_sistema || '',
+                    arquivoBase64,
+                };
+
+                const response = await fetch('/api/vendaPlanoPj/subirVidaSaudeECor', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    setTipoMensagem("danger");
+                    setMensagemDeErro(errorData.message || 'Erro ao subir vidas para Saúde e Cor');
+                    setLoading(false);
+                    return;
+                }
+            } catch (error: any) {
+                setTipoMensagem("danger");
+                setMensagemDeErro(error.message || 'Erro inesperado ao subir vidas para Saúde e Cor');
+                setLoading(false);
                 return;
             } finally {
                 setLoading(false);
@@ -269,8 +297,13 @@ export default function CadastroPj() {
         const erros: string[] = [];
 
         linhas.forEach((linha, index) => {
-            const campos = linha.split(';');
-            
+            // Remove aspas duplas do início/fim da linha, se houver
+            let linhaLimpa = linha.trim();
+            if (linhaLimpa.startsWith('"') && linhaLimpa.endsWith('"')) {
+                linhaLimpa = linhaLimpa.slice(1, -1);
+            }
+            const campos = linhaLimpa.split(';');
+
             if (campos.length !== 6) {
                 erros.push(`Linha ${index + 1}: Formato inválido - esperado 6 colunas separadas por ;`);
                 return;
@@ -745,40 +778,19 @@ export default function CadastroPj() {
                                     onClick={async () => {
                                         setLoading(true);
                                         try {
-                                            let response;
-                                            
-                                            // Se há funcionários no upload, usa a nova API
-                                            if (funcionarios.length > 0) {
-                                                response = await fetch('/api/vendaPlanoPj/vendaPjSaudeECor', {
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json',
-                                                    },
-                                                    body: JSON.stringify({
-                                                        nomeEmpresa: formData.nomeEmpresa,
-                                                        cnpj: formData.cnpj,
-                                                        funcionarios: funcionarios,
-                                                        formaPagamento: formData.formaPagamento,
-                                                        valorPlano: formData.valorPlano,
-                                                        idUsuario: user?.id || idUsuario,
-                                                    }),
-                                                });
-                                            } else {
-                                                // Usa a API original para venda simples
-                                                response = await fetch('/api/vendaPlanoPj/vendaClientePj', {
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json',
-                                                    },
-                                                    body: JSON.stringify({
-                                                        nomeEmpresa: formData.nomeEmpresa,
-                                                        cnpj: formData.cnpj,
-                                                        formaPagamento: formData.formaPagamento,
-                                                        valorPlano: formData.valorPlano,
-                                                        idUsuario: user?.id || idUsuario,
-                                                    }),
-                                                });
-                                            }
+                                            const response = await fetch('/api/vendaPlanoPj/vendaClientePj', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                },
+                                                body: JSON.stringify({
+                                                    nomeEmpresa: formData.nomeEmpresa,
+                                                    cnpj: formData.cnpj,
+                                                    formaPagamento: formData.formaPagamento,
+                                                    valorPlano: formData.valorPlano,
+                                                    idUsuario: user?.id || idUsuario,
+                                                }),
+                                            });
 
                                             if (!response.ok) {
                                                 const errorData = await response.json();
@@ -798,12 +810,9 @@ export default function CadastroPj() {
                                                             id_usuario: user?.id || idUsuario,
                                                             forma_pagamento: formData.formaPagamento,
                                                             link_pagamento: data.paymentLink,
-                                                            tipo_venda: funcionarios.length > 0 ? "pj_grupo" : "pj",
+                                                            tipo_venda: "pj",
                                                             situacao_pagamento: "pendente",
                                                             valor_venda: formData.valorPlano,
-                                                            observacoes: funcionarios.length > 0 ? 
-                                                                `${funcionarios.length} funcionários cadastrados` : 
-                                                                undefined,
                                                         }),
                                                     });
                                                 } catch (vendaError) {
@@ -812,15 +821,6 @@ export default function CadastroPj() {
 
                                                 setPaymentLink(data.paymentLink);
                                                 setShowPopup(true);
-                                                
-                                                // Mostra resumo se houve cadastro de funcionários
-                                                if (data.resumo) {
-                                                    setTipoMensagem("success");
-                                                    setMensagemDeErro(
-                                                        `Venda processada! ${data.resumo.sucessos} funcionários cadastrados com sucesso. ` +
-                                                        (data.resumo.erros > 0 ? `${data.resumo.erros} erros encontrados.` : '')
-                                                    );
-                                                }
                                             } else {
                                                 alert('Erro: o link de pagamento não foi retornado.');
                                             }
@@ -833,10 +833,7 @@ export default function CadastroPj() {
                                     }}
                                     disabled={!formData.formaPagamento}
                                 >
-                                    {funcionarios.length > 0 
-                                        ? `Processar venda com ${funcionarios.length} funcionários`
-                                        : 'Gerar link de pagamento'
-                                    }
+                                    Gerar link de pagamento
                                 </Button>
                             </Box>
                         </>

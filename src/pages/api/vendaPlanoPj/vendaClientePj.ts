@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 // Configurações do Asaas
-const ASAAS_API_KEY = process.env.ASAAS_API_KEY || "";
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
 const ASAAS_BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://api.asaas.com/v3' 
   : 'https://sandbox.asaas.com/api/v3';
@@ -20,6 +20,14 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Método não permitido' });
+  }
+
+  // Verificar se a API key está configurada
+  if (!ASAAS_API_KEY) {
+    console.error('❌ ASAAS_API_KEY não está configurada nas variáveis de ambiente');
+    return res.status(500).json({ 
+      message: 'Configuração de API não encontrada. Contate o administrador.' 
+    });
   }
 
   try {
@@ -44,7 +52,7 @@ export default async function handler(
       const valorTotal = parseFloat(dados.valorPlano);
       
       paymentLink = await criarAssinaturaAsaas({
-        cnpj: dados.cnpj,
+        cnpj: "49.937.814/0001-46",
         nomeEmpresa: dados.nomeEmpresa,
         valorTotal,
         formaPagamento: dados.formaPagamento,
@@ -96,6 +104,10 @@ interface DadosAssinaturaAsaas {
 
 // Função para buscar ou criar cliente no Asaas
 async function buscarOuCriarClienteAsaas(cnpj: string, nomeEmpresa: string): Promise<string> {
+  if (!ASAAS_API_KEY) {
+    throw new Error('ASAAS_API_KEY não configurada');
+  }
+
   try {
     // Primeiro, tenta buscar o cliente pelo CNPJ
     const searchResponse = await fetch(`${ASAAS_BASE_URL}/customers?cpfCnpj=${cnpj}`, {
@@ -146,6 +158,10 @@ async function buscarOuCriarClienteAsaas(cnpj: string, nomeEmpresa: string): Pro
 
 // Função para criar assinatura recorrente no Asaas
 async function criarAssinaturaAsaas(dados: DadosAssinaturaAsaas): Promise<string> {
+  if (!ASAAS_API_KEY) {
+    throw new Error('ASAAS_API_KEY não configurada');
+  }
+
   try {
     // Buscar ou criar cliente
     const customerId = await buscarOuCriarClienteAsaas(dados.cnpj, dados.nomeEmpresa);

@@ -151,7 +151,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log("Cadastro concluído com sucesso!");
 
     // Fecha o browser
-    await browser.close();
+    //await browser.close();
 
     return res.status(200).json({ message: "Integração concluída com sucesso!" });
   } catch (error) {

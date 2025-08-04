@@ -193,6 +193,60 @@ export default function PaginaApolice() {
     }
   };
 
+  const handleGerarContratoVita = async () => {
+    if (!user) {
+      setAvisoMensagem("Usuário não encontrado. Faça login novamente.");
+      setAvisoTipo("danger");
+      setShowAviso(true);
+      return;
+    }
+
+    const dadosContrato = {
+      nomeCliente: user.nome,
+      cpfCliente: user.cpf,
+      dataNascimento: formatarDataNascimento(user.dt_nascimento),
+      idadeCliente: calcularIdade(user.dt_nascimento),
+      vigenciaInicio: formatarDataVigencia(user.data_contrato_vigencia_inicio),
+      vigenciaFinal: formatarDataVigencia(user.data_contrato_vigencia_final),
+      numeroApolice: user.num_contrato_retorno_apolice || "—",
+      numeroOperacao: user.cod_contrato_retorno_operacao || "—",
+      numeroCertificado: user.num_contrato_retorno_certificado || "—",
+      empresa: user.dsc_instituicao,
+      valorPlano: "39,90",
+      dataEmissao: new Date().toLocaleDateString("pt-BR"),
+    };
+
+    try {
+      const response = await fetch("/api/contrato/gerarContratoVita", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dadosContrato),
+      });
+
+      if (!response.ok) {
+        console.error("Erro ao gerar contrato Vita");
+        setAvisoMensagem("Erro ao gerar contrato. Tente novamente mais tarde.");
+        setAvisoTipo("danger");
+        setShowAviso(true);
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+
+      setAvisoMensagem("Contrato gerado com sucesso!");
+      setAvisoTipo("success");
+      setShowAviso(true);
+
+    } catch (err) {
+      console.error("Erro ao gerar contrato Vita:", err);
+      setAvisoMensagem("Erro ao processar contrato. Tente novamente.");
+      setAvisoTipo("danger");
+      setShowAviso(true);
+    }
+  };
+
   return (
     <div className="container py-5">
       <motion.h1
@@ -273,6 +327,30 @@ export default function PaginaApolice() {
           </Button>
 
           {user?.dsc_instituicao?.includes("Vita") && (
+            <>
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handlePreencherCarteirinha}
+                className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
+              >
+                <i className="bi bi-credit-card fs-5"></i>
+                Gerar Carteirinha
+              </Button>
+              
+              <Button
+                variant="warning"
+                size="lg"
+                onClick={handleGerarContratoVita}
+                className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
+              >
+                <i className="bi bi-file-earmark-text fs-5"></i>
+                Gerar Contrato Vita
+              </Button>
+            </>
+          )}
+
+          {!user?.dsc_instituicao?.includes("Vita") && (
             <Button
               variant="primary"
               size="lg"

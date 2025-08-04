@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 // Configurações do Asaas
-const ASAAS_API_KEY = "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjM2M2VkNzM3LTQ3ZDMtNDk4MC1iMzk1LWIwMWFiNTQ4NmQzZjo6JGFhY2hfYWMyZjg5ZmUtYTQ4MC00MDJhLTk5YzctOTRhM2MzZDFmOWIw";
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
 const ASAAS_BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://api.asaas.com/v3' 
   : 'https://sandbox.asaas.com/api/v3';
@@ -30,6 +30,14 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Método não permitido' });
+  }
+
+  // Verificar se a API key está configurada
+  if (!ASAAS_API_KEY) {
+    console.error('❌ ASAAS_API_KEY não está configurada nas variáveis de ambiente');
+    return res.status(500).json({ 
+      message: 'Configuração de API não encontrada. Contate o administrador.' 
+    });
   }
 
   try {
@@ -171,6 +179,10 @@ interface DadosAssinaturaAsaas {
 
 // Função para buscar ou criar cliente no Asaas
 async function buscarOuCriarClienteAsaas(cnpj: string, nomeEmpresa: string): Promise<string> {
+  if (!ASAAS_API_KEY) {
+    throw new Error('ASAAS_API_KEY não configurada');
+  }
+
   try {
     // Primeiro, tenta buscar o cliente pelo CNPJ
     console.log(ASAAS_API_KEY)
@@ -222,6 +234,10 @@ async function buscarOuCriarClienteAsaas(cnpj: string, nomeEmpresa: string): Pro
 
 // Função para criar assinatura recorrente no Asaas
 async function criarAssinaturaAsaas(dados: DadosAssinaturaAsaas): Promise<string> {
+  if (!ASAAS_API_KEY) {
+    throw new Error('ASAAS_API_KEY não configurada');
+  }
+
   try {
     // Buscar ou criar cliente
     const customerId = await buscarOuCriarClienteAsaas(dados.cnpj, dados.nomeEmpresa);

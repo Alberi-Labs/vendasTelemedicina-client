@@ -1,8 +1,7 @@
 // pages/api/clienteSaudeecor/buscarDados.ts
 
 import { NextApiRequest, NextApiResponse } from "next";
-import { DadosSaudeECor } from "@/types/dadosSaudeECor"; // Para CPF
-import { DadosSaudeECorPJ } from "@/types/dadosSaudeECorPJ";
+import pool from "../../../lib/db";
 
 const SaudeECorURL = process.env.SAUDE_E_COR_URL;
 const SaudeECorURLPJ = process.env.SAUDE_E_COR_URL_PJ;
@@ -49,14 +48,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       body: JSON.stringify(payload),
     });
-
     if (!response.ok) {
       const errorText = await response.text();
       return res.status(response.status).json({ message: "Erro na requisição externa", error: errorText });
     }
 
     const data = await response.json();
-
+    console.log("Dados recebidos:", data);
+    
     // Verifica se os dados retornados estão vazios
     const isEmpty = !data || (Array.isArray(data) && data.length === 0) || (typeof data === "object" && Object.keys(data).length === 0);
     if (isEmpty) {
@@ -65,9 +64,92 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    // Se os dados foram encontrados na API, verificar no banco de dados
+    if (Array.isArray(data) && data.length > 0) {
+      const clienteData = data[0]; // Pega o primeiro cliente dos dados retornados
+      await verificarOuCriarCliente(clienteData);
+    }
+
     return res.status(200).json(data);
 
   } catch (error: any) {
     return res.status(500).json({ message: "Erro ao buscar os dados", error: error.message });
+  }
+}
+
+// Função para verificar se o cliente existe no banco ou criá-lo
+async function verificarOuCriarCliente(clienteData: any) {
+  try {
+    const cpfLimpo = clienteData.num_cpf.replace(/\D/g, "");
+    
+    // Verificar se o cliente já existe no banco
+    const [rows]: any = await pool.execute(
+      "SELECT idCliente, primeiro_acesso FROM tb_clientes WHERE cpf = ?",
+      [cpfLimpo]
+    );
+
+    if (rows.length > 0) {
+      // Cliente já existe, verificar primeiro acesso
+      const cliente = rows[0];
+      if (!cliente.primeiro_acesso) {
+        console.log("primeiro acesso");
+        
+        // Atualizar para marcar que já fez o primeiro acesso
+        await pool.execute(
+          "UPDATE tb_clientes SET primeiro_acesso = ? WHERE idCliente = ?",
+          [1, cliente.idCliente]
+        );
+      }
+    } else {
+      // Cliente não existe, criar novo registro
+      console.log("Criando novo cliente no banco de dados");
+      
+      // Extrair data de nascimento se disponível nos dados da API
+      let dataNascimento = null;
+      if (clienteData.dat_nascimento) {
+        dataNascimento = clienteData.dat_nascimento;
+      }
+
+      // Buscar o ID da instituição pelo nome
+      let idInstituicao = null;
+      if (clienteData.dsc_instituicao) {
+        const [instituicaoRows]: any = await pool.execute(
+          "SELECT idInstituicao FROM tb_instituicao WHERE nomeInstituicao LIKE ?",
+          [`%${clienteData.dsc_instituicao}%`]
+        );
+        
+        if (instituicaoRows.length > 0) {
+          idInstituicao = instituicaoRows[0].idInstituicao;
+        }
+      }
+
+      await pool.execute(
+        `INSERT INTO tb_clientes (
+          nome, telefone, email, cpf, data_nascimento, 
+          idClienteDependente, data_vinculo, creditos, senha, perfil, 
+          id_instituicao, cep, registro_geral, primeiro_acesso
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          clienteData.nom_cliente,
+          clienteData.num_celular,
+          clienteData.dsc_email,
+          cpfLimpo,
+          dataNascimento,
+          null, // idClienteDependente
+          new Date(), // data_vinculo - data atual
+          0, // creditos
+          null, // senha
+          'cliente', // perfil
+          idInstituicao, // ID da instituição encontrada ou null
+          null, // cep
+          null, // registro_geral
+          0 // primeiro_acesso = false (0)
+        ]
+      );
+      
+      console.log("primeiro acesso");
+    }
+  } catch (error) {
+    console.error("Erro ao verificar/criar cliente:", error);
   }
 }

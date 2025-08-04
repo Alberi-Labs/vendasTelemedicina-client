@@ -181,15 +181,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await page.click("#btn_gravar");
 
         console.log("Cadastro concluído com sucesso!");
-        // Inserir usuário na tabela tb_usuarios
-        // Formatar a senha no formato ddmmaaaa
         const data = new Date(dataNascimento);
         const senhaTexto = `${String(data.getDate()).padStart(2, '0')}${String(data.getMonth() + 1).padStart(2, '0')}${data.getFullYear()}`;
 
-        // Criptografar a senha com bcrypt
-        const senhaCriptografada = await bcrypt.hash(senhaTexto, 10);
-
-        // Inserir o usuário no banco
         const [usuarioResult]: any = await pool.query(
             `INSERT INTO tb_usuarios 
     (nome, email, senha, telefone, perfil, imagem, cpf, creditos, data_nascimento, id_instituicao, plano_telemedicina, cep, endereco, uf, cidade, sexo) 
@@ -197,7 +191,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             [
                 nome,
                 email,
-                senhaCriptografada,  // senha criptografada com base na data
+                senhaTexto,  // senha em texto simples
                 celular,
                 "cliente",
                 null,

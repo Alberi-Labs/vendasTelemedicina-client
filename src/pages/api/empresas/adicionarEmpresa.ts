@@ -31,26 +31,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Verifica se já existe uma empresa com o mesmo nome ou CNPJ
     const checkSql = `
-      SELECT id, nomeEmpresa, cnpj FROM tb_empresas 
+      SELECT idEmpresa, nomeEmpresa, cnpj FROM tb_empresas 
       WHERE LOWER(nomeEmpresa) = LOWER(?) OR cnpj = ?
     `;
     
-    const existingCompanies = await pool.query(checkSql, [nomeEmpresa, cnpjLimpo]);
-    
-    if (Array.isArray(existingCompanies) && existingCompanies.length > 0) {
-      const existing = existingCompanies[0] as any;
-      
+    const [rows] = await pool.query(checkSql, [nomeEmpresa, cnpjLimpo]);
+    if (Array.isArray(rows) && rows.length > 0) {
+      const existing = rows[0] as any;
       if (existing.cnpj === cnpjLimpo) {
         return res.status(409).json({ 
           message: `Empresa com CNPJ ${cnpj} já está cadastrada.`,
-          existing: { id: existing.id, nomeEmpresa: existing.nomeEmpresa }
+          existing: { id: existing.idEmpresa, nomeEmpresa: existing.nomeEmpresa }
         });
       }
-      
-      if (existing.nomeEmpresa.toLowerCase() === nomeEmpresa.toLowerCase()) {
+      if (existing.nomeEmpresa && existing.nomeEmpresa.toLowerCase() === nomeEmpresa.toLowerCase()) {
         return res.status(409).json({ 
           message: `Empresa com nome "${nomeEmpresa}" já está cadastrada.`,
-          existing: { id: existing.id, nomeEmpresa: existing.nomeEmpresa }
+          existing: { id: existing.idEmpresa, nomeEmpresa: existing.nomeEmpresa }
         });
       }
     }
@@ -58,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       INSERT INTO tb_empresas (
         nomeEmpresa, nomeFantasia, email, cnpj, celular,
         cep, endereco, uf, cidade, valor_plano,
-        ativo, imagem_perfil, instituicao, quantidade_vidas
+        ativo, imagem_perfil, id_instituicao, quantidade_vidas
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -75,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       valor_plano || null,
       1,          // ativo (padrão: 1 = ativo)
       null,       // imagem_perfil (padrão: null)
-      null,       // instituicao (padrão: null)
+      null,       // id_instituicao (padrão: null, ajuste se tiver valor)
       null,       // quantidade_vidas (padrão: null)
     ];
 
