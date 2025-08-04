@@ -24,9 +24,40 @@ export default function PaginaApolice() {
   const [loadingContrato, setLoadingContrato] = useState(false);
 
   const { user, updateUser } = useAuth();
+  
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Verificar status do contrato assinado quando a página carregar
+  useEffect(() => {
+    const verificarStatusContrato = async () => {
+      if (!user?.cpf || !user?.dsc_instituicao?.includes("Vita")) {
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/contrato/verificarStatusContrato", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cpf: user.cpf }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Atualizar contexto se o status for diferente
+          if (data.contrato_assinado !== user.contrato_assinado) {
+            updateUser({ contrato_assinado: data.contrato_assinado });
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao verificar status do contrato:", error);
+      }
+    };
+
+    verificarStatusContrato();
+  }, [user?.cpf, user?.dsc_instituicao, user?.contrato_assinado, updateUser]);
 
   console.log(user)
   const dscEmpresa = encodeURIComponent(user?.dsc_instituicao || "");
@@ -264,6 +295,50 @@ export default function PaginaApolice() {
     }
   };
 
+  const handleBaixarContratoAssinado = async () => {
+    if (!user?.cpf) {
+      setAvisoMensagem("Erro: CPF do usuário não encontrado.");
+      setAvisoTipo("danger");
+      setShowAviso(true);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/contrato/baixarContratoAssinado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cpf_usuario: user.cpf }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao baixar contrato");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      // Fazer download do arquivo
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `contrato_vita_assinado_${user.nome?.replace(/\s+/g, '_') || 'cliente'}.pdf`;
+      link.click();
+      
+      // Limpar URL
+      window.URL.revokeObjectURL(url);
+
+      setAvisoMensagem("Contrato assinado baixado com sucesso!");
+      setAvisoTipo("success");
+      setShowAviso(true);
+
+    } catch (err: any) {
+      console.error("Erro ao baixar contrato assinado:", err);
+      setAvisoMensagem(err.message || "Erro ao baixar contrato assinado. Tente novamente.");
+      setAvisoTipo("danger");
+      setShowAviso(true);
+    }
+  };
+
   const handleBaixarContrato = () => {
     if (urlContratoVisualizacao) {
       const link = document.createElement('a');
@@ -465,27 +540,15 @@ export default function PaginaApolice() {
                   Gerar Contrato Vita
                 </Button>
               ) : (
-                <>
-                  <Button
-                    variant="outline-info"
-                    size="lg"
-                    onClick={() => urlContratoVisualizacao && window.open(urlContratoVisualizacao, "_blank")}
-                    className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
-                  >
-                    <i className="bi bi-eye fs-5"></i>
-                    Visualizar Contrato
-                  </Button>
-                  
-                  <Button
-                    variant="success"
-                    size="lg"
-                    onClick={handleIniciarAssinatura}
-                    className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
-                  >
-                    <i className="bi bi-pen fs-5"></i>
-                    Assinar Contrato
-                  </Button>
-                </>
+                <Button
+                  variant="outline-info"
+                  size="lg"
+                  onClick={handleBaixarContratoAssinado}
+                  className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
+                >
+                  <i className="bi bi-download fs-5"></i>
+                  Baixar Contrato Assinado
+                </Button>
               )}
             </>
           )}
