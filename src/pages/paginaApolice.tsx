@@ -302,7 +302,7 @@ export default function PaginaApolice() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id_usuario: user.id,
+          cpf_usuario: user.cpf,
           tipo_contrato: "vita",
           dados_contrato: dadosContrato,
           assinatura_digital: assinaturaBase64,

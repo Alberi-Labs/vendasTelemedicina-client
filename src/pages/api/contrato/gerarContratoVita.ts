@@ -69,11 +69,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Adicionar a assinatura aos dados se ela existir
     const dadosComAssinatura = {
       ...dados,
+      // Assinatura na última página, após quebra de página
+      paginaAssinatura: assinaturaDigital ? true : false,
       assinatura: assinaturaProcessada ? {
         data: assinaturaProcessada,
         size: [300, 100]
       } : null,
-      dataAssinatura: assinaturaDigital ? new Date().toLocaleDateString("pt-BR") : null
+      dataAssinatura: assinaturaDigital ? new Date().toLocaleDateString("pt-BR") : null,
+      horaAssinatura: assinaturaDigital ? new Date().toLocaleTimeString("pt-BR") : null,
+      // Informações adicionais para a página de assinatura
+      localAssinatura: "São Paulo, SP",
+      textoAssinatura: "Documento assinado digitalmente conforme Lei nº 14.063/2020"
     };
 
     doc.render(dadosComAssinatura);

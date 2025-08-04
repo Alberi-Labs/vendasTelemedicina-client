@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const { 
-      id_usuario, 
+      cpf_usuario, 
       tipo_contrato, 
       dados_contrato, 
       assinatura_digital, 
@@ -16,19 +16,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       user_agent 
     } = req.body;
 
-    if (!id_usuario || !tipo_contrato || !dados_contrato || !assinatura_digital) {
+    if (!cpf_usuario || !tipo_contrato || !dados_contrato || !assinatura_digital) {
       return res.status(400).json({ 
-        error: "Campos obrigatórios: id_usuario, tipo_contrato, dados_contrato, assinatura_digital" 
+        error: "Campos obrigatórios: cpf_usuario, tipo_contrato, dados_contrato, assinatura_digital" 
       });
     }
 
     // Salvar o contrato assinado no banco de dados
     const [resultado] = await pool.query(
       `INSERT INTO tb_contratos_assinados 
-       (id_usuario, tipo_contrato, dados_contrato, assinatura_digital, ip_assinatura, user_agent, data_assinatura, status)
+       (cpf_usuario, tipo_contrato, dados_contrato, assinatura_digital, ip_assinatura, user_agent, data_assinatura, status)
        VALUES (?, ?, ?, ?, ?, ?, NOW(), 'assinado')`,
       [
-        id_usuario,
+        cpf_usuario,
         tipo_contrato,
         JSON.stringify(dados_contrato),
         assinatura_digital,
