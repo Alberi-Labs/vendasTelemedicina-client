@@ -130,18 +130,8 @@ const ContratoPopup: React.FC<ContratoPopupProps> = ({
                   style={{ border: 'none' }}
                   title="Visualizar Contrato"
                   onLoad={() => {
-                    // Tentar detectar scroll no iframe
-                    const iframe = document.querySelector('iframe');
-                    if (iframe?.contentWindow) {
-                      try {
-                        iframe.contentWindow.addEventListener('scroll', () => {
-                          handleScroll({ target: iframe } as any);
-                        });
-                      } catch (error) {
-                        // Fallback se não conseguir acessar o conteúdo
-                        setTimeout(() => setScrolledToBottom(true), 3000);
-                      }
-                    }
+                    // Para PDFs, assumir que o usuário pode rolar após 3 segundos
+                    setTimeout(() => setScrolledToBottom(true), 3000);
                   }}
                 />
               ) : (
@@ -156,8 +146,19 @@ const ContratoPopup: React.FC<ContratoPopupProps> = ({
             
             {!contratoAssinado && !scrolledToBottom && contractData && (
               <div className="alert alert-warning mx-3 mt-3 mb-0" role="alert">
-                <i className="bi bi-info-circle me-2"></i>
-                <strong>Atenção:</strong> Role até o final do documento para habilitar as opções de assinatura.
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <i className="bi bi-info-circle me-2"></i>
+                    <strong>Atenção:</strong> Role até o final do documento para habilitar as opções de assinatura.
+                  </div>
+                  <Button 
+                    variant="outline-warning" 
+                    size="sm"
+                    onClick={() => setScrolledToBottom(true)}
+                  >
+                    Li todo o contrato
+                  </Button>
+                </div>
               </div>
             )}
           </>

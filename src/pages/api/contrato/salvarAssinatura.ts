@@ -22,13 +22,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    // Buscar o ID do usuário pelo CPF na tabela tb_clientes (com ou sem formatação)
+    const cpfLimpo = cpf_usuario.replace(/[.\-]/g, ''); // Remove pontos e traços
+    
+    const [usuarios] = await pool.query(
+      `SELECT idCliente FROM tb_clientes 
+       WHERE REPLACE(REPLACE(cpf, '.', ''), '-', '') = ? 
+       OR cpf = ?`,
+      [cpfLimpo, cpf_usuario]
+    ) as any[];
+
+    if (!usuarios || usuarios.length === 0) {
+      return res.status(404).json({ 
+        error: "Usuário não encontrado na base de dados" 
+      });
+    }
+
+    const id_usuario = usuarios[0].idCliente;
+
     // Salvar o contrato assinado no banco de dados
     const [resultado] = await pool.query(
       `INSERT INTO tb_contratos_assinados 
-       (cpf_usuario, tipo_contrato, dados_contrato, assinatura_digital, ip_assinatura, user_agent, data_assinatura, status)
+       (id_usuario, tipo_contrato, dados_contrato, assinatura_digital, ip_assinatura, user_agent, data_assinatura, status)
        VALUES (?, ?, ?, ?, ?, ?, NOW(), 'assinado')`,
       [
-        cpf_usuario,
+        id_usuario,
         tipo_contrato,
         JSON.stringify(dados_contrato),
         assinatura_digital,

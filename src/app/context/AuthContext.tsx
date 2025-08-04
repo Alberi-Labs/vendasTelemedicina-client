@@ -38,6 +38,7 @@ interface AuthContextType {
   user: User | null;
   login: (tokenOrUserData: string | User, isCliente?: boolean) => void;
   logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
   isAuthLoaded: boolean;
 }
 
@@ -87,8 +88,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
   };
 
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthLoaded }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthLoaded }}>
       {children}
     </AuthContext.Provider>
   );

@@ -23,7 +23,7 @@ export default function PaginaApolice() {
   const [urlContratoVisualizacao, setUrlContratoVisualizacao] = useState<string | null>(null);
   const [loadingContrato, setLoadingContrato] = useState(false);
 
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -349,9 +349,7 @@ export default function PaginaApolice() {
       window.open(url, "_blank");
 
       // Atualizar dados do usuário no contexto
-      if (user) {
-        user.contrato_assinado = true;
-      }
+      updateUser({ contrato_assinado: true });
 
       setAvisoMensagem("Contrato assinado com sucesso! O documento foi salvo e está sendo baixado.");
       setAvisoTipo("success");
