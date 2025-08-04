@@ -19,10 +19,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const docNumeros = cpf.replace(/\D/g, "");
-  console.log("Documento sem formatação:", docNumeros);
   const isCPF = docNumeros.length === 11;
   const endpoint = isCPF ? SaudeECorURL : SaudeECorURLPJ;
-  console.log("Endpoint:", endpoint);
 
   const payload = isCPF
     ? {
@@ -39,7 +37,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       };
 
   try {
-    console.log("Payload:", payload);
 
     const response = await fetch(endpoint as string, {
       method: "POST",
@@ -54,7 +51,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const data = await response.json();
-    console.log("Dados recebidos:", data);
     
     // Verifica se os dados retornados estão vazios
     const isEmpty = !data || (Array.isArray(data) && data.length === 0) || (typeof data === "object" && Object.keys(data).length === 0);

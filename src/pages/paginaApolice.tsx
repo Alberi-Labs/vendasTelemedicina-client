@@ -202,18 +202,10 @@ export default function PaginaApolice() {
     }
 
     const dadosContrato = {
-      nomeCliente: user.nome,
-      cpfCliente: user.cpf,
-      dataNascimento: formatarDataNascimento(user.dt_nascimento),
-      idadeCliente: calcularIdade(user.dt_nascimento),
-      vigenciaInicio: formatarDataVigencia(user.data_contrato_vigencia_inicio),
-      vigenciaFinal: formatarDataVigencia(user.data_contrato_vigencia_final),
-      numeroApolice: user.num_contrato_retorno_apolice || "—",
-      numeroOperacao: user.cod_contrato_retorno_operacao || "—",
-      numeroCertificado: user.num_contrato_retorno_certificado || "—",
-      empresa: user.dsc_instituicao,
-      valorPlano: "39,90",
-      dataEmissao: new Date().toLocaleDateString("pt-BR"),
+      nomeseg: user.nome,
+      cpf: user.cpf,
+      datanascimento: user.dt_nascimento?.split("-").reverse().join("/"),
+      endereco: `${user.cidade || ""}${user.cidade && user.uf ? ", " : ""}${user.uf || ""}`.trim() || "—",
     };
 
     try {

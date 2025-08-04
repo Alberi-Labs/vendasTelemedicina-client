@@ -144,6 +144,9 @@ export default function LoginCliente() {
         cod_contrato_retorno_operacao: clienteRaw.cod_contrato_retorno_operacao,
         dsc_email: clienteRaw.dsc_email,
         num_celular: clienteRaw.num_celular,
+        ind_uf: clienteRaw.ind_uf,
+        uf: clienteRaw.uf,
+        cidade: clienteRaw.cidade,
         cobrancas,
       };
 

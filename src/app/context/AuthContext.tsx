@@ -28,6 +28,9 @@ export interface User {
   tip_status_pagamento?: string;
   login_sistema?: string;
   senha_sistema?: string;
+  ind_uf?: string;
+  cidade?: string;
+  uf?: string;
 }
 
 interface AuthContextType {

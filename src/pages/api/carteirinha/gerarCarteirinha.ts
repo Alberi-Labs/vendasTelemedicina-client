@@ -31,7 +31,7 @@ export default async function handler(
     const isVita = dados.empresa?.toLowerCase().includes('vita');
     const templatePath = isVita 
       ? path.join(process.cwd(), 'public', 'Final-Vitta-Card.png')
-      : path.join(process.cwd(), 'public', 'default.jpg');
+      : path.join(process.cwd(), 'templates', 'carteirinha-vita.jpeg'); // Usando vita.png como template para não-Vita
 
     // Carregar a imagem de fundo
     const backgroundImage = await loadImage(templatePath);
@@ -42,24 +42,32 @@ export default async function handler(
     ctx.drawImage(backgroundImage, 0, 0);
 
     // Configurar fonte para melhor legibilidade
-    ctx.fillStyle = '#FFFFFF'; // Texto branco para contraste no fundo azul
-    ctx.font = 'bold 18px Arial';
+    ctx.fillStyle = '#000000'; // Texto preto para contraste no fundo da carteirinha
+    ctx.font = 'bold 16px Arial';
     ctx.textBaseline = 'top';
 
-    // Posições específicas para a carteirinha Vita baseadas na imagem
-    // A carteirinha tem campos específicos que precisam ser preenchidos
-    const positions = {
-      nome: { x: 100, y: 500 }, // Posição aproximada do campo nome
-      cpf: { x: 100, y: 540 },  // Posição aproximada do campo CPF
-      vigencia: { x: 1364, y: 125 }, // Posição aproximada da vigência
-      apolice: { x: 800, y: 500 }, // Posição do número da apólice
-      operacao: { x: 800, y: 530 }, // Posição da operação (abaixo da apólice)
-      certificado: { x: 800, y: 560 }, // Posição do certificado (ao lado da operação)
+    // Posições específicas baseadas na imagem anexada com quadro azul
+    // As posições são ajustadas para o template carteirinha-vita.png
+    const positions = isVita ? {
+      // Posições para template Vita (Final-Vitta-Card.png)
+      nome: { x: 100, y: 500 },
+      cpf: { x: 100, y: 540 },
+      vigencia: { x: 1364, y: 125 },
+      apolice: { x: 800, y: 500 },
+      operacao: { x: 800, y: 530 },
+      certificado: { x: 800, y: 560 },
+    } : {
+      // Posições para template não-Vita (carteirinha-vita.png) - baseado na área azul da imagem
+      nome: { x: 850, y: 270 }, // Área do quadro azul superior
+      cpf: { x: 850, y: 300 },  // Logo abaixo do nome
+      vigencia: { x: 850, y: 330 }, // Terceira linha no quadro azul
+      apolice: { x: 1350, y: 270 }, // Quarta linha
+      operacao: { x: 1350, y: 300 }, // Quinta linha
+      certificado: { x: 1350, y: 330 }, // Sexta linha
     };
 
-    // Função para quebrar texto se for muito longo
     const drawText = (text: string, x: number, y: number, maxWidth: number = 400) => {
-      ctx.fillStyle = '#FFFFFF'; // Garantir que o texto seja branco
+      ctx.fillStyle = '#FFFFFF'; // Branco para Vita, preto para outros
       const words = text.split(' ');
       let line = '';
       let lineY = y;
@@ -80,13 +88,13 @@ export default async function handler(
       ctx.fillText(line, x, lineY);
     };
 
-    // Adicionar textos na carteirinha com texto branco
+    // Adicionar textos na carteirinha
     if (dados.nome) {
-      ctx.font = 'bold 20px Arial'; // Fonte maior para o nome
+      ctx.font = isVita ? 'bold 20px Arial' : 'bold 18px Arial'; // Fonte ajustada por template
       drawText(dados.nome.toUpperCase(), positions.nome.x, positions.nome.y);
     }
     
-    ctx.font = 'bold 18px Arial'; // Fonte menor para os outros campos
+    ctx.font = isVita ? 'bold 18px Arial' : 'bold 16px Arial'; // Fonte menor para os outros campos
     
     if (dados.cpf) {
       drawText(`CPF: ${dados.cpf}`, positions.cpf.x, positions.cpf.y);

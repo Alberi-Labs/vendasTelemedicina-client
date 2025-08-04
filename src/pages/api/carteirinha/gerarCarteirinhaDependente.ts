@@ -22,12 +22,11 @@ export default async function handler(
     // Criar canvas com as dimensões da carteirinha
     const canvas = createCanvas(800, 500);
     const ctx = canvas.getContext('2d');
-    
     // Determinar qual template usar baseado na empresa
     const isVita = dados.empresa?.toLowerCase().includes('vita');
     const templatePath = isVita 
       ? path.join(process.cwd(), 'public', 'Final-Vitta-Card.png')
-      : path.join(process.cwd(), 'public', 'default.jpg');
+      : path.join(process.cwd(), 'templates', 'carteirinha-vita.jpeg');
 
     // Carregar a imagem de fundo
     const backgroundImage = await loadImage(templatePath);
@@ -38,20 +37,27 @@ export default async function handler(
     ctx.drawImage(backgroundImage, 0, 0);
 
     // Configurar fonte para melhor legibilidade
-    ctx.fillStyle = '#FFFFFF'; // Texto branco para contraste no fundo azul
-    ctx.font = 'bold 18px Arial';
+    ctx.fillStyle = '#000000'; // Texto preto para contraste no fundo da carteirinha
+    ctx.font = 'bold 16px Arial';
     ctx.textBaseline = 'top';
 
-    // Posições específicas para a carteirinha de dependente (simplificada)
-    const positions = {
-      dependente: { x: 100, y: 460 }, // Marcação de dependente
-      nome: { x: 100, y: 500 }, // Posição aproximada do campo nome
-      cpf: { x: 100, y: 540 },  // Posição aproximada do campo CPF
+    // Posições específicas para a carteirinha de dependente baseadas no template
+    const positions = isVita ? {
+      // Posições para template Vita (Final-Vitta-Card.png)
+      dependente: { x: 100, y: 460 },
+      nome: { x: 100, y: 500 },
+      cpf: { x: 100, y: 540 },
+    } : {
+      // Posições para template não-Vita (carteirinha-vita.jpeg) - baseado na área azul da imagem
+      dependente: { x: 850, y: 240 }, // Marcação de dependente
+      nome: { x: 850, y: 270 }, // Área do quadro azul superior
+      cpf: { x: 850, y: 300 },  // Logo abaixo do nome
     };
 
     // Função para quebrar texto se for muito longo
     const drawText = (text: string, x: number, y: number, maxWidth: number = 400) => {
-      ctx.fillStyle = '#FFFFFF'; // Garantir que o texto seja branco
+      // Definir cor do texto baseado no template
+      ctx.fillStyle = '#FFFFFF'; // Branco para Vita, preto para outros
       const words = text.split(' ');
       let line = '';
       let lineY = y;
@@ -73,17 +79,17 @@ export default async function handler(
     };
 
     // Adicionar marcação de DEPENDENTE
-    ctx.font = 'bold 16px Arial';
+    ctx.font = isVita ? 'bold 16px Arial' : 'bold 14px Arial';
     drawText('DEPENDENTE', positions.dependente.x, positions.dependente.y);
 
-    // Adicionar textos na carteirinha com texto branco
+    // Adicionar textos na carteirinha
     if (dados.nome) {
-      ctx.font = 'bold 20px Arial'; // Fonte maior para o nome
+      ctx.font = isVita ? 'bold 20px Arial' : 'bold 18px Arial'; // Fonte ajustada por template
       drawText(dados.nome.toUpperCase(), positions.nome.x, positions.nome.y);
     }
     
     if (dados.cpf) {
-      ctx.font = 'bold 18px Arial'; // Fonte menor para CPF
+      ctx.font = isVita ? 'bold 18px Arial' : 'bold 16px Arial'; // Fonte menor para CPF
       drawText(`CPF: ${dados.cpf}`, positions.cpf.x, positions.cpf.y);
     }
 
