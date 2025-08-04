@@ -47,56 +47,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       cpf: contrato.cpf,
       datanascimento: contrato.dt_nascimento ? new Date(contrato.dt_nascimento).toLocaleDateString("pt-BR") : "",
       endereco: `${contrato.cidade || ""}${contrato.cidade && contrato.uf ? ", " : ""}${contrato.uf || ""}`.trim() || "—",
+      // Campos para assinatura na página 7
+      dataAssinaturaBrasilia: new Date(dataAssinatura).toLocaleDateString("pt-BR"),
+      diaAssinatura: new Date(dataAssinatura).getDate().toString(),
+      mesAssinatura: new Date(dataAssinatura).toLocaleDateString("pt-BR", { month: "long" }),
+      anoAssinatura: new Date(dataAssinatura).getFullYear().toString(),
+      assinaturaDigital: assinaturaDigital,
     };
 
-    // Gerar o contrato com a assinatura
-    const tempId = uuidv4();
-    const tempDir = path.join(process.cwd(), "tmp");
-
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir);
-    }
-
-    const docxPath = path.join(tempDir, `contrato_assinado_${tempId}.docx`);
-    const pdfPath = path.join(tempDir, `contrato_assinado_${tempId}.pdf`);
-    const assinaturaTempPath = path.join(tempDir, `assinatura_${tempId}.png`);
-
-    // Processar a assinatura
-    let assinaturaProcessada = null;
-    if (assinaturaDigital && assinaturaDigital.startsWith('data:image/png;base64,')) {
-      const base64Data = assinaturaDigital.replace(/^data:image\/png;base64,/, "");
-      fs.writeFileSync(assinaturaTempPath, base64Data, 'base64');
-      assinaturaProcessada = fs.readFileSync(assinaturaTempPath);
-    }
-
-    // Carregar template
+    // Caminho do template
     const templatePath = path.join(process.cwd(), "templates", "modelo_contrato_vita.docx");
+    
+    if (!fs.existsSync(templatePath)) {
+      return res.status(500).json({ error: "Template do contrato não encontrado" });
+    }
+
+    // Ler o template
     const content = fs.readFileSync(templatePath, "binary");
     const zip = new PizZip(content);
-
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
     });
 
-    // Dados do contrato com assinatura
-    const dadosComAssinatura = {
-      ...dadosContrato,
-      paginaAssinatura: true,
-      assinatura: assinaturaProcessada ? {
-        data: assinaturaProcessada,
-        size: [300, 100]
-      } : null,
-      dataAssinatura: new Date(dataAssinatura).toLocaleDateString("pt-BR"),
-      horaAssinatura: new Date(dataAssinatura).toLocaleTimeString("pt-BR"),
-      localAssinatura: "São Paulo, SP",
-      textoAssinatura: "Documento assinado digitalmente conforme Lei nº 14.063/2020"
-    };
+    // Preencher o template com os dados (incluindo os novos campos de data)
+    doc.setData(dadosContrato);
 
-    doc.render(dadosComAssinatura);
+    try {
+      doc.render();
+    } catch (error) {
+      console.error("Erro ao processar template:", error);
+      return res.status(500).json({ error: "Erro ao processar template do contrato" });
+    }
 
-    const bufferDocx = doc.getZip().generate({ type: "nodebuffer" });
-    fs.writeFileSync(docxPath, bufferDocx);
+    const buf = doc.getZip().generate({ type: "nodebuffer" });
+
+    // Criar arquivo temporário único
+    const timestamp = Date.now();
+    const tempDir = path.join(process.cwd(), "tmp");
+    
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const tempDocxPath = path.join(tempDir, `${timestamp}.docx`);
+    const tempPdfPath = path.join(tempDir, `${timestamp}.pdf`);
+
+    fs.writeFileSync(tempDocxPath, buf);
+
+    // Adicionar a assinatura ao PDF
+    const assinaturaPath = path.join(tempDir, `assinatura_${timestamp}.png`);
+    
+    // Salvar a imagem da assinatura
+    const assinaturaBuffer = Buffer.from(assinaturaDigital.replace(/^data:image\/png;base64,/, ""), 'base64');
+    fs.writeFileSync(assinaturaPath, assinaturaBuffer);
 
     // Detectar sistema operacional e converter para PDF
     const isWindows = process.platform === 'win32';
@@ -104,13 +108,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     if (isWindows) {
       convertCommands = [
-        `"C:\\Program Files\\LibreOffice\\program\\soffice.exe" --headless --convert-to pdf "${docxPath}" --outdir "${tempDir}"`,
-        `"C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe" --headless --convert-to pdf "${docxPath}" --outdir "${tempDir}"`,
-        `soffice --headless --convert-to pdf "${docxPath}" --outdir "${tempDir}"`,
-        `libreoffice --headless --convert-to pdf "${docxPath}" --outdir "${tempDir}"`
+        `"C:\\Program Files\\LibreOffice\\program\\soffice.exe" --headless --convert-to pdf "${tempDocxPath}" --outdir "${tempDir}"`,
+        `"C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe" --headless --convert-to pdf "${tempDocxPath}" --outdir "${tempDir}"`,
+        `soffice --headless --convert-to pdf "${tempDocxPath}" --outdir "${tempDir}"`,
+        `libreoffice --headless --convert-to pdf "${tempDocxPath}" --outdir "${tempDir}"`
       ];
     } else {
-      convertCommands = [`libreoffice --headless --convert-to pdf "${docxPath}" --outdir "${tempDir}"`];
+      convertCommands = [`libreoffice --headless --convert-to pdf "${tempDocxPath}" --outdir "${tempDir}"`];
     }
 
     let conversionSuccess = false;
@@ -125,13 +129,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (conversionSuccess) {
-      const pdfBuffer = fs.readFileSync(pdfPath);
+      const pdfBuffer = fs.readFileSync(tempPdfPath);
       
       // Limpar arquivos temporários
-      fs.unlinkSync(docxPath);
-      fs.unlinkSync(pdfPath);
-      if (fs.existsSync(assinaturaTempPath)) {
-        fs.unlinkSync(assinaturaTempPath);
+      fs.unlinkSync(tempDocxPath);
+      fs.unlinkSync(tempPdfPath);
+      if (fs.existsSync(assinaturaPath)) {
+        fs.unlinkSync(assinaturaPath);
       }
 
       const nomeArquivo = `contrato_vita_assinado_${new Date(dataAssinatura).toISOString().split('T')[0]}.pdf`;
@@ -142,12 +146,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
     } else {
       // Se falhar a conversão, retornar o DOCX
-      const docxBuffer = fs.readFileSync(docxPath);
+      const docxBuffer = fs.readFileSync(tempDocxPath);
       
       // Limpar arquivos temporários
-      fs.unlinkSync(docxPath);
-      if (fs.existsSync(assinaturaTempPath)) {
-        fs.unlinkSync(assinaturaTempPath);
+      fs.unlinkSync(tempDocxPath);
+      if (fs.existsSync(assinaturaPath)) {
+        fs.unlinkSync(assinaturaPath);
       }
 
       const nomeArquivo = `contrato_vita_assinado_${new Date(dataAssinatura).toISOString().split('T')[0]}.docx`;

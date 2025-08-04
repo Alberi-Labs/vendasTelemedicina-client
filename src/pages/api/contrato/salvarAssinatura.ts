@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Salvar o contrato assinado no banco de dados
     const [resultado] = await pool.query(
       `INSERT INTO tb_contratos_assinados 
-       (idCliente, tipo_contrato, dados_contrato, assinatura_digital, ip_assinatura, user_agent, data_assinatura, status)
+       (id_usuario, tipo_contrato, dados_contrato, assinatura_digital, ip_assinatura, user_agent, data_assinatura, status)
        VALUES (?, ?, ?, ?, ?, ?, NOW(), 'assinado')`,
       [
         id_usuario,
