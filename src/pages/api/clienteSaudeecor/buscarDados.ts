@@ -63,7 +63,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Se os dados foram encontrados na API, verificar no banco de dados
     if (Array.isArray(data) && data.length > 0) {
       const clienteData = data[0]; // Pega o primeiro cliente dos dados retornados
-      await verificarOuCriarCliente(clienteData);
+      const clienteBanco = await verificarOuCriarCliente(clienteData);
+      
+      // Adicionar informações do banco aos dados da API
+      if (clienteBanco) {
+        data[0] = {
+          ...data[0],
+          contrato_assinado: clienteBanco.contrato_assinado,
+          primeiro_acesso: clienteBanco.primeiro_acesso
+        };
+      }
     }
 
     return res.status(200).json(data);
@@ -80,7 +89,7 @@ async function verificarOuCriarCliente(clienteData: any) {
     
     // Verificar se o cliente já existe no banco
     const [rows]: any = await pool.execute(
-      "SELECT idCliente, primeiro_acesso FROM tb_clientes WHERE cpf = ?",
+      "SELECT idCliente, primeiro_acesso, contrato_assinado FROM tb_clientes WHERE cpf = ?",
       [cpfLimpo]
     );
 
@@ -95,7 +104,14 @@ async function verificarOuCriarCliente(clienteData: any) {
           "UPDATE tb_clientes SET primeiro_acesso = ? WHERE idCliente = ?",
           [1, cliente.idCliente]
         );
+        
+        return {
+          ...cliente,
+          primeiro_acesso: 1
+        };
       }
+      
+      return cliente;
     } else {
       // Cliente não existe, criar novo registro
       console.log("Criando novo cliente no banco de dados");
@@ -123,8 +139,8 @@ async function verificarOuCriarCliente(clienteData: any) {
         `INSERT INTO tb_clientes (
           nome, telefone, email, cpf, data_nascimento, 
           idClienteDependente, data_vinculo, creditos, senha, perfil, 
-          id_instituicao, cep, registro_geral, primeiro_acesso
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id_instituicao, cep, registro_geral, primeiro_acesso, contrato_assinado
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           clienteData.nom_cliente,
           clienteData.num_celular,
@@ -139,13 +155,20 @@ async function verificarOuCriarCliente(clienteData: any) {
           idInstituicao, // ID da instituição encontrada ou null
           null, // cep
           null, // registro_geral
-          0 // primeiro_acesso = false (0)
+          0, // primeiro_acesso = false (0)
+          0  // contrato_assinado = false (0)
         ]
       );
       
       console.log("primeiro acesso");
+      
+      return {
+        primeiro_acesso: 0,
+        contrato_assinado: 0
+      };
     }
   } catch (error) {
     console.error("Erro ao verificar/criar cliente:", error);
+    return null;
   }
 }

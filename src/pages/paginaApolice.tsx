@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Button } from "react-bootstrap";
 import { useAuth } from "@/app/context/AuthContext";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
+import AssinaturaDigital from "@/components/assinaturaDigital/AssinaturaDigital";
+import ContratoPopup from "@/components/contratoPopup/ContratoPopup";
 
 type Apolice = {
   link: string;
@@ -15,6 +17,11 @@ export default function PaginaApolice() {
   const [showAviso, setShowAviso] = useState(false);
   const [avisoMensagem, setAvisoMensagem] = useState("");
   const [avisoTipo, setAvisoTipo] = useState<"success" | "warning" | "danger">("warning");
+  const [showAssinatura, setShowAssinatura] = useState(false);
+  const [showContratoPopup, setShowContratoPopup] = useState(false);
+  const [dadosContrato, setDadosContrato] = useState<any>(null);
+  const [urlContratoVisualizacao, setUrlContratoVisualizacao] = useState<string | null>(null);
+  const [loadingContrato, setLoadingContrato] = useState(false);
 
   const { user } = useAuth();
   useEffect(() => {
@@ -201,12 +208,26 @@ export default function PaginaApolice() {
       return;
     }
 
-    const dadosContrato = {
+    // Preparar dados do contrato
+    const dadosContratoTemp = {
       nomeseg: user.nome,
       cpf: user.cpf,
       datanascimento: user.dt_nascimento?.split("-").reverse().join("/"),
       endereco: `${user.cidade || ""}${user.cidade && user.uf ? ", " : ""}${user.uf || ""}`.trim() || "—",
     };
+
+    // Salvar dados do contrato e abrir popup
+    setDadosContrato(dadosContratoTemp);
+    setShowContratoPopup(true);
+  };
+
+  const handleBaixarSemAssinar = async () => {
+    if (!dadosContrato) {
+      setAvisoMensagem("Erro nos dados do contrato. Tente novamente.");
+      setAvisoTipo("danger");
+      setShowAviso(true);
+      return;
+    }
 
     try {
       const response = await fetch("/api/contrato/gerarContratoVita", {
@@ -216,24 +237,129 @@ export default function PaginaApolice() {
       });
 
       if (!response.ok) {
-        console.error("Erro ao gerar contrato Vita");
-        setAvisoMensagem("Erro ao gerar contrato. Tente novamente mais tarde.");
-        setAvisoTipo("danger");
-        setShowAviso(true);
-        return;
+        throw new Error("Erro ao gerar contrato");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      // Fazer download do arquivo
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `contrato_vita_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.click();
+      
+      // Limpar URL
+      window.URL.revokeObjectURL(url);
+
+      setAvisoMensagem("Contrato baixado com sucesso!");
+      setAvisoTipo("success");
+      setShowAviso(true);
+
+    } catch (err) {
+      console.error("Erro ao baixar contrato:", err);
+      setAvisoMensagem("Erro ao baixar contrato. Tente novamente.");
+      setAvisoTipo("danger");
+      setShowAviso(true);
+    }
+  };
+
+  const handleBaixarContrato = () => {
+    if (urlContratoVisualizacao) {
+      const link = document.createElement('a');
+      link.href = urlContratoVisualizacao;
+      link.download = `contrato_vita_${user?.nome?.replace(/\s+/g, '_') || 'cliente'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleIniciarAssinatura = () => {
+    setShowContratoPopup(false);
+    setShowAssinatura(true);
+  };
+
+  const handleAssinaturaConcluida = async (assinaturaBase64: string) => {
+    setShowAssinatura(false);
+    
+    if (!user || !dadosContrato) {
+      setAvisoMensagem("Erro nos dados do contrato. Tente novamente.");
+      setAvisoTipo("danger");
+      setShowAviso(true);
+      return;
+    }
+
+    try {
+      // Obter informações da sessão
+      const userAgent = navigator.userAgent;
+      const ipResponse = await fetch('https://api.ipify.org?format=json');
+      const ipData = await ipResponse.json();
+      const ipAddress = ipData.ip;
+
+      // Salvar a assinatura no banco de dados
+      const salvarAssinaturaResponse = await fetch("/api/contrato/salvarAssinatura", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id_usuario: user.id,
+          tipo_contrato: "vita",
+          dados_contrato: dadosContrato,
+          assinatura_digital: assinaturaBase64,
+          ip_assinatura: ipAddress,
+          user_agent: userAgent
+        }),
+      });
+
+      if (!salvarAssinaturaResponse.ok) {
+        throw new Error("Erro ao salvar assinatura");
+      }
+
+      // Marcar contrato como assinado na tabela tb_clientes
+      const marcarAssinadoResponse = await fetch("/api/contrato/marcarAssinado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cpf: user.cpf
+        }),
+      });
+
+      if (!marcarAssinadoResponse.ok) {
+        throw new Error("Erro ao atualizar status do contrato");
+      }
+
+      // Gerar contrato com assinatura
+      const dadosComAssinatura = {
+        ...dadosContrato,
+        assinaturaDigital: assinaturaBase64
+      };
+
+      const response = await fetch("/api/contrato/gerarContratoVita", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dadosComAssinatura),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao gerar contrato assinado");
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       window.open(url, "_blank");
 
-      setAvisoMensagem("Contrato gerado com sucesso!");
+      // Atualizar dados do usuário no contexto
+      if (user) {
+        user.contrato_assinado = true;
+      }
+
+      setAvisoMensagem("Contrato assinado com sucesso! O documento foi salvo e está sendo baixado.");
       setAvisoTipo("success");
       setShowAviso(true);
 
     } catch (err) {
-      console.error("Erro ao gerar contrato Vita:", err);
-      setAvisoMensagem("Erro ao processar contrato. Tente novamente.");
+      console.error("Erro ao processar assinatura:", err);
+      setAvisoMensagem("Erro ao processar assinatura. Tente novamente.");
       setAvisoTipo("danger");
       setShowAviso(true);
     }
@@ -330,15 +456,39 @@ export default function PaginaApolice() {
                 Gerar Carteirinha
               </Button>
               
-              <Button
-                variant="warning"
-                size="lg"
-                onClick={handleGerarContratoVita}
-                className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
-              >
-                <i className="bi bi-file-earmark-text fs-5"></i>
-                Gerar Contrato Vita
-              </Button>
+              {!user?.contrato_assinado ? (
+                <Button
+                  variant="warning"
+                  size="lg"
+                  onClick={handleGerarContratoVita}
+                  className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
+                >
+                  <i className="bi bi-file-earmark-text fs-5"></i>
+                  Gerar Contrato Vita
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline-info"
+                    size="lg"
+                    onClick={() => urlContratoVisualizacao && window.open(urlContratoVisualizacao, "_blank")}
+                    className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
+                  >
+                    <i className="bi bi-eye fs-5"></i>
+                    Visualizar Contrato
+                  </Button>
+                  
+                  <Button
+                    variant="success"
+                    size="lg"
+                    onClick={handleIniciarAssinatura}
+                    className="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
+                  >
+                    <i className="bi bi-pen fs-5"></i>
+                    Assinar Contrato
+                  </Button>
+                </>
+              )}
             </>
           )}
 
@@ -364,6 +514,27 @@ export default function PaginaApolice() {
 
         </div>
       </motion.div>
+
+      {/* Modal de Assinatura Digital */}
+      <AssinaturaDigital
+        show={showAssinatura}
+        onHide={() => setShowAssinatura(false)}
+        onAssinar={handleAssinaturaConcluida}
+        nomeUsuario={user?.nome || ""}
+      />
+
+      {/* Modal de Visualização do Contrato */}
+      <ContratoPopup
+        show={showContratoPopup}
+        onHide={() => setShowContratoPopup(false)}
+        onAssinar={() => {
+          setShowContratoPopup(false);
+          setShowAssinatura(true);
+        }}
+        onBaixarSemAssinar={handleBaixarSemAssinar}
+        dadosContrato={dadosContrato}
+        contratoAssinado={user?.contrato_assinado || false}
+      />
     </div>
   );
 }

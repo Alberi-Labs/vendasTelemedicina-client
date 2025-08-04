@@ -28,6 +28,7 @@ export interface User {
   tip_status_pagamento?: string;
   login_sistema?: string;
   senha_sistema?: string;
+  contrato_assinado?: boolean;
   ind_uf?: string;
   cidade?: string;
   uf?: string;
