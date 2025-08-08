@@ -8,7 +8,24 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import { v4 as uuidv4 } from "uuid";
 
+const ImageModule = require('docxtemplater-image-module-free');
 const execAsync = promisify(exec);
+
+// Função para inserir imagem no template
+const imageOpts = {
+  getImage: function(tagValue: any, tagName: any) {
+    if (typeof tagValue === 'string' && tagValue.startsWith('data:image')) {
+      // Se for base64, converter para buffer
+      const base64Data = tagValue.replace(/^data:image\/[a-z]+;base64,/, '');
+      return Buffer.from(base64Data, 'base64');
+    }
+    return fs.readFileSync(tagValue);
+  },
+  getSize: function(img: any, tagValue: any, tagName: any) {
+    // Tamanho da assinatura no documento
+    return [200, 80]; // largura, altura em pontos
+  }
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -24,9 +41,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Buscar o contrato assinado no banco de dados
     const [contratoRows]: any = await pool.execute(
-      `SELECT ca.*, c.nome, c.cpf, c.email, c.telefone, c.data_nascimento, c.cidade, c.uf 
+      `SELECT ca.*, c.nome, c.cpf, c.email, c.telefone, c.dt_nascimento, c.cidade, c.uf 
        FROM tb_contratos_assinados ca 
-       JOIN tb_clientes c ON ca.id_usuario = c.idCliente 
+       JOIN tb_clientes c ON ca.idCliente = c.idCliente 
        WHERE c.cpf = ? 
        ORDER BY ca.data_assinatura DESC 
        LIMIT 1`,
@@ -71,6 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
+      modules: [new ImageModule(imageOpts)]
     });
 
     // Preencher o template com os dados (incluindo os novos campos de data)

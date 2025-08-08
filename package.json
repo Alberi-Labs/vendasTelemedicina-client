@@ -24,6 +24,7 @@
     "chart.js": "^4.4.8",
     "dayjs": "^1.11.13",
     "docxtemplater": "^3.61.1",
+    "docxtemplater-image-module-free": "^1.1.1",
     "dotenv": "^16.4.7",
     "file-saver": "^2.0.5",
     "formidable": "^3.5.2",

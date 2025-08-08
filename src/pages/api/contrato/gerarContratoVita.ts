@@ -8,7 +8,24 @@ import { promisify } from "util";
 import { v4 as uuidv4 } from "uuid";
 import { createCanvas, loadImage } from 'canvas';
 
+const ImageModule = require('docxtemplater-image-module-free');
 const execAsync = promisify(exec);
+
+// Função para inserir imagem no template
+const imageOpts = {
+  getImage: function(tagValue: any, tagName: any) {
+    if (typeof tagValue === 'string' && tagValue.startsWith('data:image')) {
+      // Se for base64, converter para buffer
+      const base64Data = tagValue.replace(/^data:image\/[a-z]+;base64,/, '');
+      return Buffer.from(base64Data, 'base64');
+    }
+    return fs.readFileSync(tagValue);
+  },
+  getSize: function(img: any, tagValue: any, tagName: any) {
+    // Tamanho da assinatura no documento
+    return [200, 80]; // largura, altura em pontos
+  }
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -64,6 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
+      modules: [new ImageModule(imageOpts)]
     });
 
     // Adicionar a assinatura aos dados se ela existir
@@ -76,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       anoAssinatura: assinaturaDigital ? agora.getFullYear().toString() : null,
       // Dados para o bloco de assinatura digital
       assinaturaDigital: assinaturaDigital ? true : false,
-      imagemAssinatura: assinaturaDigital ? assinaturaDigital : null,
+      imagemAssinatura: assinaturaDigital ? assinaturaDigital : null, // Imagem em base64
       mensagemAssinatura: assinaturaDigital ? 
         `Assinado digitalmente por CPF: ${dados.cpf}, em ${agora.toLocaleDateString("pt-BR")} às ${agora.toLocaleTimeString("pt-BR")}` : null,
       // Campos legados (manter compatibilidade)
