@@ -43,7 +43,7 @@ export default function Manutencao() {
           Se precisar de suporte, fale conosco pelo WhatsApp:
         </p>
         <a
-          href="https://wa.me/5561996364787"
+          href="https://wa.me/5561996363963"
           target="_blank"
           rel="noopener noreferrer"
           className="small fw-bold"

@@ -134,7 +134,7 @@ export default function PaginaInicial() {
       description: "Vizualize os dados de suas vendas."
     },
     {
-      href: "https://wa.me/5561996364787",
+      href: "https://wa.me/5561996363963",
       icon: "bi-question-circle",
       text: "Suporte e Ajuda",
       allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"],
@@ -197,8 +197,8 @@ export default function PaginaInicial() {
                 </li>
                 <li>
                   <strong>Suporte ao cliente:</strong>{" "}
-                  <a href="https://wa.me/5561996364787" target="_blank" rel="noreferrer">
-                    (61) 99636-4787
+                  <a href="https://wa.me/5561996363963" target="_blank" rel="noreferrer">
+                    (61) 99636-3963
                   </a>{" "}
                   — disponível via WhatsApp ou ligação.
                 </li>

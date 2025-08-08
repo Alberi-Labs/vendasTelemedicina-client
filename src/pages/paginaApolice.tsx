@@ -303,6 +303,12 @@ export default function PaginaApolice() {
       return;
     }
 
+    // Ativar loading durante o download
+    setLoadingContrato(true);
+    setAvisoMensagem("Preparando download do contrato assinado...");
+    setAvisoTipo("warning");
+    setShowAviso(true);
+
     try {
       const response = await fetch("/api/contrato/baixarContratoAssinado", {
         method: "POST",
@@ -327,15 +333,18 @@ export default function PaginaApolice() {
       // Limpar URL
       window.URL.revokeObjectURL(url);
 
-      setAvisoMensagem("Contrato assinado baixado com sucesso!");
+      setAvisoMensagem("📥 Contrato assinado baixado com sucesso!");
       setAvisoTipo("success");
       setShowAviso(true);
 
     } catch (err: any) {
       console.error("Erro ao baixar contrato assinado:", err);
-      setAvisoMensagem(err.message || "Erro ao baixar contrato assinado. Tente novamente.");
+      setAvisoMensagem(`❌ ${err.message || "Erro ao baixar contrato assinado. Tente novamente."}`);
       setAvisoTipo("danger");
       setShowAviso(true);
+    } finally {
+      // Desativar loading
+      setLoadingContrato(false);
     }
   };
 

@@ -118,7 +118,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       nomeseg: contrato.nome,
       cpf: contrato.cpf,
       datanascimento: contrato.dt_nascimento ? new Date(contrato.dt_nascimento).toLocaleDateString("pt-BR") : "",
-      endereco: `${contrato.cidade || ""}${contrato.cidade && contrato.uf ? ", " : ""}${contrato.uf || ""}`.trim() || "—",
+      endereco: (() => {
+        // Construir endereço apenas se tivermos dados
+        const enderecoParts = [];
+        if (contrato.cidade) enderecoParts.push(contrato.cidade);
+        if (contrato.uf) enderecoParts.push(contrato.uf);
+        return enderecoParts.length > 0 ? enderecoParts.join(", ") : "";
+      })(),
       // Campos para assinatura na página 7 - sempre mostrar as datas
       dataAssinaturaBrasilia: new Date(dataAssinatura).toLocaleDateString("pt-BR"),
       diaAssinatura: new Date(dataAssinatura).getDate().toString(),
