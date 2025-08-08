@@ -41,14 +41,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Buscar o contrato assinado no banco de dados
     const [contratoRows]: any = await pool.execute(
-      `SELECT ca.*, c.nome, c.cpf, c.email, c.telefone, c.data_nascimento, c.cidade, c.uf 
+      `SELECT ca.*, c.nome, c.cpf, c.email, c.telefone, c.dt_nascimento, c.cidade, c.uf 
        FROM tb_contratos_assinados ca 
-       JOIN tb_clientes c ON ca.id_usuario = c.idCliente 
+       JOIN tb_clientes c ON ca.idCliente = c.idCliente 
        WHERE c.cpf = ? 
        ORDER BY ca.data_assinatura DESC 
        LIMIT 1`,
       [cpf_usuario.replace(/\D/g, "")]
     );
+
+    console.log("Query executada, linhas encontradas:", contratoRows.length);
+    if (contratoRows.length > 0) {
+      console.log("Primeiro contrato:", {
+        id: contratoRows[0].id,
+        nome: contratoRows[0].nome,
+        cpf: contratoRows[0].cpf,
+        dataAssinatura: contratoRows[0].data_assinatura,
+        temAssinatura: !!contratoRows[0].assinatura_digital
+      });
+    }
 
     if (contratoRows.length === 0) {
       return res.status(404).json({ error: "Contrato assinado não encontrado" });
@@ -58,6 +69,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const assinaturaDigital = contrato.assinatura_digital;
     const dataAssinatura = contrato.data_assinatura;
     
+    console.log("Dados do contrato:", {
+      nome: contrato.nome,
+      cpf: contrato.cpf,
+      temAssinatura: !!assinaturaDigital,
+      tamanhoAssinatura: assinaturaDigital ? assinaturaDigital.length : 0
+    });
+    
     // Criar arquivo temporário único ANTES de definir os dados
     const timestamp = Date.now();
     const tempDir = path.join(process.cwd(), "tmp");
@@ -66,10 +84,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
+    console.log("Diretório temporário:", tempDir);
+
+    // Verificar se há assinatura digital
+    if (!assinaturaDigital) {
+      return res.status(400).json({ error: "Assinatura digital não encontrada no contrato" });
+    }
+
     // Salvar a imagem da assinatura
     const assinaturaPath = path.join(tempDir, `assinatura_${timestamp}.png`);
-    const assinaturaBuffer = Buffer.from(assinaturaDigital.replace(/^data:image\/png;base64,/, ""), 'base64');
-    fs.writeFileSync(assinaturaPath, assinaturaBuffer);
+    console.log("Caminho da assinatura:", assinaturaPath);
+    
+    try {
+      const assinaturaBuffer = Buffer.from(assinaturaDigital.replace(/^data:image\/png;base64,/, ""), 'base64');
+      console.log("Tamanho do buffer da assinatura:", assinaturaBuffer.length);
+      
+      fs.writeFileSync(assinaturaPath, assinaturaBuffer);
+      console.log("Arquivo de assinatura criado com sucesso");
+      
+      // Verificar se o arquivo foi realmente criado
+      if (fs.existsSync(assinaturaPath)) {
+        console.log("Arquivo verificado - existe:", fs.statSync(assinaturaPath).size, "bytes");
+      } else {
+        console.log("Erro: arquivo não foi criado");
+      }
+    } catch (error) {
+      console.error("Erro ao criar arquivo de assinatura:", error);
+      return res.status(500).json({ error: "Erro ao processar assinatura digital" });
+    }
     
     // Recriar os dados do contrato no formato original
     const dadosContrato = {
@@ -88,12 +130,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       mensagemAssinatura: `Assinado digitalmente por CPF: ${contrato.cpf}, em ${new Date(dataAssinatura).toLocaleDateString("pt-BR")} às ${new Date(dataAssinatura).toLocaleTimeString("pt-BR")}`
     };
 
+    console.log("Dados do contrato para template:", {
+      ...dadosContrato,
+      imagemAssinatura: `${assinaturaPath} (existe: ${fs.existsSync(assinaturaPath)})`
+    });
+
     // Caminho do template
     const templatePath = path.join(process.cwd(), "templates", "modelo_contrato_vita.docx");
     
     if (!fs.existsSync(templatePath)) {
       return res.status(500).json({ error: "Template do contrato não encontrado" });
     }
+
+    console.log("Template encontrado:", templatePath);
 
     // Ler o template
     const content = fs.readFileSync(templatePath, "binary");
@@ -103,6 +152,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       linebreaks: true,
       modules: [new ImageModule(imageOpts)]
     });
+
+    console.log("Docxtemplater configurado com ImageModule");
 
     // Preencher o template com os dados (incluindo os novos campos de data)
     try {
@@ -148,6 +199,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (conversionSuccess) {
       const pdfBuffer = fs.readFileSync(tempPdfPath);
       
+      console.log("Conversão PDF bem-sucedida");
+      console.log("Arquivos antes da limpeza:", {
+        docx: fs.existsSync(tempDocxPath),
+        pdf: fs.existsSync(tempPdfPath),
+        assinatura: fs.existsSync(assinaturaPath)
+      });
+      
       // Limpar arquivos temporários
       fs.unlinkSync(tempDocxPath);
       fs.unlinkSync(tempPdfPath);
@@ -164,6 +222,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // Se falhar a conversão, retornar o DOCX
       const docxBuffer = fs.readFileSync(tempDocxPath);
+      
+      console.log("Conversão falhou, retornando DOCX");
+      console.log("Arquivos antes da limpeza:", {
+        docx: fs.existsSync(tempDocxPath),
+        assinatura: fs.existsSync(assinaturaPath)
+      });
       
       // Limpar arquivos temporários
       fs.unlinkSync(tempDocxPath);
