@@ -119,16 +119,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       cpf: contrato.cpf,
       datanascimento: contrato.dt_nascimento ? new Date(contrato.dt_nascimento).toLocaleDateString("pt-BR") : "",
       endereco: `${contrato.cidade || ""}${contrato.cidade && contrato.uf ? ", " : ""}${contrato.uf || ""}`.trim() || "—",
-      // Campos para assinatura na página 7
+      // Campos para assinatura na página 7 - sempre mostrar as datas
       dataAssinaturaBrasilia: new Date(dataAssinatura).toLocaleDateString("pt-BR"),
       diaAssinatura: new Date(dataAssinatura).getDate().toString(),
       mesAssinatura: new Date(dataAssinatura).toLocaleDateString("pt-BR", { month: "long" }),
       anoAssinatura: new Date(dataAssinatura).getFullYear().toString(),
-      // Dados para o bloco de assinatura digital
-      assinaturaDigital: true, // Para mostrar o bloco
-      imagemAssinatura: assinaturaPath, // Para campo {{%imagemAssinatura}}
-      assinaturaImagem: assinaturaPath, // Para campo {{%assinaturaImagem}}
-      mensagemAssinatura: `Assinado digitalmente por CPF: ${contrato.cpf}, em ${new Date(dataAssinatura).toLocaleDateString("pt-BR")} às ${new Date(dataAssinatura).toLocaleTimeString("pt-BR")}`
+      // Dados para o bloco de assinatura digital - garantir que não seja undefined
+      assinaturaDigital: !!assinaturaDigital, // true se houver assinatura
+      imagemAssinatura: assinaturaDigital ? assinaturaPath : "", // Para campo {{%imagemAssinatura}}
+      assinaturaImagem: assinaturaDigital ? assinaturaPath : "", // Para campo {{%assinaturaImagem}}
+      mensagemAssinatura: assinaturaDigital ? 
+        `Assinado digitalmente por CPF: ${contrato.cpf}, em ${new Date(dataAssinatura).toLocaleDateString("pt-BR")} às ${new Date(dataAssinatura).toLocaleTimeString("pt-BR")}` : "",
+      // Campos legados também com valores seguros
+      dataAssinatura: new Date(dataAssinatura).toLocaleDateString("pt-BR"),
+      horaAssinatura: new Date(dataAssinatura).toLocaleTimeString("pt-BR")
     };
 
     console.log("Dados do contrato para template:", {

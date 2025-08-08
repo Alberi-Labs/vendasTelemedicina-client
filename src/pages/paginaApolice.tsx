@@ -5,6 +5,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 import AssinaturaDigital from "@/components/assinaturaDigital/AssinaturaDigital";
 import ContratoPopup from "@/components/contratoPopup/ContratoPopup";
+import Loading from "@/components/loading/loading";
 
 type Apolice = {
   link: string;
@@ -357,7 +358,16 @@ export default function PaginaApolice() {
   const handleAssinaturaConcluida = async (assinaturaBase64: string) => {
     setShowAssinatura(false);
     
+    // Ativar loading durante todo o processo de geração do contrato
+    setLoadingContrato(true);
+    
+    // Mostrar mensagem de progresso
+    setAvisoMensagem("Processando assinatura digital...");
+    setAvisoTipo("warning");
+    setShowAviso(true);
+    
     if (!user || !dadosContrato) {
+      setLoadingContrato(false);
       setAvisoMensagem("Erro nos dados do contrato. Tente novamente.");
       setAvisoTipo("danger");
       setShowAviso(true);
@@ -370,6 +380,9 @@ export default function PaginaApolice() {
       const ipResponse = await fetch('https://api.ipify.org?format=json');
       const ipData = await ipResponse.json();
       const ipAddress = ipData.ip;
+
+      // Atualizar mensagem de progresso
+      setAvisoMensagem("Salvando assinatura no banco de dados...");
 
       // Salvar a assinatura no banco de dados
       const salvarAssinaturaResponse = await fetch("/api/contrato/salvarAssinatura", {
@@ -389,6 +402,9 @@ export default function PaginaApolice() {
         throw new Error("Erro ao salvar assinatura");
       }
 
+      // Atualizar mensagem de progresso
+      setAvisoMensagem("Atualizando status do contrato...");
+
       // Marcar contrato como assinado na tabela tb_clientes
       const marcarAssinadoResponse = await fetch("/api/contrato/marcarAssinado", {
         method: "POST",
@@ -401,6 +417,9 @@ export default function PaginaApolice() {
       if (!marcarAssinadoResponse.ok) {
         throw new Error("Erro ao atualizar status do contrato");
       }
+
+      // Atualizar mensagem de progresso
+      setAvisoMensagem("Gerando contrato assinado...");
 
       // Gerar contrato com assinatura
       const dadosComAssinatura = {
@@ -425,20 +444,24 @@ export default function PaginaApolice() {
       // Atualizar dados do usuário no contexto
       updateUser({ contrato_assinado: true });
 
-      setAvisoMensagem("Contrato assinado com sucesso! O documento foi salvo e está sendo baixado.");
+      // Mensagem de sucesso
+      setAvisoMensagem("🎉 Contrato assinado com sucesso! O documento foi salvo e está sendo baixado.");
       setAvisoTipo("success");
       setShowAviso(true);
 
     } catch (err) {
       console.error("Erro ao processar assinatura:", err);
-      setAvisoMensagem("Erro ao processar assinatura. Tente novamente.");
+      setAvisoMensagem("❌ Erro ao processar assinatura. Tente novamente.");
       setAvisoTipo("danger");
       setShowAviso(true);
+    } finally {
+      // Desativar loading independentemente do resultado
+      setLoadingContrato(false);
     }
   };
 
   return (
-    <div className="container py-5">
+    <div className="container py-5" style={{ position: 'relative', minHeight: '80vh' }}>
       <motion.h1
         className="text-center mb-5 fw-bold"
         initial={{ opacity: 0, y: -20 }}
@@ -595,6 +618,9 @@ export default function PaginaApolice() {
         dadosContrato={dadosContrato}
         contratoAssinado={user?.contrato_assinado || false}
       />
+
+      {/* Loading durante a geração do contrato assinado */}
+      {loadingContrato && <Loading />}
     </div>
   );
 }
