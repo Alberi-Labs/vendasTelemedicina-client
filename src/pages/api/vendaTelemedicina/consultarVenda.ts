@@ -67,7 +67,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             criado_em: formatarDataParaBrasileiro(venda.criado_em),
         }));
 
-        console.log("Vendas de telemedicina formatadas:", vendasFormatadas);
         return res.status(200).json({ success: true, vendas: vendasFormatadas });
     } catch (error) {
         console.error("🔥 Erro ao consultar vendas de telemedicina:", error);

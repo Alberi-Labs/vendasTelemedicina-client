@@ -81,7 +81,6 @@ const PaginaNotasFiscais: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setAssinaturas(data.assinaturas || []);
-        console.log(`📋 Carregadas ${data.total} assinaturas`);
       } else {
         throw new Error('Erro ao carregar assinaturas da API');
       }
@@ -145,7 +144,6 @@ const PaginaNotasFiscais: React.FC = () => {
     try {
       const resp = await fetch(`/api/notasFiscais/consultarAsaas?assinaturaId=${assinatura.assinaturaId}`);
       const data = await resp.json();
-      console.log(data)
       setNotasFiscais(data.notasFiscais || data.data || []);
     } catch (e) {
       setNotasFiscais([]);
@@ -159,7 +157,6 @@ const PaginaNotasFiscais: React.FC = () => {
 
     try {
       setLoading(true);
-        console.log(assinaturaSelecionada)
       const dadosEmissao = {
         assinaturaId: assinaturaSelecionada.assinaturaId,
         empresaNome: assinaturaSelecionada.empresaNome,

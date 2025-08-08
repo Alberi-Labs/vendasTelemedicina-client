@@ -75,7 +75,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         break;
       } catch (error: any) {
         lastError = error;
-        console.log(`Comando falhou: ${command}`, error.message);
       }
     }
 
@@ -95,7 +94,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       
     } else {
-      console.log('Erro na conversão para PDF com todos os comandos:', lastError);
       
       // Se falhar a conversão, retornar mensagem informativa
       fs.unlinkSync(docxPath);

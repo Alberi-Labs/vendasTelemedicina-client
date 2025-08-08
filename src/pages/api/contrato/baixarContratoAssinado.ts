@@ -52,7 +52,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       diaAssinatura: new Date(dataAssinatura).getDate().toString(),
       mesAssinatura: new Date(dataAssinatura).toLocaleDateString("pt-BR", { month: "long" }),
       anoAssinatura: new Date(dataAssinatura).getFullYear().toString(),
-      assinaturaDigital: assinaturaDigital,
+      // Dados para o bloco de assinatura digital
+      assinaturaDigital: true, // Para mostrar o bloco
+      imagemAssinatura: assinaturaDigital, // A imagem em base64
+      mensagemAssinatura: `Assinado digitalmente por CPF: ${contrato.cpf}, em ${new Date(dataAssinatura).toLocaleDateString("pt-BR")} às ${new Date(dataAssinatura).toLocaleTimeString("pt-BR")}`
     };
 
     // Caminho do template

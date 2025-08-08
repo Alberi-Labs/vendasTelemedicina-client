@@ -31,7 +31,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       `,
       [idInstituicao, idInstituicao, mes, ano]
     );
-    console.log("rows", rows[0]);
     res.status(200).json(rows[0]);
   } catch (error: any) {
     console.error("Erro ao buscar quadro comparativo:", error);

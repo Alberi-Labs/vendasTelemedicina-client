@@ -59,7 +59,6 @@ export default function PaginaApolice() {
     verificarStatusContrato();
   }, [user?.cpf, user?.dsc_instituicao, user?.contrato_assinado, updateUser]);
 
-  console.log(user)
   const dscEmpresa = encodeURIComponent(user?.dsc_instituicao || "");
 
   const calcularIdade = (dataNascimento: string | undefined): number => {

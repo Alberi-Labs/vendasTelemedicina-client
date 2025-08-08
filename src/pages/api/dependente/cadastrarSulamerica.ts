@@ -43,9 +43,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const cpfDependenteFormatado = isFormattedCPF(cpfDependente) ? cpfDependente : formatCPF(cpfDependente);
     const nascimentoDependenteFormatado = isFormattedDate(nascimentoDependente) ? nascimentoDependente : formatDate(nascimentoDependente);
 
-    console.log("🆔 CPF Formatado:", cpfFormatado);
-    console.log("📅 Data Formatada:", dataFormatada);
-
     const browser = await puppeteer.launch({ headless: true,             slowMo: 10,
  });
     const page = await browser.newPage();
@@ -82,7 +79,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       mensagemSucessoEsperada
     );
 
-    console.log("✅ Dependente Cadastrado e confirmado!");
 
     await browser.close();
 

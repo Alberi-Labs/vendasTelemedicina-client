@@ -124,7 +124,6 @@ const buscarDependentesDoServidor = async () => {
     };
 
     try {
-      console.log(user)
       const response = await fetch("/api/dependente/cadastrarSulamerica", {
         method: "POST",
         headers: {
@@ -139,7 +138,6 @@ const buscarDependentesDoServidor = async () => {
         }),
       });
       const result = await response.json();
-      console.log(result)
 
       if (!response.ok || !result.success) {
         console.error("❌ Erro ao cadastrar dependente:", result.error);
@@ -149,7 +147,6 @@ const buscarDependentesDoServidor = async () => {
       }
       await cadastrarBanco(novoDependente);
 
-      console.log("✅ Dependente cadastrado com sucesso!");
     } catch (error: any) {
       console.error("❌ Erro ao chamar a API de cadastro:", error);
       alert("Erro ao cadastrar dependente: " + error.message);

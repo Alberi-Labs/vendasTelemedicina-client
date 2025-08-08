@@ -5,7 +5,6 @@ import pool from "@/lib/db";
 // Utilitário para formatar a data
 function formatarDataParaMySQL(data: string): string {
   const [dia, mes, ano] = data.split("/");
-  console.log(`Data recebida: ${ano}-${mes}-${dia} `);
   return `${ano}-${mes}-${dia}`; // Ex: "2003-12-14"
 }
 

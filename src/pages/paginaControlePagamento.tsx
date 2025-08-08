@@ -17,7 +17,6 @@ export default function PaginaControlePagamento() {
   const { user } = useAuth(); 
   useEffect(() => {
     if (!user) return;
-    console.log(user)
     const cobrancas = user.cobrancas || [];
 
     const pagos: Pagamento[] = cobrancas

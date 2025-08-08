@@ -28,6 +28,7 @@ export default async function handler(
     const canvas = createCanvas(800, 500);
     const ctx = canvas.getContext('2d');
     // Determinar qual template usar baseado na empresa
+    dados.empresa = 'saude e cor'
     const isVita = dados.empresa?.toLowerCase().includes('vita');
     const templatePath = isVita 
       ? path.join(process.cwd(), 'public', 'Final-Vitta-Card.png')

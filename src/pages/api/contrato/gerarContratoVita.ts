@@ -67,16 +67,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     // Adicionar a assinatura aos dados se ela existir
+    const agora = new Date();
     const dadosComAssinatura = {
       ...dados,
-      // Assinatura na última página, após quebra de página
+      // Campos para data de Brasília na página 7
+      diaAssinatura: assinaturaDigital ? agora.getDate().toString() : null,
+      mesAssinatura: assinaturaDigital ? agora.toLocaleDateString("pt-BR", { month: "long" }) : null,
+      anoAssinatura: assinaturaDigital ? agora.getFullYear().toString() : null,
+      // Dados para o bloco de assinatura digital
+      assinaturaDigital: assinaturaDigital ? true : false,
+      imagemAssinatura: assinaturaDigital ? assinaturaDigital : null,
+      mensagemAssinatura: assinaturaDigital ? 
+        `Assinado digitalmente por CPF: ${dados.cpf}, em ${agora.toLocaleDateString("pt-BR")} às ${agora.toLocaleTimeString("pt-BR")}` : null,
+      // Campos legados (manter compatibilidade)
       paginaAssinatura: assinaturaDigital ? true : false,
       assinatura: assinaturaProcessada ? {
         data: assinaturaProcessada,
         size: [300, 100]
       } : null,
-      dataAssinatura: assinaturaDigital ? new Date().toLocaleDateString("pt-BR") : null,
-      horaAssinatura: assinaturaDigital ? new Date().toLocaleTimeString("pt-BR") : null,
+      dataAssinatura: assinaturaDigital ? agora.toLocaleDateString("pt-BR") : null,
+      horaAssinatura: assinaturaDigital ? agora.toLocaleTimeString("pt-BR") : null,
       // Informações adicionais para a página de assinatura
       localAssinatura: "São Paulo, SP",
       textoAssinatura: "Documento assinado digitalmente conforme Lei nº 14.063/2020"
@@ -119,7 +129,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.send(pdfBuffer);
       
     } catch (conversionError) {
-      console.log('Erro na conversão para PDF, retornando DOCX:', conversionError);
       
       // Se falhar a conversão, retornar o DOCX
       const docxBuffer = fs.readFileSync(docxPath);

@@ -35,8 +35,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    console.log("queryConditions", queryConditions);
-    console.log("queryParams", queryParams);
     const [rows]: any = await pool.query(
       `
       SELECT 
@@ -55,7 +53,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       `,
       queryParams
     );
-    console.log("rows", rows);  
     res.status(200).json(rows);
   } catch (error: any) {
     console.error("Erro ao buscar cobranças:", error);

@@ -7,7 +7,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { nome, cpf, telefone, email, data_nascimento } = req.body;
-  console.log("🔹 Recebendo requisição de cadastro de cliente:", nome, telefone, email, data_nascimento);
 
   const idInstituicaoFixa = 1;
 

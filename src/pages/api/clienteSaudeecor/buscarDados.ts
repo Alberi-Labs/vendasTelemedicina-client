@@ -97,7 +97,6 @@ async function verificarOuCriarCliente(clienteData: any) {
       // Cliente já existe, verificar primeiro acesso
       const cliente = rows[0];
       if (!cliente.primeiro_acesso) {
-        console.log("primeiro acesso");
         
         // Atualizar para marcar que já fez o primeiro acesso
         await pool.execute(
@@ -113,8 +112,6 @@ async function verificarOuCriarCliente(clienteData: any) {
       
       return cliente;
     } else {
-      // Cliente não existe, criar novo registro
-      console.log("Criando novo cliente no banco de dados");
       
       // Extrair data de nascimento se disponível nos dados da API
       let dataNascimento = null;
@@ -160,7 +157,6 @@ async function verificarOuCriarCliente(clienteData: any) {
         ]
       );
       
-      console.log("primeiro acesso");
       
       return {
         primeiro_acesso: 0,

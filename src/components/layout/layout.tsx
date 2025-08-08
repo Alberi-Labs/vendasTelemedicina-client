@@ -17,7 +17,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isAuthLoaded && !user && !isLoginPage) {
-      console.log("Usuário não autenticado, redirecionando...");
       // Redireciona para a página de login, exceto se já estiver na página de login
       router.push("/");
     }

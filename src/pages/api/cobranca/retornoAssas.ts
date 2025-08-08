@@ -7,10 +7,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === "POST") {
     try {
       const { event, payment } = req.body;
-      console.log(req.body)
       if (event === "PAYMENT_RECEIVED" || payment?.status === "RECEIVED" || payment?.status === "CONFIRMED") {
         pagamentosConfirmados.add(payment.pixQrCodeId);
-        console.log(`✅ Pagamento confirmado: ${payment.pixQrCodeId}`);
       }
 
       return res.status(200).json({ message: "Webhook recebido com sucesso" });

@@ -11,7 +11,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { cpf, password } = req.body;
 
   try {
-    console.log("🔹 Recebendo requisição de login para CPF:", cpf);
 
     // Busca o usuário com join na instituicao
     const [usuarios]: any = await pool.query(
@@ -30,14 +29,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
        WHERE u.cpf = ?`,
       [cpf]
     );
-    console.log(usuarios)
     if (usuarios.length === 0) {
       console.error("❌ Usuário não encontrado:", cpf);
       return res.status(401).json({ error: "Usuário não encontrado" });
     }
 
     const user = usuarios[0];
-    console.log("✅ Usuário encontrado:", user.nome);
 
     const senhaCorreta = await bcrypt.compare(password, user.senha);
     if (!senhaCorreta) {
@@ -51,7 +48,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { expiresIn: "1d" }
     );
 
-    console.log("🔑 Token gerado com sucesso para:", user.nome);
 
     return res.status(200).json({
       token,

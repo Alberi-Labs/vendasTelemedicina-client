@@ -34,7 +34,6 @@ export default function LoginFuncionario() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      console.log("data", data);
       const clienteData: User = {
         id: data.usuario.id,
         nome: data.usuario.nome,

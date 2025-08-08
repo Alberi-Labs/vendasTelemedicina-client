@@ -44,7 +44,6 @@ export default function CadastroPj() {
     const [funcionarios, setFuncionarios] = useState<any[]>([]);
     const [errosArquivo, setErrosArquivo] = useState<string[]>([]);
     const { user } = useAuth();
-    console.log(user)
     let idUsuario: string = "";
 
     useEffect(() => {
@@ -121,7 +120,6 @@ export default function CadastroPj() {
         try {
             const response = await fetch(`/api/empresas/listarEmpresas${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`);
             const data = await response.json();
-            console.log(data)
             if (data.success) {
                 setEmpresasLista(data.empresas);
             }

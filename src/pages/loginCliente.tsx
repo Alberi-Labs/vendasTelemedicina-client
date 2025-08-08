@@ -8,18 +8,15 @@ export default function LoginCliente() {
   const router = useRouter();
   const { login } = useAuth();
   const currentDomain = typeof window !== "undefined" ? window.location.hostname : "";
-  console.log("currentDomain", currentDomain)
   const imagemFundo = currentDomain === "vitaclinica.saudeecor.com"
     ? "/uploads/vita.png"
     : "/image.png";
 
   const mapearImagemEmpresa = (nome: string): string | null => {
-    console.log("nome", nome)
     const nomeNormalizado = nome
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
-    console.log("nome", nomeNormalizado)
 
     if (nomeNormalizado.includes("vita")) return "/vita.png";
     if (nomeNormalizado.includes("clinica abc")) return "/uploads/clinicaabc.png";
@@ -83,7 +80,6 @@ export default function LoginCliente() {
       });
 
       const data = await res.json();
-      console.log("Resposta da API:", data);
       if (!res.ok) {
         const erroMensagem = data?.message || data?.error || "Erro inesperado.";
         throw new Error(erroMensagem);
