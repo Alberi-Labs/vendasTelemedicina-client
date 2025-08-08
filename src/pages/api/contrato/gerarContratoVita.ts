@@ -94,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       anoAssinatura: assinaturaDigital ? agora.getFullYear().toString() : null,
       // Dados para o bloco de assinatura digital
       assinaturaDigital: assinaturaDigital ? true : false,
-      imagemAssinatura: assinaturaDigital ? assinaturaDigital : null, // Imagem em base64
+      imagemAssinatura: assinaturaDigital ? assinaturaTempPath : null, // Caminho do arquivo de imagem
       mensagemAssinatura: assinaturaDigital ? 
         `Assinado digitalmente por CPF: ${dados.cpf}, em ${agora.toLocaleDateString("pt-BR")} às ${agora.toLocaleTimeString("pt-BR")}` : null,
       // Campos legados (manter compatibilidade)
@@ -110,7 +110,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       textoAssinatura: "Documento assinado digitalmente conforme Lei nº 14.063/2020"
     };
 
-    doc.render(dadosComAssinatura);
+    try {
+      doc.render(dadosComAssinatura);
+    } catch (error) {
+      console.error("Erro ao processar template:", error);
+      return res.status(500).json({ error: "Erro ao processar template do contrato" });
+    }
 
     const bufferDocx = doc.getZip().generate({ type: "nodebuffer" });
     fs.writeFileSync(docxPath, bufferDocx);

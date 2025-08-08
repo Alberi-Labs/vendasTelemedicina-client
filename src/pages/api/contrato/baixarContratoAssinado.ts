@@ -41,9 +41,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Buscar o contrato assinado no banco de dados
     const [contratoRows]: any = await pool.execute(
-      `SELECT ca.*, c.nome, c.cpf, c.email, c.telefone, c.dt_nascimento, c.cidade, c.uf 
+      `SELECT ca.*, c.nome, c.cpf, c.email, c.telefone, c.data_nascimento, c.cidade, c.uf 
        FROM tb_contratos_assinados ca 
-       JOIN tb_clientes c ON ca.idCliente = c.idCliente 
+       JOIN tb_clientes c ON ca.id_usuario = c.idCliente 
        WHERE c.cpf = ? 
        ORDER BY ca.data_assinatura DESC 
        LIMIT 1`,
@@ -58,6 +58,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const assinaturaDigital = contrato.assinatura_digital;
     const dataAssinatura = contrato.data_assinatura;
     
+    // Criar arquivo temporário único ANTES de definir os dados
+    const timestamp = Date.now();
+    const tempDir = path.join(process.cwd(), "tmp");
+    
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    // Salvar a imagem da assinatura
+    const assinaturaPath = path.join(tempDir, `assinatura_${timestamp}.png`);
+    const assinaturaBuffer = Buffer.from(assinaturaDigital.replace(/^data:image\/png;base64,/, ""), 'base64');
+    fs.writeFileSync(assinaturaPath, assinaturaBuffer);
+    
     // Recriar os dados do contrato no formato original
     const dadosContrato = {
       nomeseg: contrato.nome,
@@ -71,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       anoAssinatura: new Date(dataAssinatura).getFullYear().toString(),
       // Dados para o bloco de assinatura digital
       assinaturaDigital: true, // Para mostrar o bloco
-      imagemAssinatura: assinaturaDigital, // A imagem em base64
+      imagemAssinatura: assinaturaPath, // Caminho do arquivo da imagem
       mensagemAssinatura: `Assinado digitalmente por CPF: ${contrato.cpf}, em ${new Date(dataAssinatura).toLocaleDateString("pt-BR")} às ${new Date(dataAssinatura).toLocaleTimeString("pt-BR")}`
     };
 
@@ -92,10 +105,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     // Preencher o template com os dados (incluindo os novos campos de data)
-    doc.setData(dadosContrato);
-
     try {
-      doc.render();
+      doc.render(dadosContrato);
     } catch (error) {
       console.error("Erro ao processar template:", error);
       return res.status(500).json({ error: "Erro ao processar template do contrato" });
@@ -103,25 +114,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const buf = doc.getZip().generate({ type: "nodebuffer" });
 
-    // Criar arquivo temporário único
-    const timestamp = Date.now();
-    const tempDir = path.join(process.cwd(), "tmp");
-    
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
     const tempDocxPath = path.join(tempDir, `${timestamp}.docx`);
     const tempPdfPath = path.join(tempDir, `${timestamp}.pdf`);
 
     fs.writeFileSync(tempDocxPath, buf);
-
-    // Adicionar a assinatura ao PDF
-    const assinaturaPath = path.join(tempDir, `assinatura_${timestamp}.png`);
-    
-    // Salvar a imagem da assinatura
-    const assinaturaBuffer = Buffer.from(assinaturaDigital.replace(/^data:image\/png;base64,/, ""), 'base64');
-    fs.writeFileSync(assinaturaPath, assinaturaBuffer);
 
     // Detectar sistema operacional e converter para PDF
     const isWindows = process.platform === 'win32';
