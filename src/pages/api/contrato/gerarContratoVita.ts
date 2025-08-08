@@ -88,29 +88,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const agora = new Date();
     const dadosComAssinatura = {
       ...dados,
-      // Campos para data de Brasília na página 7 - SEMPRE mostrar as datas (para preview)
+      // Campos para data de Brasília na página 7 - SEMPRE mostrar as datas (mesmo no preview)
       dataAssinaturaBrasilia: agora.toLocaleDateString("pt-BR"),
       diaAssinatura: agora.getDate().toString(),
       mesAssinatura: agora.toLocaleDateString("pt-BR", { month: "long" }),
       anoAssinatura: agora.getFullYear().toString(),
-      // Dados para o bloco de assinatura digital - só preencher se tiver assinatura
-      assinaturaDigital: assinaturaDigital ? true : false,
-      imagemAssinatura: assinaturaDigital ? assinaturaTempPath : "", // String vazia em vez de null
-      assinaturaImagem: assinaturaDigital ? assinaturaTempPath : "", // Campo alternativo também vazio
+      dataAssinatura: agora.toLocaleDateString("pt-BR"), // Sempre mostrar
+      horaAssinatura: agora.toLocaleTimeString("pt-BR"), // Sempre mostrar
+      // Dados para o bloco de assinatura digital - campos em branco se não tiver assinatura
+      assinaturaDigital: !!assinaturaDigital, // true/false
+      imagemAssinatura: assinaturaDigital ? assinaturaTempPath : "", // Vazio se não tiver assinatura
+      assinaturaImagem: assinaturaDigital ? assinaturaTempPath : "", // Vazio se não tiver assinatura
       mensagemAssinatura: assinaturaDigital ? 
-        `Assinado digitalmente por CPF: ${dados.cpf}, em ${agora.toLocaleDateString("pt-BR")} às ${agora.toLocaleTimeString("pt-BR")}` : "",
+        `Assinado digitalmente por CPF: ${dados.cpf}, em ${agora.toLocaleDateString("pt-BR")} às ${agora.toLocaleTimeString("pt-BR")}` : "", // Vazio se não tiver assinatura
       // Campos legados (manter compatibilidade)
-      paginaAssinatura: assinaturaDigital ? true : false,
+      paginaAssinatura: !!assinaturaDigital,
       assinatura: assinaturaProcessada ? {
         data: assinaturaProcessada,
         size: [300, 100]
       } : null,
-      dataAssinatura: agora.toLocaleDateString("pt-BR"), // Sempre mostrar
-      horaAssinatura: agora.toLocaleTimeString("pt-BR"), // Sempre mostrar
       // Informações adicionais para a página de assinatura
       localAssinatura: "São Paulo, SP",
       textoAssinatura: "Documento assinado digitalmente conforme Lei nº 14.063/2020"
     };
+
+    console.log("Dados enviados para o template:", {
+      temAssinatura: !!assinaturaDigital,
+      dataAssinaturaBrasilia: dadosComAssinatura.dataAssinaturaBrasilia,
+      diaAssinatura: dadosComAssinatura.diaAssinatura,
+      mesAssinatura: dadosComAssinatura.mesAssinatura,
+      anoAssinatura: dadosComAssinatura.anoAssinatura,
+      assinaturaDigital: dadosComAssinatura.assinaturaDigital,
+      imagemAssinatura: dadosComAssinatura.imagemAssinatura,
+      mensagemAssinatura: dadosComAssinatura.mensagemAssinatura
+    });
 
     try {
       doc.render(dadosComAssinatura);
