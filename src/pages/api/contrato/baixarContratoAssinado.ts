@@ -41,9 +41,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Buscar o contrato assinado no banco de dados
     const [contratoRows]: any = await pool.execute(
-      `SELECT ca.*, c.nome, c.cpf, c.email, c.telefone, c.data_nascimento, c.cidade, c.uf 
+      `SELECT ca.*, c.nome, c.cpf, c.email, c.telefone, c.dt_nascimento, c.cidade, c.uf 
        FROM tb_contratos_assinados ca 
-       JOIN tb_clientes c ON ca.id_usuario = c.idCliente 
+       JOIN tb_clientes c ON ca.idCliente = c.idCliente 
        WHERE c.cpf = ? 
        ORDER BY ca.data_assinatura DESC 
        LIMIT 1`,
@@ -68,6 +68,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const contrato = contratoRows[0];
     const assinaturaDigital = contrato.assinatura_digital;
     const dataAssinatura = contrato.data_assinatura;
+
+    // Buscar dados completos do usuário na API SaudeECor para obter endereço
+    let dadosUsuarioCompletos = null;
+    try {
+      const responseBuscarDados = await fetch(`${req.headers.origin || 'http://localhost:3000'}/api/clienteSaudeecor/buscarDados`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cpf: cpf_usuario }),
+      });
+
+      if (responseBuscarDados.ok) {
+        const userData = await responseBuscarDados.json();
+        if (Array.isArray(userData) && userData.length > 0) {
+          dadosUsuarioCompletos = userData[0];
+          console.log("Dados do usuário da API:", {
+            nome: dadosUsuarioCompletos.nom_cliente,
+            endereco: dadosUsuarioCompletos.dsc_endereco_completo,
+            cidade: dadosUsuarioCompletos.dsc_cidade,
+            uf: dadosUsuarioCompletos.dsc_uf
+          });
+        }
+      }
+    } catch (error) {
+      console.log("Erro ao buscar dados da API SaudeECor:", error);
+      // Continua com os dados do banco se falhar a API
+    }
     
     console.log("Dados do contrato:", {
       nome: contrato.nome,
@@ -119,7 +145,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       cpf: contrato.cpf,
       datanascimento: contrato.dt_nascimento ? new Date(contrato.dt_nascimento).toLocaleDateString("pt-BR") : "",
       endereco: (() => {
-        // Construir endereço apenas se tivermos dados
+        // Priorizar dados da API SaudeECor se disponíveis
+        if (dadosUsuarioCompletos) {
+          if (dadosUsuarioCompletos.dsc_endereco_completo) {
+            return dadosUsuarioCompletos.dsc_endereco_completo;
+          }
+          // Se não tem endereço completo, construir com cidade e UF da API
+          const enderecoParts = [];
+          if (dadosUsuarioCompletos.dsc_cidade) enderecoParts.push(dadosUsuarioCompletos.dsc_cidade);
+          if (dadosUsuarioCompletos.dsc_uf) enderecoParts.push(dadosUsuarioCompletos.dsc_uf);
+          return enderecoParts.length > 0 ? enderecoParts.join(", ") : "";
+        }
+        
+        // Fallback: usar dados do banco se API falhar
         const enderecoParts = [];
         if (contrato.cidade) enderecoParts.push(contrato.cidade);
         if (contrato.uf) enderecoParts.push(contrato.uf);
@@ -142,7 +180,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
 
     console.log("Dados do contrato para template:", {
-      ...dadosContrato,
+      nome: dadosContrato.nomeseg,
+      cpf: dadosContrato.cpf,
+      endereco: dadosContrato.endereco,
+      enderecoFonte: dadosUsuarioCompletos ? "API SaudeECor" : "Banco de dados",
       imagemAssinatura: `${assinaturaPath} (existe: ${fs.existsSync(assinaturaPath)})`
     });
 
