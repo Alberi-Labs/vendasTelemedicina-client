@@ -84,9 +84,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           dadosUsuarioCompletos = userData[0];
           console.log("Dados do usuário da API:", {
             nome: dadosUsuarioCompletos.nom_cliente,
-            endereco: dadosUsuarioCompletos.dsc_endereco_completo,
-            cidade: dadosUsuarioCompletos.dsc_cidade,
-            uf: dadosUsuarioCompletos.dsc_uf
+            cidade: dadosUsuarioCompletos.cidade,
+            uf: dadosUsuarioCompletos.uf
           });
         }
       }
@@ -147,13 +146,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       endereco: (() => {
         // Priorizar dados da API SaudeECor se disponíveis
         if (dadosUsuarioCompletos) {
-          if (dadosUsuarioCompletos.dsc_endereco_completo) {
-            return dadosUsuarioCompletos.dsc_endereco_completo;
-          }
-          // Se não tem endereço completo, construir com cidade e UF da API
+          // Construir endereço com cidade e UF da API
           const enderecoParts = [];
-          if (dadosUsuarioCompletos.dsc_cidade) enderecoParts.push(dadosUsuarioCompletos.dsc_cidade);
-          if (dadosUsuarioCompletos.dsc_uf) enderecoParts.push(dadosUsuarioCompletos.dsc_uf);
+          if (dadosUsuarioCompletos.cidade) enderecoParts.push(dadosUsuarioCompletos.cidade);
+          if (dadosUsuarioCompletos.uf) enderecoParts.push(dadosUsuarioCompletos.uf);
           return enderecoParts.length > 0 ? enderecoParts.join(", ") : "";
         }
         
