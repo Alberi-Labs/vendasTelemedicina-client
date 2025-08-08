@@ -41,9 +41,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Buscar o contrato assinado no banco de dados
     const [contratoRows]: any = await pool.execute(
-      `SELECT ca.*, c.nome, c.cpf, c.email, c.telefone, c.dt_nascimento, c.cidade, c.uf 
+      `SELECT ca.*, c.nome, c.cpf, c.email, c.telefone, c.data_nascimento, c.cidade, c.uf 
        FROM tb_contratos_assinados ca 
-       JOIN tb_clientes c ON ca.idCliente = c.idCliente 
+       JOIN tb_clientes c ON ca.id_usuario = c.idCliente 
        WHERE c.cpf = ? 
        ORDER BY ca.data_assinatura DESC 
        LIMIT 1`,
