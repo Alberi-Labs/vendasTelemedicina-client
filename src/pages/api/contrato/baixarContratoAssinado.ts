@@ -126,7 +126,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       anoAssinatura: new Date(dataAssinatura).getFullYear().toString(),
       // Dados para o bloco de assinatura digital
       assinaturaDigital: true, // Para mostrar o bloco
-      imagemAssinatura: assinaturaPath, // Caminho do arquivo da imagem
+      imagemAssinatura: assinaturaPath, // Para campo {{%imagemAssinatura}}
+      assinaturaImagem: assinaturaPath, // Para campo {{%assinaturaImagem}}
       mensagemAssinatura: `Assinado digitalmente por CPF: ${contrato.cpf}, em ${new Date(dataAssinatura).toLocaleDateString("pt-BR")} às ${new Date(dataAssinatura).toLocaleTimeString("pt-BR")}`
     };
 
