@@ -4,7 +4,7 @@ import path from "path";
 
 // Configurações do Asaas
 const ASAAS_API_URL = process.env.ASAAS_API_URL || 'https://sandbox.asaas.com/api/v3';
-const ASAAS_API_TOKEN = process.env.ASAAS_API_KEY;
+const ASAAS_API_TOKEN = '$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjU0MTEzNzljLTE4M2ItNDIxMC05Nzg5LWIzM2RkZGM0OTVlMDo6JGFhY2hfYTljOTBkNTctZjc5Yi00YzAxLWEyZmItNmU0YjBlOTFhNTkw';
 
 interface DadosEmissaoNF {
   assinaturaId: string;
@@ -54,13 +54,13 @@ export default async function handler(
 
     console.log('📄 Iniciando emissão de nota fiscal via Asaas...');
     console.log(`🏢 Empresa: ${dados.empresaNome}`);
-    console.log(`💰 Valor: R$ ${dados.valor}`);
+    console.log(`💰 Valor: R$ ${dados.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
     console.log(`📋 Assinatura ID: ${dados.assinaturaId}`);
 
     // Preparar dados da NFe para Asaas
     const dadosAsaasNF: AsaasNotaFiscalConfig = {
       serviceDescription: dados.descricao,
-      value: dados.valor,
+      value: parseFloat(dados.valor.toFixed(2)), // Garantir 2 casas decimais
       effectiveDate: new Date().toISOString().split('T')[0],
       observations: dados.observacoes,
       externalReference: dados.assinaturaId,
@@ -236,7 +236,7 @@ export async function consultarNotasFiscais(assinaturaId?: string) {
         serie: '001',
         assinaturaId: 'sub_123456789',
         empresaNome: 'Tech Solutions LTDA',
-        valor: 299.90,
+        valor: 29.90,
         status: 'autorizada',
         dataEmissao: '2024-07-15'
       }

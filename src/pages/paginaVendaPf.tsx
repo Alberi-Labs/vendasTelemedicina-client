@@ -117,57 +117,114 @@ export default function CadastroPf() {
     };
     
     const nextStep = async () => {
-        if (currentStep === 1) {
+        if (currentStep === 2) {
+            // Validar se forma de pagamento foi selecionada
+            if (!formData.formaPagamento) {
+                setMensagemDeErro('Por favor, selecione uma forma de pagamento.');
+                return;
+            }
+
             setLoading(true);
             try {
                 const sexoFormatado = formData.sexo.toLowerCase() === 'feminino' ? 'F' : 'M';
-    
-                const response = await fetch('/api/vendaPlanoPf/vendaClienteOnlline', {
+                
+                const dadosCompletos = {
+                    nomeCliente: formData.nome,
+                    email: formData.email,
+                    cpf: formData.cpf,
+                    celular: formData.celular,
+                    dataNascimento: formData.nascimento,
+                    cep: formData.cep,
+                    endereco: formData.endereco,
+                    casa: formData.casa,
+                    sexo: sexoFormatado,
+                    uf: formData.uf,
+                    cidade: formData.cidade,
+                    formaDePagamento: formData.formaPagamento,
+                    instituicao: user?.dsc_instituicao,
+                    login_sistema: user?.login_sistema,
+                    senha_sistema: user?.senha_sistema,
+                    idUsuario: user?.id,
+                };
+
+                // ETAPA 1: Cadastrar no sistema Saúde e Cor
+                console.log('🔸 Iniciando cadastro no sistema Saúde e Cor...');
+                const responseSaudeECor = await fetch('/api/vendaPlanoPf/cadastroSaudeECor', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(dadosCompletos),
+                });
+
+                const dataSaudeECor = await responseSaudeECor.json();
+
+                if (!responseSaudeECor.ok) {
+                    throw new Error(dataSaudeECor.error || 'Erro no cadastro Saúde e Cor');
+                }
+
+                console.log('✅ Cadastro no Saúde e Cor concluído!');
+
+                // ETAPA 2: Cadastrar no banco de dados
+                console.log('🔸 Iniciando cadastro no banco de dados...');
+                const responseDB = await fetch('/api/vendaPlanoPf/cadastroClientePfDB', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(dadosCompletos),
+                });
+
+                const dataDB = await responseDB.json();
+
+                if (!responseDB.ok) {
+                    throw new Error(dataDB.error || 'Erro no cadastro no banco');
+                }
+
+                console.log('✅ Cadastro no banco concluído! Cliente ID:', dataDB.clienteId);
+
+                // ETAPA 3: Gerar cobrança
+                console.log('🔸 Iniciando geração de cobrança...');
+                const responseCobranca = await fetch('/api/vendaPlanoPf/gerarCobrancaPf', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
+                        clienteId: dataDB.clienteId,
                         nomeCliente: formData.nome,
                         email: formData.email,
                         cpf: formData.cpf,
-                        celular: formData.celular,
-                        dataNascimento: formData.nascimento,
-                        cep: formData.cep,
-                        endereco: formData.endereco,
-                        casa: formData.casa,
-                        sexo: sexoFormatado,
-                        uf: formData.uf,
-                        cidade: formData.cidade,
                         formaDePagamento: formData.formaPagamento,
-                        instituicao: user?.dsc_instituicao,
-                        login_sistema: user?.login_sistema,
-                        senha_sistema: user?.senha_sistema,
+                        idUsuario: user?.id,
                     }),
                 });
-    
-                const data = await response.json();
-    
-                if (!response.ok) {
-                    throw new Error(data.error || 'Erro ao enviar os dados');
+
+                const dataCobranca = await responseCobranca.json();
+
+                if (!responseCobranca.ok) {
+                    throw new Error(dataCobranca.error || 'Erro na geração de cobrança');
                 }
-    
-                if (data.pagamentoLink) {
-                    setPaymentLink(data.pagamentoLink);
+
+                console.log('✅ Cobrança gerada com sucesso!');
+
+                if (dataCobranca.paymentLink) {
+                    setPaymentLink(dataCobranca.paymentLink);
                     setShowPopup(true);
                 } else {
                     setMensagemDeErro('Erro: o link de pagamento não foi retornado.');
                 }
+
             } catch (error: any) {
-                console.error('Erro ao enviar os dados para /api/vendaPlanoPf/vendaClienteOnlline:', error);
+                console.error('Erro no processamento da venda:', error);
                 setMensagemDeErro(error.message || 'Erro inesperado.');
                 return;
             } finally {
                 setLoading(false);
             }
+        } else {
+            setCurrentStep((prev) => prev + 1);
         }
-    
-        setCurrentStep((prev) => prev + 1);
     };
     
 
@@ -349,66 +406,9 @@ export default function CadastroPf() {
                                 </Box>
                             </Box>
                             <Box className="text-center mt-4">
-                                <Button
-                                    variant="contained"
-                                    color="success"
-                                    onClick={async () => {
-                                        setLoading(true);
-                                        try {
-                                            // Primeiro gera o link de pagamento
-                                            const response = await fetch('/api/vendaPlanoPf/vendaClientePf', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                },
-                                                body: JSON.stringify({
-                                                    nomeCliente: formData.nome,
-                                                    formaDePagamento: formData.formaPagamento,
-                                                    idUsuario: user?.id || idUsuario,
-                                                }),
-                                            });
-
-                                            if (!response.ok) {
-                                                const errorData = await response.json();
-                                                throw new Error(errorData.message || 'Erro ao gerar o link de pagamento');
-                                            }
-
-                                            const data = await response.json();
-                                            if (data.paymentLink) {
-                                                try {
-                                                    await fetch('/api/vendaTelemedicina/criarVenda', {
-                                                        method: 'POST',
-                                                        headers: {
-                                                            'Content-Type': 'application/json',
-                                                        },
-                                                        body: JSON.stringify({
-                                                            id_usuario: user?.id || idUsuario,
-                                                            forma_pagamento: formData.formaPagamento,
-                                                            link_pagamento: data.paymentLink,
-                                                            tipo_venda: "pf",
-                                                            situacao_pagamento: "pendente",
-                                                            valor_venda: "29.90", 
-                                                        }),
-                                                    });
-                                                } catch (vendaError) {
-                                                    console.error('Erro ao registrar venda na tabela telemedicina:', vendaError);
-                                                }
-
-                                                setPaymentLink(data.paymentLink);
-                                                setShowPopup(true); 
-                                            } else {
-                                                alert('Erro: o link de pagamento não foi retornado.');
-                                            }
-                                        } catch (error) {
-                                            alert('Erro ao gerar o link de pagamento.');
-                                        } finally {
-                                            setLoading(false);
-                                        }
-                                    }}
-                                >
-                                    Gerar link de pagamento
-                                </Button>
-
+                                <Typography variant="body2" color="textSecondary">
+                                    Após selecionar a forma de pagamento, clique em "Avançar" para processar a venda.
+                                </Typography>
                             </Box>
                         </>
                     )}
@@ -427,6 +427,16 @@ export default function CadastroPf() {
                             Avançar
                         </Button>
                     )}
+                    {currentStep === 2 && (
+                        <Button 
+                            variant="contained" 
+                            color="success" 
+                            onClick={nextStep}
+                            disabled={!formData.formaPagamento}
+                        >
+                            Finalizar Venda
+                        </Button>
+                    )}
                 </Box>
             </Paper>
             {loading && (
@@ -435,7 +445,7 @@ export default function CadastroPf() {
                         currentStep === 1
                             ? "Cadastrando dados do cliente..."
                             : currentStep === 2
-                                ? "Enviando dados de cobrança..."
+                                ? "Processando venda: Cadastro no sistema → Banco de dados → Cobrança..."
                                 : "Carregando..."
                     }
                 />

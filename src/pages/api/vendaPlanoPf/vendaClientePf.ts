@@ -1,4 +1,3 @@
-import pool from "@/lib/db";
 import { NextApiRequest, NextApiResponse } from "next";
 import puppeteer, { ElementHandle } from "puppeteer";
 
@@ -7,14 +6,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: "Método não permitido" });
   }
 
-  const { nomeCliente, formaDePagamento, idUsuario } = req.body;
+  const { 
+    nomeCliente, 
+    email, 
+    cpf, 
+    celular, 
+    dataNascimento, 
+    cep, 
+    endereco, 
+    casa, 
+    sexo, 
+    uf, 
+    cidade, 
+    formaDePagamento, 
+    instituicao, 
+    login_sistema, 
+    senha_sistema, 
+    idUsuario 
+  } = req.body;
   console.log("🔸 Requisição recebida:", req.body);
 
   try {
-    const instituicao = "Fernando Card";
     console.log("🔸 Iniciando Puppeteer...");
     const browser = await puppeteer.launch({
-      headless: true,
+      headless: false,
       slowMo: 10,
       args: [
         "--no-sandbox",
@@ -31,8 +46,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await page.goto("https://saudeecor.i9.dev.br/white/login.php", { waitUntil: "networkidle2" });
 
     console.log("🔸 Preenchendo login...");
-    await page.type('input[name="usuario"]', '020.314.821-57');
-    await page.type('input[name="senha"]', '102030');
+    await page.type('input[name="usuario"]', login_sistema);
+    await page.type('input[name="senha"]', senha_sistema);
     await Promise.all([
       page.click('button[type="submit"]'),
       page.waitForNavigation({ waitUntil: "networkidle2" }),
@@ -56,20 +71,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       console.error("❌ Botão #btn_pesquisar não encontrado.");
     }
-    console.log("🔸 Clicando no botão de menu (barras)...");
-
-    await page.screenshot({ path: '/tmp/pagina_atual0.png', fullPage: true });
-
-    await page.waitForSelector('a[data-widget="pushmenu"]', { visible: true });
-    await page.click('a[data-widget="pushmenu"]');
-    console.log("✅ Menu (barras) clicado.");
-
-    console.log("🔸 Clicando no botão de fullscreen...");
-    await page.waitForSelector('a[data-widget="fullscreen"]', { visible: true });
-    await page.click('a[data-widget="fullscreen"]');
-    console.log("✅ Botão de fullscreen clicado.");
-    await page.screenshot({ path: '/tmp/pagina_atual01.png', fullPage: true });
-
     console.log("🔸 Clicando em cliente...");
     await page.waitForSelector('#divClienteVinculo .btn-primary', { visible: true });
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -111,6 +112,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await page.waitForSelector('.table .btn-primary', { visible: true });
     await page.click('.table .btn-primary');
 
+    console.log("🔸 Clicando na isenção de pagamento (Sim)...");
+    await page.waitForSelector('input[name="tip_venda"][value="S"]', { visible: true });
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await page.click('input[name="tip_venda"][value="S"]');
+    console.log("✅ Isenção de pagamento selecionada.");
+
+
+
     console.log("🔸 Clicando em 'Escolher Produto'...");
     await page.waitForSelector('.timeline-footer .btn-warning', { visible: true });
     const escolherProduto = await page.$('.timeline-footer .btn-warning');
@@ -122,7 +131,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    await page.screenshot({ path: '/tmp/pagina_atual.png', fullPage: true });
 
     console.log("🔸 Procurando e clicando no botão do 'Plano Telemedicina Básico'...");
     const rows = await page.$$('#divHtmlProduto table tbody tr');
@@ -153,76 +161,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 
     await new Promise(resolve => setTimeout(resolve, 3000));
-
-    console.log("🔸 Rolando até forma de pagamento...");
-    await page.evaluate(() => window.scrollBy(0, window.innerHeight));
-    await page.waitForSelector('#divPagamentoVinculoHtm .btn', { visible: true });
+    console.log("🔸 Clicando no botão Proposta...");
+    await page.waitForSelector('#divBtnPropostaIsento .btn', { visible: true });
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const pagamentoButton = await page.$('#divPagamentoVinculoHtm .btn');
-    if (pagamentoButton) {
-      const boundingBox = await pagamentoButton.boundingBox();
-      if (boundingBox) {
-        await page.mouse.click(
-          boundingBox.x + boundingBox.width / 2,
-          boundingBox.y + boundingBox.height / 2
-        );
-        console.log("✅ Botão 'Forma de pagamento' clicado.");
-      }
+    await page.click('#divBtnPropostaIsento .btn');
+    console.log("✅ Botão Proposta clicado.");
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    console.log("🔸 Esperando o modal abrir...");
+    await page.waitForSelector('.modal.show, .modal.in', { visible: true });
+
+    // seleciona o modal visível
+    const modalHandle = await page.$('.modal.show, .modal.in');
+
+    // clica no botão close *dentro* do modal
+    console.log("🔸 Clicando no botão Close (X) dentro do modal...");
+    if (modalHandle) {
+      await modalHandle.$eval('button.close[aria-label="Close"]', btn => btn.click());
     } else {
-      console.error("❌ Botão 'Forma de pagamento' não encontrado.");
+      console.error("❌ Modal não encontrado para fechar.");
     }
-    await new Promise(resolve => setTimeout(resolve, 4000));
-    await page.screenshot({ path: '/tmp/pagina_atual2.png', fullPage: true });
 
-    console.log(`🔸 Selecionando forma de pagamento: ${formaDePagamento}`);
-    await page.evaluate((formaDePagamento) => {
-      const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-      const normalizedFormaDePagamento = normalize(formaDePagamento);
-      const inputs = Array.from(document.querySelectorAll('input[name="tip_pagamento"]'));
-      const inputToSelect = inputs.find(input =>
-        normalize((input as HTMLInputElement).value) === normalizedFormaDePagamento
-      );
-      if (inputToSelect) {
-        (inputToSelect as HTMLElement).click();
-      } else {
-        console.error(`Forma de pagamento "${formaDePagamento}" não encontrada.`);
-      }
-    }, formaDePagamento);
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    const html = await page.content();
-    console.log("📄 Texto visível da página:");
-    console.log(html);
-    console.log("🔸 Iniciando processo de pagamento...");
-    await page.waitForSelector('#btn_iniciar_processo button', { visible: true });
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    await page.evaluate(() => {
-      const btn = document.querySelector('#btn_iniciar_processo button') as HTMLElement;
-      if (btn) btn.click();
+    // espera o modal sumir
+    await page.waitForSelector('.modal.show, .modal.in', { hidden: true });
+    console.log("✅ Modal fechado.");
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    console.log("🔸 Clicando no botão 'Próximo passo'...");
+    await page.waitForSelector('#divBtnProximoPasso a', { visible: true });
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await page.click('#divBtnProximoPasso a');
+    console.log("✅ Botão 'Próximo passo' clicado.");
+
+    console.log("🔸 Procurando botão 'Enviar proposta'...");
+
+    const selector = '.timeline-footer a.btn.bg-purple[data-toggle="modal"][data-target="#modal-lg-contr"]';
+    await page.waitForSelector(selector, { visible: true, timeout: 10000 });
+
+    const btn = await page.$(selector);
+    if (!btn) throw new Error("Botão 'Enviar proposta' não encontrado.");
+
+    await page.evaluate((el) => {
+      el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+    }, btn);
+
+    await page.evaluate((el) => el.click(), btn);
+
+    console.log("🔸 Esperando modal de retorno da proposta...");
+    await page.waitForSelector('#modal-lg-contr.show, #modal-lg-contr.in', { visible: true });
+
+    await browser.close();
+    return res.status(200).json({
+      sucesso: true,
     });
-
-    await page.waitForSelector('p.text-muted.well a', { visible: true });
-    const paymentLink = await page.evaluate(() => {
-      const linkElement = document.querySelector('p.text-muted.well a');
-      if (linkElement) {
-        const onclickValue = linkElement.getAttribute('onclick');
-        const match = onclickValue && onclickValue.match(/wiOpen\('([^']+)'/);
-        return match ? match[1] : null;
-      }
-      return null;
-    });
-
-    if (paymentLink) {
-      console.log("✅ Link de pagamento encontrado:", paymentLink);
-      return res.status(200).json({
-        message: "Integração concluída com sucesso!",
-        paymentLink
-      });
-    } else {
-      console.error("❌ Link de pagamento não encontrado.");
-      return res.status(500).json({
-        error: "Link de pagamento não encontrado."
-      });
-    }
 
   } catch (error) {
     console.error("❌ Erro ao executar Puppeteer:", error);

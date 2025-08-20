@@ -24,7 +24,7 @@ import {
   Snackbar
 } from '@mui/material';
 import Layout from '../components/layout/layout';
-import useAuth from '../hook/useAuth';
+import { useAuth } from '../app/context/AuthContext';
 import VisualizarNotaFiscal from '../components/notasFiscais/VisualizarNotaFiscal';
 
 interface Assinatura {
@@ -49,7 +49,7 @@ interface NotaFiscal {
 }
 
 const PaginaNotasFiscais: React.FC = () => {
-  const { authenticated } = useAuth();
+  const { user } = useAuth();
   const [assinaturas, setAssinaturas] = useState<Assinatura[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalEmitir, setModalEmitir] = useState(false);
@@ -93,7 +93,7 @@ const PaginaNotasFiscais: React.FC = () => {
           id: '1',
           empresaNome: 'Tech Solutions LTDA',
           cnpj: '12.345.678/0001-90',
-          valor: 299.90,
+          valor: 29.90,
           status: 'ativa',
           dataInicio: '2024-01-15',
           proximoVencimento: '2024-08-15',
@@ -104,7 +104,7 @@ const PaginaNotasFiscais: React.FC = () => {
           id: '2',
           empresaNome: 'Inovação Corp',
           cnpj: '98.765.432/0001-10',
-          valor: 499.90,
+          valor: 29.90,
           status: 'ativa',
           dataInicio: '2024-02-01',
           proximoVencimento: '2024-09-01',
