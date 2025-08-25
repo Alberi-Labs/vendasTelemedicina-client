@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Button, Card } from "react-bootstrap";
+import { Card } from "react-bootstrap";
 import { useAuth } from "@/app/context/AuthContext";
 
 const beneficiosPerdidos = [
@@ -12,31 +13,21 @@ const beneficiosPerdidos = [
 
 const PaginaCancelamento: React.FC = () => {
     const [isMounted, setIsMounted] = useState(false);
-    const { user } = useAuth();  // Aqui pegamos o usuário diretamente do contexto
-
+    const { user } = useAuth();
+    console.log("Dados do usuário:", user);
     useEffect(() => {
         setIsMounted(true);
     }, []);
 
-    if (!isMounted || !user) return null;  // Espera o usuário estar carregado
+    if (!isMounted || !user) return null;
 
-    const handleCancelamento = () => {
-        alert("❌ Benefícios cancelados com sucesso!");
-    };
+    // Normaliza o nome da instituição para facilitar a comparação
+    console.log("Nome da instituição:", user.dsc_instituicao);
+    const nomeInstituicao = (user.dsc_instituicao || "").normalize("NFD").replace(/[^a-zA-Z\s]/g, "").toLowerCase();
+    const isVita = nomeInstituicao.includes("vita");
+    const whatsappLink = isVita ? "https://wa.me/5565996187600" : "https://wa.me/556196363963";
+    const whatsappNumber = isVita ? "(65) 99618-7600" : "(61) 9636-3963";
 
-      
-  const formatarDataNascimento = (data: string | undefined): string => {
-    if (!data) return "—";
-  
-    if (data.includes("/")) return data;
-  
-    if (data.includes("-")) {
-      const [ano, mes, dia] = data.split("-");
-      return `${dia}/${mes}/${ano}`;
-    }
-  
-    return "Formato inválido";
-  };
     return (
         <div className="container py-5">
             <motion.h1
@@ -58,15 +49,8 @@ const PaginaCancelamento: React.FC = () => {
                     <Card className="shadow border-0">
                         <Card.Body>
                             <p className="text-muted">
-                                Ao prosseguir com o cancelamento, os seguintes benefícios serão encerrados imediatamente. Confira os dados abaixo e, caso esteja tudo certo, confirme sua decisão com responsabilidade.
+                                Para cancelar seus benefícios, você precisa entrar em contato conosco através do WhatsApp. Os seguintes benefícios serão cancelados:
                             </p>
-
-                            <h5 className="fw-semibold mt-4">👤 Seus Dados</h5>
-                            <ul className="list-unstyled">
-                                <li><strong>Nome:</strong> {user.nome}</li>
-                                <li><strong>CPF:</strong> {user.cpf}</li>
-                                <li><strong>Data de Nascimento:</strong> {formatarDataNascimento(user.dt_nascimento)}</li>
-                            </ul>
 
                             <h5 className="fw-semibold mt-4">🚫 Benefícios que serão cancelados</h5>
                             <ul className="list-group list-group-flush">
@@ -78,15 +62,18 @@ const PaginaCancelamento: React.FC = () => {
                                 ))}
                             </ul>
 
-                            <div className="text-center mt-4">
-                                <Button
-                                    variant="danger"
-                                    size="lg"
-                                    className="px-4 py-2 rounded-3"
-                                    onClick={handleCancelamento}
+                            <div className="alert alert-info mt-4">
+                                <h6 className="fw-semibold mb-2">📱 Para cancelar seus benefícios:</h6>
+                                <p className="mb-2">Entre em contato conosco pelo WhatsApp:</p>
+                                <a 
+                                    href={whatsappLink}
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="btn btn-success btn-lg d-flex align-items-center justify-content-center gap-2"
                                 >
-                                    Confirmar Cancelamento
-                                </Button>
+                                    <i className="bi bi-whatsapp"></i>
+                                    {whatsappNumber}
+                                </a>
                             </div>
                         </Card.Body>
                     </Card>

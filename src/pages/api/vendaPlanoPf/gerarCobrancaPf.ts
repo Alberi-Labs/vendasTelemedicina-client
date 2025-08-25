@@ -2,8 +2,10 @@ import pool from "@/lib/db";
 import { NextApiRequest, NextApiResponse } from "next";
 
 // Configurações do Asaas
-const ASAAS_API_KEY = '$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjU0MTEzNzljLTE4M2ItNDIxMC05Nzg5LWIzM2RkZGM0OTVlMDo6JGFhY2hfYTljOTBkNTctZjc5Yi00YzAxLWEyZmItNmU0YjBlOTFhNTkw';
-const ASAAS_BASE_URL = 'https://sandbox.asaas.com/api/v3';
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY ? `$${process.env.ASAAS_API_KEY}` : undefined;
+const ASAAS_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://api.asaas.com/v3' 
+  : 'https://sandbox.asaas.com/api/v3';
 
 interface DadosCobrancaPf {
   clienteId: number;

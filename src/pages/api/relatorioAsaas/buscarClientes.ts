@@ -1,7 +1,7 @@
 // pages/api/asaas/listarTodosClientes.ts
 import { NextApiRequest, NextApiResponse } from "next";
 
-const ASAAS_API_KEY = process.env.ASAAS_API_KEY || "";
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "GET") {
@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 method: 'GET',
                 headers: {
                     accept: 'application/json',
-                    access_token: ASAAS_API_KEY
+                    access_token: `${ASAAS_API_KEY}`
                 }
             });
 

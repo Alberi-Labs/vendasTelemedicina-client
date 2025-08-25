@@ -1,7 +1,6 @@
 import pool from "@/lib/db";
 import { NextApiRequest, NextApiResponse } from "next";
 import puppeteer from "puppeteer";
-import bcrypt from "bcrypt";
 import { useAuth } from "@/app/context/AuthContext";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -56,12 +55,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         await page.waitForSelector('a.nav-link', { visible: true });
+
         await page.evaluate(() => {
             const clienteLink = Array.from(document.querySelectorAll('a.nav-link')).find(
                 (el) => el.textContent?.trim() === "Cliente"
             );
             if (clienteLink) (clienteLink as HTMLElement).click();
         });
+
+        
 
         await page.waitForSelector("#btn_voltar", { visible: true });
         await new Promise((resolve) => setTimeout(resolve, 1000));

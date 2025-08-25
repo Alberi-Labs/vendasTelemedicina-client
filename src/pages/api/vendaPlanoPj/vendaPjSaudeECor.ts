@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 // Configurações do Asaas
-const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY ? `$${process.env.ASAAS_API_KEY}` : undefined;
 const ASAAS_BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://api.asaas.com/v3' 
   : 'https://sandbox.asaas.com/api/v3';

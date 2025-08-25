@@ -1,7 +1,7 @@
 // pages/api/asaas/todasCobrancasPorCliente.ts
 import { NextApiRequest, NextApiResponse } from "next";
 
-const ASAAS_API_KEY = process.env.ASAAS_API_KEY || "";
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY ? `$${process.env.ASAAS_API_KEY}` : undefined;
 
 async function getAllCustomers() {
     const allCustomers: any[] = [];
