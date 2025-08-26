@@ -120,7 +120,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await page.click('button[onclick="getCliente();"]');
 
     console.log("🔸 Selecionando cliente da tabela...");
-    // Verifica se existe cliente na tabela
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
     const nenhumRegistro = await page.evaluate(() => {
       const table = document.querySelector('.table tbody');
       if (!table) return false;
@@ -128,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (nenhumRegistro) {
-      // Clica no botão Novo cliente
+      console.log('Clicando em novo cliente');
       await page.waitForSelector('#btn_novo_cliente', { visible: true });
       await page.click('#btn_novo_cliente');
       console.log('Cliquei em Novo cliente porque não havia registro!');
@@ -137,7 +138,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await page.waitForSelector('#formulario', { visible: true });
 
       // Preenche os campos do formulário
-      await page.select('#seq_instituicao', dados.instituicao);
+      console.log("🔸 Selecionando instituição no formulário...");
+      await page.evaluate((instituicao) => {
+        const options = Array.from(document.querySelectorAll('#seq_instituicao option'));
+        const optionToSelect = options.find(option => option.textContent?.trim() === instituicao);
+        if (optionToSelect) {
+          (optionToSelect as HTMLOptionElement).selected = true;
+          const selectElement = document.querySelector('#seq_instituicao');
+          if (selectElement) {
+            selectElement.dispatchEvent(new Event('change'));
+          }
+        } else {
+          console.error(`Instituição "${instituicao}" não encontrada no formulário.`);
+        }
+      }, dados.instituicao);
+      
       await page.type('#nom_cliente', dados.nomeCliente);
       await page.type('#dsc_email', dados.email);
       await page.type('#num_cpf', dados.cpf);
@@ -147,11 +162,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await page.type('#dsc_endereco', dados.endereco);
       await page.select('#ind_sexo', dados.sexo);
       await page.select('#ind_uf', dados.uf);
-      // Aguarda cidades carregarem se necessário
-      if (dados.cidade) {
-        await page.waitForSelector('#ind_cidade', { visible: true });
-        await page.select('#ind_cidade', dados.cidade);
-      }
+      
+      // Aguarda cidades carregarem e seleciona sempre BRASÍLIA
+      console.log("🔸 Selecionando BRASÍLIA como cidade...");
+      await page.waitForSelector('#ind_cidade', { visible: true });
+      await page.select('#ind_cidade', '743'); // BRASÍLIA
+      console.log("✅ BRASÍLIA selecionada como cidade.");
+      
       // Marca o checkbox de ativo se não estiver marcado
       await page.evaluate(() => {
         const checkbox = document.querySelector('#flg_ativo') as HTMLInputElement;
@@ -163,34 +180,112 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       await page.waitForSelector('.table .btn-primary', { visible: true });
       await page.click('.table .btn-primary');
+      console.log('Cliente existente selecionado!');
     }
 
+    // A partir daqui o fluxo é igual para ambos os casos
     console.log("🔸 Clicando na isenção de pagamento (Sim)...");
     await page.waitForSelector('input[name="tip_venda"][value="S"]', { visible: true });
     await new Promise((resolve) => setTimeout(resolve, 1000));
     await page.click('input[name="tip_venda"][value="S"]');
     console.log("✅ Isenção de pagamento selecionada.");
 
-    console.log("🔸 Clicando no botão Proposta...");
-    await page.waitForSelector('#divBtnPropostaIsento .btn', { visible: true });
+    // Aguarda e clica no botão "Escolher Produto"
+    console.log("🔸 Clicando no botão 'Escolher Produto'...");
+    await page.waitForSelector('a[data-target="#modal-lg-prod"]', { visible: true });
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    await page.click('#divBtnPropostaIsento .btn');
-    console.log("✅ Botão Proposta clicado.");
+    await page.click('a[data-target="#modal-lg-prod"]');
+    console.log("✅ Botão 'Escolher Produto' clicado.");
 
-    console.log("🔸 Clicando no botão Close (X)...");
-    await page.waitForSelector('button.close[data-dismiss="modal"]', { visible: true });
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    await page.click('button.close[data-dismiss="modal"]');
-    console.log("✅ Botão Close (X) clicado.");
+    console.log("🔸 Clicando em 'Escolher Produto'...");
+    await page.waitForSelector('.timeline-footer .btn-warning', { visible: true });
+    const escolherProduto = await page.$('.timeline-footer .btn-warning');
+    if (escolherProduto) {
+      await page.evaluate((element) => (element as HTMLElement).click(), escolherProduto);
+      console.log("✅ Produto selecionado.");
+    } else {
+      console.error("❌ Botão para escolher produto não encontrado.");
+    }
 
-    console.log("🔸 Clicando no botão 'Próximo passo'...");
-    await page.waitForSelector('#divBtnProximoPasso a', { visible: true });
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    await page.click('#divBtnProximoPasso a');
-    console.log("✅ Botão 'Próximo passo' clicado.");
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    await browser.close();
-    console.log("✅ Cadastro no Saúde e Cor concluído com sucesso!");
+    console.log("🔸 Procurando e clicando no botão do 'Plano Telemedicina Básico'...");
+    const rows = await page.$$('#divHtmlProduto table tbody tr');
+    let produtoClicado = false;
+
+    for (const row of rows) {
+      const nomeColuna = await row.$eval('td:first-child', el => el.textContent?.trim());
+      if (nomeColuna === "Plano Telemedicina Básico") {
+        const botao = await row.$('button.btn-primary.btn-sm');
+        if (botao) {
+          const boundingBox = await botao.boundingBox();
+          if (boundingBox) {
+            await page.mouse.click(
+              boundingBox.x + boundingBox.width / 2,
+              boundingBox.y + boundingBox.height / 2
+            );
+            produtoClicado = true;
+            console.log("✅ Produto 'Plano Telemedicina Básico' vinculado com sucesso.");
+            break;
+          }
+        }
+      }
+    }
+
+    if (!produtoClicado) {
+      console.error("❌ Produto 'Plano Telemedicina Básico' não encontrado ou botão não clicável.");
+    }
+     await new Promise(resolve => setTimeout(resolve, 500));
+     console.log("🔸 Clicando no botão Proposta...");
+     await page.waitForSelector('#divBtnPropostaIsento a', { visible: true });
+     await new Promise((resolve) => setTimeout(resolve, 1000));
+     await page.click('#divBtnPropostaIsento a');
+     console.log("✅ Botão Proposta clicado.");
+
+    // await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // console.log("🔸 Esperando o modal abrir...");
+    // await page.waitForSelector('.modal.show, .modal.in', { visible: true });
+
+    // // seleciona o modal visível
+    // const modalHandle = await page.$('.modal.show, .modal.in');
+
+    // // clica no botão close *dentro* do modal
+    // console.log("🔸 Clicando no botão Close (X) dentro do modal...");
+    // if (modalHandle) {
+    //   await modalHandle.$eval('button.close[aria-label="Close"]', btn => btn.click());
+    // } else {
+    //   console.error("❌ Modal não encontrado para fechar.");
+    // }
+
+    // // espera o modal sumir
+    // await page.waitForSelector('.modal.show, .modal.in', { hidden: true });
+    // console.log("✅ Modal fechado.");
+    // await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // console.log("🔸 Clicando no botão 'Próximo passo'...");
+    // await page.waitForSelector('#divBtnProximoPasso a', { visible: true });
+    // await new Promise((resolve) => setTimeout(resolve, 1000));
+    // await page.click('#divBtnProximoPasso a');
+    // console.log("✅ Botão 'Próximo passo' clicado.");
+
+    // console.log("🔸 Procurando botão 'Enviar proposta'...");
+
+    // const selector = '.timeline-footer a.btn.bg-purple[data-toggle="modal"][data-target="#modal-lg-contr"]';
+    // await page.waitForSelector(selector, { visible: true, timeout: 10000 });
+
+    // const btn = await page.$(selector);
+    // if (!btn) throw new Error("Botão 'Enviar proposta' não encontrado.");
+
+    // await page.evaluate((el) => {
+    //   el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+    // }, btn);
+
+    // await page.evaluate((el) => el.click(), btn);
+
+    console.log("🔸 Esperando modal de retorno da proposta...");
+    await page.waitForSelector('#modal-lg-contr.show, #modal-lg-contr.in', { visible: true });
+    console.log("✅ Modal de retorno da proposta aberto.");
 
     return res.status(200).json({
       success: true,
