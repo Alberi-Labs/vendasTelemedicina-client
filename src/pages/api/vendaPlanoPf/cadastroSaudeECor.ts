@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log("🔸 Iniciando automação com Puppeteer...");
     browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       slowMo: 10,
       args: [
         "--no-sandbox",
@@ -242,46 +242,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
      await page.click('#divBtnPropostaIsento a');
      console.log("✅ Botão Proposta clicado.");
 
-    // await new Promise((resolve) => setTimeout(resolve, 1000));
+     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // console.log("🔸 Esperando o modal abrir...");
-    // await page.waitForSelector('.modal.show, .modal.in', { visible: true });
+     console.log("🔸 Esperando o modal abrir...");
+     await page.waitForSelector('.modal.show, .modal.in', { visible: true });
 
     // // seleciona o modal visível
-    // const modalHandle = await page.$('.modal.show, .modal.in');
+     const modalHandle = await page.$('.modal.show, .modal.in');
 
     // // clica no botão close *dentro* do modal
-    // console.log("🔸 Clicando no botão Close (X) dentro do modal...");
-    // if (modalHandle) {
-    //   await modalHandle.$eval('button.close[aria-label="Close"]', btn => btn.click());
-    // } else {
-    //   console.error("❌ Modal não encontrado para fechar.");
-    // }
+     console.log("🔸 Clicando no botão Close (X) dentro do modal...");
+     if (modalHandle) {
+       await modalHandle.$eval('button.close[aria-label="Close"]', btn => btn.click());
+     } else {
+       console.error("❌ Modal não encontrado para fechar.");
+     }
 
     // // espera o modal sumir
-    // await page.waitForSelector('.modal.show, .modal.in', { hidden: true });
-    // console.log("✅ Modal fechado.");
-    // await new Promise((resolve) => setTimeout(resolve, 2000));
+     await page.waitForSelector('.modal.show, .modal.in', { hidden: true });
+     console.log("✅ Modal fechado.");
+     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // console.log("🔸 Clicando no botão 'Próximo passo'...");
-    // await page.waitForSelector('#divBtnProximoPasso a', { visible: true });
-    // await new Promise((resolve) => setTimeout(resolve, 1000));
-    // await page.click('#divBtnProximoPasso a');
-    // console.log("✅ Botão 'Próximo passo' clicado.");
+     console.log("🔸 Clicando no botão 'Próximo passo'...");
+     await page.waitForSelector('#divBtnProximoPasso a', { visible: true });
+     await page.click('#divBtnProximoPasso a');
+     console.log("✅ Botão 'Próximo passo' clicado.");
 
-    // console.log("🔸 Procurando botão 'Enviar proposta'...");
+     console.log("🔸 Procurando botão 'Enviar proposta'...");
+     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // const selector = '.timeline-footer a.btn.bg-purple[data-toggle="modal"][data-target="#modal-lg-contr"]';
-    // await page.waitForSelector(selector, { visible: true, timeout: 10000 });
+     const selector = '.timeline-footer a.btn.bg-purple[data-toggle="modal"][data-target="#modal-lg-contr"]';
+     await page.waitForSelector(selector, { visible: true, timeout: 10000 });
 
-    // const btn = await page.$(selector);
-    // if (!btn) throw new Error("Botão 'Enviar proposta' não encontrado.");
+     const btn = await page.$(selector);
+     if (!btn) throw new Error("Botão 'Enviar proposta' não encontrado.");
 
-    // await page.evaluate((el) => {
-    //   el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
-    // }, btn);
+     await page.evaluate((el) => {
+      el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+    }, btn);
 
-    // await page.evaluate((el) => el.click(), btn);
+     await page.evaluate((el) => el.click(), btn);
 
     console.log("🔸 Esperando modal de retorno da proposta...");
     await page.waitForSelector('#modal-lg-contr.show, #modal-lg-contr.in', { visible: true });
