@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log("🔸 Iniciando automação com Puppeteer...");
     browser = await puppeteer.launch({
-      headless: true,
+      headless: false,
       slowMo: 10,
       args: [
         "--no-sandbox",

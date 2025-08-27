@@ -34,15 +34,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+
     const valorPlano = dados.valorPlano || 29.90; // Valor padrão do plano PF
     console.log(`💰 Gerando cobrança de R$ ${valorPlano} para o cliente ${dados.nomeCliente}`);
 
     // Criar assinatura no Asaas
     console.log("🔸 Criando assinatura no Asaas...");
-    let paymentLink = '';
+  let paymentLink = '';
+  let paymentId = '';
+  let subscriptionId = '';
 
     try {
-      paymentLink = await criarAssinaturaAsaas({
+      // Função modificada para retornar também o id do primeiro pagamento
+      const assinaturaResult = await criarAssinaturaAsaasComId({
         cpf: dados.cpf,
         nomeCliente: dados.nomeCliente,
         email: dados.email,
@@ -50,15 +54,58 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         formaPagamento: dados.formaDePagamento,
         descricao: `Plano Telemedicina Básico PF - ${dados.nomeCliente}`
       });
-      
-      console.log('✅ Assinatura criada no Asaas:', paymentLink);
-      
+      paymentLink = assinaturaResult.paymentLink;
+      paymentId = assinaturaResult.paymentId;
+      subscriptionId = assinaturaResult.subscriptionId;
+      console.log('✅ Assinatura criada no Asaas:', paymentLink, paymentId, subscriptionId);
     } catch (paymentError) {
       console.error('Erro ao criar assinatura no Asaas:', paymentError);
       return res.status(500).json({ 
         error: 'Erro ao criar assinatura no Asaas',
         details: paymentError instanceof Error ? paymentError.message : 'Erro desconhecido'
       });
+    }
+
+    // Configuração automática da nota fiscal
+    if (subscriptionId) {
+      try {
+        const notaFiscalConfig = {
+          municipalServiceId: "17.23",
+          municipalServiceCode: "8299799",
+          municipalServiceName: "Prestação de serviço",
+          updatePayment: false,
+          deductions: 0.00,
+          effectiveDatePeriod: "ON_PAYMENT_CONFIRMATION",
+          receivedOnly: true,
+          daysBeforeDueDate: 0
+        };
+        // Usar o endpoint correto para configurar nota fiscal da assinatura
+        const notaResponse = await fetch(`${ASAAS_BASE_URL}/subscriptions/${subscriptionId}/invoiceSettings`, {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'content-type': 'application/json',
+            'access_token': ASAAS_API_KEY
+          },
+          body: JSON.stringify(notaFiscalConfig)
+        });
+        const responseText = await notaResponse.text();
+        let notaData;
+        try {
+          notaData = JSON.parse(responseText);
+        } catch (jsonErr) {
+          console.error('Resposta inesperada da API de nota fiscal:', responseText);
+          throw new Error('Resposta inesperada da API de nota fiscal.');
+        }
+        if (!notaResponse.ok) {
+          console.error('Erro ao configurar nota fiscal:', notaData);
+          throw new Error('Erro ao configurar nota fiscal automaticamente');
+        }
+        console.log('✅ Nota fiscal configurada automaticamente:', notaData);
+      } catch (notaError) {
+        console.error('Erro ao configurar nota fiscal:', notaError);
+        return res.status(500).json({ error: 'Erro ao configurar nota fiscal', details: notaError instanceof Error ? notaError.message : 'Erro desconhecido' });
+      }
     }
 
     // Registrar venda na tabela telemedicina
@@ -108,6 +155,99 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 // Funções auxiliares para integração com Asaas
+
+// Função para criar assinatura e retornar link, id do primeiro pagamento e id da assinatura
+async function criarAssinaturaAsaasComId(dados: DadosAssinaturaAsaas): Promise<{ paymentLink: string, paymentId: string, subscriptionId: string }> {
+  if (!ASAAS_API_KEY) {
+    throw new Error('ASAAS_API_KEY não configurada');
+  }
+
+  try {
+    // Buscar ou criar cliente
+    const customerId = await buscarOuCriarClienteAsaas(dados.cpf, dados.nomeCliente, dados.email);
+
+    // Mapear forma de pagamento
+    const billingTypeMap: { [key: string]: string } = {
+      'cartao': 'CREDIT_CARD',
+      'pix': 'PIX',
+      'boleto': 'BOLETO'
+    };
+
+    const billingType = billingTypeMap[dados.formaPagamento] || 'BOLETO';
+
+    // Calcular datas: primeira cobrança dia 10 do próximo mês, demais sempre dia 15
+    const now = new Date();
+    let firstDueDate = new Date(now.getFullYear(), now.getMonth() + 1, 10);
+    if (now.getDate() >= 10) {
+      firstDueDate = new Date(now.getFullYear(), now.getMonth() + 2, 10);
+    }
+    const firstDueDateString = firstDueDate.toISOString().split('T')[0];
+    // Próximas cobranças sempre dia 15
+    const recurringDueDate = 15;
+
+    // Criar assinatura
+    const subscriptionResponse = await fetch(`${ASAAS_BASE_URL}/subscriptions`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'access_token': ASAAS_API_KEY
+      },
+      body: JSON.stringify({
+        customer: customerId,
+        billingType: billingType,
+        nextDueDate: firstDueDateString,
+        value: dados.valorTotal,
+        cycle: 'MONTHLY',
+        description: 'Assinatura de Beneficios Saude e Cor',
+        externalReference: `ASSINATURA_PF_${Date.now()}`,
+        // endDate removido para assinatura sem limite
+        fine: { value: 2.00, type: 'PERCENTAGE' },
+        interest: { value: 1.00, type: 'PERCENTAGE' },
+        splitNextDueDate: true,
+        dueDate: recurringDueDate,
+        ...(billingType === 'CREDIT_CARD' && { creditCard: { automaticRoutingEnabled: true } })
+      })
+    });
+
+    const subscriptionData = await subscriptionResponse.json();
+
+    if (!subscriptionResponse.ok) {
+      console.error('❌ Erro na resposta da assinatura:', subscriptionData);
+      throw new Error(`Erro ao criar assinatura: ${JSON.stringify(subscriptionData)}`);
+    }
+
+    // Buscar o primeiro pagamento gerado para a assinatura
+    let paymentId = '';
+    let paymentUrl = '';
+    try {
+      const paymentsResponse = await fetch(`${ASAAS_BASE_URL}/payments?subscription=${subscriptionData.id}&limit=1`, {
+        method: 'GET',
+        headers: {
+          'accept': 'application/json',
+          'access_token': ASAAS_API_KEY
+        }
+      });
+      if (paymentsResponse.ok) {
+        const paymentsData = await paymentsResponse.json();
+        if (paymentsData.data && paymentsData.data.length > 0) {
+          const firstPayment = paymentsData.data[0];
+          paymentId = firstPayment.id;
+          paymentUrl = firstPayment.invoiceUrl || `${ASAAS_BASE_URL.replace('/v3', '')}/i/${firstPayment.id}`;
+        }
+      }
+    } catch (searchError) {
+      console.warn('Aviso: Erro ao buscar cobranças da assinatura:', searchError);
+    }
+    if (!paymentId) {
+      throw new Error('Não foi possível obter o id do pagamento recorrente.');
+    }
+    return { paymentLink: paymentUrl, paymentId, subscriptionId: subscriptionData.id };
+  } catch (error) {
+    console.error('Erro ao criar assinatura no Asaas:', error);
+    throw error;
+  }
+}
 
 interface DadosAssinaturaAsaas {
   cpf: string;
