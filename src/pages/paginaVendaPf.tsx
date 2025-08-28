@@ -23,6 +23,7 @@ export default function CadastroPf() {
         cep: "",
         endereco: "",
         casa: "",
+        bairro: "",
         sexo: "",
         uf: "",
         cidade: "",
@@ -64,6 +65,7 @@ export default function CadastroPf() {
                         setFormData((prev) => ({
                             ...prev,
                             endereco: data.logradouro,
+                            bairro: data.bairro,
                             uf: data.uf,
                             cidade: data.localidade,
                         }));
@@ -74,7 +76,7 @@ export default function CadastroPf() {
                 })
                 .catch(() => setErros((prev) => ({ ...prev, cep: "Erro ao buscar CEP" })));
         } else {
-            setFormData((prev) => ({ ...prev, endereco: "", uf: "", cidade: "" }));
+            setFormData((prev) => ({ ...prev, endereco: "", bairro: "", uf: "", cidade: "" }));
         }
     }, [formData.cep]);
 
@@ -148,7 +150,6 @@ export default function CadastroPf() {
                 };
 
                 // ETAPA 1: Cadastrar no sistema Saúde e Cor
-                console.log('🔸 Iniciando cadastro no sistema Saúde e Cor...');
                 const responseSaudeECor = await fetch('/api/vendaPlanoPf/cadastroSaudeECor', {
                     method: 'POST',
                     headers: {
@@ -163,10 +164,8 @@ export default function CadastroPf() {
                     throw new Error(dataSaudeECor.error || 'Erro no cadastro Saúde e Cor');
                 }
 
-                console.log('✅ Cadastro no Saúde e Cor concluído!');
 
                 // ETAPA 2: Cadastrar no banco de dados
-                console.log('🔸 Iniciando cadastro no banco de dados...');
                 const responseDB = await fetch('/api/vendaPlanoPf/cadastroClientePfDB', {
                     method: 'POST',
                     headers: {
@@ -181,10 +180,8 @@ export default function CadastroPf() {
                     throw new Error(dataDB.error || 'Erro no cadastro no banco');
                 }
 
-                console.log('✅ Cadastro no banco concluído! Cliente ID:', dataDB.clienteId);
 
                 // ETAPA 3: Gerar cobrança
-                console.log('🔸 Iniciando geração de cobrança...');
                 const responseCobranca = await fetch('/api/vendaPlanoPf/gerarCobrancaPf', {
                     method: 'POST',
                     headers: {
@@ -197,6 +194,11 @@ export default function CadastroPf() {
                         cpf: formData.cpf,
                         formaDePagamento: formData.formaPagamento,
                         idUsuario: user?.id,
+                        cep: formData.cep,
+                        endereco: formData.endereco,
+                        numero: formData.casa,
+                        bairro: formData.bairro,
+                        telefone: formData.celular,
                     }),
                 });
 
@@ -206,7 +208,6 @@ export default function CadastroPf() {
                     throw new Error(dataCobranca.error || 'Erro na geração de cobrança');
                 }
 
-                console.log('✅ Cobrança gerada com sucesso!');
 
                 if (dataCobranca.paymentLink) {
                     setPaymentLink(dataCobranca.paymentLink);

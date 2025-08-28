@@ -45,6 +45,7 @@ interface CrmVenda {
     situacao: string;
     observacoes: string;
     id_usuario: number;
+    nome_vendedor?: string;
     criado_em?: string;
 }
 
@@ -61,6 +62,7 @@ const situacoesDisponiveis = [
 export default function CrmVendas() {
     const { user } = useAuth();
     const [vendas, setVendas] = useState<CrmVenda[]>([]);
+    const [vendedores, setVendedores] = useState<{idUsuario: number, nome: string, perfil: string}[]>([]);
     const [loading, setLoading] = useState(false);
     const [openDialog, setOpenDialog] = useState(false);
     const [editingVenda, setEditingVenda] = useState<CrmVenda | null>(null);
@@ -84,14 +86,38 @@ export default function CrmVendas() {
         situacao: "",
         empresa: "",
         dataInicio: "",
-        dataFim: ""
+        dataFim: "",
+        vendedor: "todos"
     });
 
     useEffect(() => {
         if (user?.id) {
             carregarVendas();
+            // Carregar lista de vendedores apenas se for admin/gerente
+            if (user.role !== 'vendedor') {
+                carregarVendedores();
+            }
         }
     }, [user?.id]);
+
+    // Recarregar vendas quando o filtro de vendedor mudar
+    useEffect(() => {
+        if (user?.id && user.role !== 'vendedor') {
+            carregarVendas();
+        }
+    }, [filtros.vendedor]);
+
+    const carregarVendedores = async () => {
+        try {
+            const response = await fetch('/api/crmVendas/listarVendedores');
+            if (response.ok) {
+                const data = await response.json();
+                setVendedores(data.vendedores || []);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar vendedores:', error);
+        }
+    };
 
     const carregarVendas = async () => {
         setLoading(true);
@@ -102,7 +128,18 @@ export default function CrmVendas() {
                 return;
             }
 
-            const response = await fetch(`/api/crmVendas/consultar?id_usuario=${user.id}`);
+            // Construir a URL com os parâmetros necessários
+            const params = new URLSearchParams({
+                id_usuario: user.id.toString(),
+                perfil_usuario: user.role || 'vendedor'
+            });
+
+            // Adicionar filtro por vendedor se não for "todos" e o usuário não for vendedor
+            if (user.role !== 'vendedor' && filtros.vendedor !== 'todos') {
+                params.append('vendedor_filtro', filtros.vendedor);
+            }
+
+            const response = await fetch(`/api/crmVendas/consultar?${params.toString()}`);
             if (response.ok) {
                 const data = await response.json();
                 setVendas(data.vendas || []);
@@ -346,9 +383,17 @@ export default function CrmVendas() {
         <Container maxWidth="xl" sx={{ py: 9 }}>
             <Paper elevation={3} sx={{ p: 3 }}>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                    <Typography variant="h4" component="h1">
-                        CRM de Propostas
-                    </Typography>
+                    <Box>
+                        <Typography variant="h4" component="h1">
+                            CRM de Propostas
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            {user?.role === 'vendedor' 
+                                ? `Visualizando apenas suas propostas (${user.nome})` 
+                                : 'Visualizando todas as propostas do sistema'
+                            }
+                        </Typography>
+                    </Box>
                     <Button
                         variant="contained"
                         onClick={() => {
@@ -391,6 +436,26 @@ export default function CrmVendas() {
                                 onChange={(e) => setFiltros({...filtros, empresa: e.target.value})}
                             />
                         </Grid>
+                        {/* Filtro por vendedor - apenas para admins */}
+                        {user?.role !== 'vendedor' && (
+                            <Grid item xs={12} sm={6} md={3}>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>Vendedor</InputLabel>
+                                    <Select
+                                        value={filtros.vendedor}
+                                        label="Vendedor"
+                                        onChange={(e) => setFiltros({...filtros, vendedor: e.target.value})}
+                                    >
+                                        <MenuItem value="todos">Todos os Vendedores</MenuItem>
+                                        {vendedores.map((vendedor) => (
+                                            <MenuItem key={vendedor.idUsuario} value={vendedor.idUsuario.toString()}>
+                                                {vendedor.nome} ({vendedor.perfil})
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                        )}
                         <Grid item xs={12} sm={6} md={3}>
                             <TextField
                                 fullWidth
@@ -472,6 +537,14 @@ export default function CrmVendas() {
                                             <i className="bi bi-people-fill" style={{ marginRight: 8, color: '#666', fontSize: 16 }}></i>
                                             <Typography variant="body2" color="text.secondary">
                                                 {venda.numero_funcionarios} funcionários
+                                            </Typography>
+                                        </Box>
+
+                                        {/* Nome do Vendedor Responsável */}
+                                        <Box display="flex" alignItems="center" mb={2}>
+                                            <i className="bi bi-person-badge" style={{ marginRight: 8, color: '#1976d2', fontSize: 16 }}></i>
+                                            <Typography variant="body2" color="primary" sx={{ fontWeight: 'bold' }}>
+                                                Vendedor: {venda.nome_vendedor || 'Não informado'}
                                             </Typography>
                                         </Box>
 

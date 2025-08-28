@@ -7,19 +7,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const { id_usuario } = req.query;
+        const { id_usuario, perfil_usuario, vendedor_filtro } = req.query;
+        
         let query = `
-            SELECT id, empresa, local, data, horario, contatos, numero_funcionarios, descricao, situacao, observacoes, id_usuario, criado_em 
-            FROM tb_crm_vendas
+            SELECT 
+                crm.id, 
+                crm.empresa, 
+                crm.local, 
+                crm.data, 
+                crm.horario, 
+                crm.contatos, 
+                crm.numero_funcionarios, 
+                crm.descricao, 
+                crm.situacao, 
+                crm.observacoes, 
+                crm.id_usuario, 
+                crm.criado_em,
+                u.nome as nome_vendedor
+            FROM tb_crm_vendas crm
+            LEFT JOIN tb_usuarios u ON crm.id_usuario = u.idUsuario
         `;
         let params: any[] = [];
+        let whereConditions: string[] = [];
 
-        if (id_usuario) {
-            query += " WHERE id_usuario = ?";
+        // Se for vendedor, mostrar apenas os CRMs dele
+        if (perfil_usuario === 'vendedor' && id_usuario) {
+            whereConditions.push("crm.id_usuario = ?");
             params.push(id_usuario);
         }
+        // Se for admin/gerente e tiver filtro por vendedor específico
+        else if (vendedor_filtro && vendedor_filtro !== 'todos') {
+            whereConditions.push("crm.id_usuario = ?");
+            params.push(vendedor_filtro);
+        }
 
-        query += " ORDER BY criado_em DESC";
+        // Adicionar WHERE se houver condições
+        if (whereConditions.length > 0) {
+            query += " WHERE " + whereConditions.join(" AND ");
+        }
+
+        query += " ORDER BY crm.criado_em DESC";
 
         const [rows]: any = await pool.query(query, params);
 
