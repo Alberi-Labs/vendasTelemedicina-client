@@ -1,7 +1,7 @@
 // pages/api/asaas/todasCobrancasPorCliente.ts
 import { NextApiRequest, NextApiResponse } from "next";
 
-const ASAAS_API_KEY = process.env.ASAAS_API_KEY ? `$${process.env.ASAAS_API_KEY}` : undefined;
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY ?? "";
 
 async function getAllCustomers() {
     const allCustomers: any[] = [];
@@ -12,8 +12,8 @@ async function getAllCustomers() {
     while (hasMore) {
         const response = await fetch(`https://api.asaas.com/v3/customers?limit=${limit}&offset=${offset}`, {
             headers: {
-                accept: 'application/json',
-                access_token: ASAAS_API_KEY
+                'accept': 'application/json',
+                'access_token': ASAAS_API_KEY
             }
         });
 
@@ -37,8 +37,8 @@ async function getPaymentsByCustomer(customerId: string): Promise<any[]> {
     while (hasMore) {
         const response = await fetch(`https://api.asaas.com/v3/payments?customer=${customerId}&limit=${limit}&offset=${offset}`, {
             headers: {
-                accept: 'application/json',
-                access_token: ASAAS_API_KEY
+                'accept': 'application/json',
+                'access_token': ASAAS_API_KEY
             }
         });
 
