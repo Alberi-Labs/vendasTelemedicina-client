@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       slowMo: 8,
       args: [
         "--no-sandbox",
