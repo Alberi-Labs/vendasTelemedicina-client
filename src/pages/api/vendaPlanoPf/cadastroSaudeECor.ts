@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     browser = await puppeteer.launch({
-      headless: true,
+      headless: false,
       slowMo: 8,
       args: [
         "--no-sandbox",
@@ -192,15 +192,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await page.click('a[data-target="#modal-lg-prod"]');
     //aqiuio
 
-    // await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    // await page.waitForSelector('.timeline-footer .btn-warning', { visible: true });
-    // const escolherProduto = await page.$('.timeline-footer .btn-warning');
-    // if (escolherProduto) {
-    //   await page.evaluate((element) => (element as HTMLElement).click(), escolherProduto);
-    // } else {
-    //   console.error("❌ Botão para escolher produto não encontrado.");
-    // }
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -209,7 +200,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const optionToSelect = options.find(option => option.textContent?.trim() === instituicao);
       if (optionToSelect) {
         (optionToSelect as HTMLOptionElement).selected = true;
-        const selectElement = document.querySelector('#seq_instituicao');
+        const selectElement = document.querySelector('select#seq_instituicao');
+        console.log("elemento selecionado", selectElement);
         if (selectElement) {
           selectElement.dispatchEvent(new Event('change'));
         }
