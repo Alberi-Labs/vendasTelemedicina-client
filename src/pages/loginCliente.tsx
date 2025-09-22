@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { useAuth, User } from "@/app/context/AuthContext";
+import { clientesApi } from "@/lib/api-client";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 import Loading from "@/components/loading/loading";
 
@@ -59,8 +60,6 @@ export default function LoginCliente() {
     setLoading(true);
     setError("");
 
-    const rota = "/api/clienteSaudeecor/buscarDados";
-
     const formatarCpf = (cpf: string) => {
       return cpf.replace(/\D/g, "")
         .replace(/(\d{3})(\d)/, "$1.$2")
@@ -70,20 +69,12 @@ export default function LoginCliente() {
 
     const cpfFormatado = formatarCpf(cpf);
     const senhaFormatada = formatarData(dataNascimento); // apenas visual
-    const payload = { cpf: cpfFormatado, dataNascimento };
+  const payload = { cpf: cpfFormatado, dataNascimento };
 
     try {
-      const res = await fetch(rota, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        const erroMensagem = data?.message || data?.error || "Erro inesperado.";
-        throw new Error(erroMensagem);
-      }
+  // Nova API do backend
+  const resp = await clientesApi.buscarDadosSaudeECor(payload.cpf);
+  const data = resp?.data ?? resp;
 
       // Verifica se a resposta é um array (CNPJ) ou objeto (CPF)
       const clienteRaw = Array.isArray(data)
@@ -164,110 +155,99 @@ export default function LoginCliente() {
       className="d-flex justify-content-center align-items-center"
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #0f172a, #1e293b)",
-        padding: "1rem",
-
+        background: "#0f172a",
+        padding: "1rem"
       }}
     >
       <div
-        className="row shadow-lg rounded overflow-hidden w-100 mx-3 mx-md-0"
+        className="shadow p-4 p-md-5 w-100"
         style={{
-          maxWidth: "960px",
-          backgroundColor: "white",
-          borderRadius: "12px",
-          minHeight: "660px",
+          backgroundColor: "#ffffff",
+          borderRadius: "14px",
+          maxWidth: "480px",
+          width: "100%",
+          border: "1px solid #e2e8f0"
         }}
       >
-
-
-        {/* Lado da imagem */}
         <div
-          className="col-md-6 d-none d-md-block p-0"
           style={{
-            backgroundImage: `url('${imagemFundo}')`,
-            backgroundColor: currentDomain === "vitaclinica.saudeecor.com" ? "rgb(22, 22, 33)" : "white",
-            backgroundSize: "80%",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "center",
+            background: "linear-gradient(90deg,#2563eb,#3b82f6)",
+            height: 4,
+            borderRadius: 4,
+            marginBottom: 24
           }}
-        ></div>
-
-        {/* Lado do formulário */}
-        <div
-          className="col-md-6 p-5 d-flex flex-column justify-content-center"
-          style={{ minHeight: "100%" }}
+        />
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="btn btn-link text-primary text-decoration-none d-flex align-items-center gap-1 p-0 mb-3"
+          style={{ fontSize: ".85rem" }}
         >
+          <i className="bi bi-arrow-left"></i>
+          Voltar
+        </button>
+
+        {error && <AvisoAlerta mensagem={error} tipo="danger" />}
+
+        <div className="text-center mb-3">
+          <i className="bi bi-person-circle" style={{ fontSize: "2.2rem", color: "#2563eb" }}></i>
+        </div>
+        <h4 className="fw-bold text-center mb-2" style={{ fontSize: "1.4rem" }}>Área do Cliente</h4>
+        <p className="text-muted text-center mb-4" style={{ fontSize: ".85rem" }}>Informe seus dados para continuar.</p>
+
+        <form onSubmit={handleLogin} noValidate>
           <div className="mb-3">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="btn btn-link text-primary text-decoration-none d-flex align-items-center gap-1 p-0"
-            >
-              <i className="bi bi-arrow-left"></i>
-              Voltar
-            </button>
+            <label className="form-label small text-muted">CPF</label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Digite seu CPF"
+              value={cpf}
+              onChange={(e) => setCpf(e.target.value)}
+              required
+              aria-label="CPF"
+            />
           </div>
 
-          {error && <AvisoAlerta mensagem={error} tipo="danger" />}
-
-          <div className="text-center mb-3">
-            <i className="bi bi-person-circle" style={{ fontSize: "2rem", color: "#2563eb" }}></i>
+          <div className="mb-4">
+            <label className="form-label small text-muted">Data de Nascimento</label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="DD/MM/AAAA"
+              value={dataNascimento}
+              onChange={handleDataNascimentoChange}
+              required
+              maxLength={10}
+              aria-label="Data de nascimento"
+            />
           </div>
 
-          <h4 className="fw-bold text-center mb-2">Bem-vindo à área do cliente</h4>
-          <p className="text-muted text-center mb-4">Acesse sua conta para continuar.</p>
+          <button
+            type="submit"
+            className="btn w-100 d-flex justify-content-center align-items-center gap-2 text-white"
+            style={{
+              backgroundColor: "#8dc63f",
+              height: "46px",
+              fontWeight: 600,
+              borderRadius: "10px",
+              fontSize: ".95rem"
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#79b92f")}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#8dc63f")}
+            disabled={loading}
+          >
+            <i className="bi bi-box-arrow-in-right" />
+            {loading ? <Loading /> : "Entrar"}
+          </button>
+        </form>
 
-          <form onSubmit={handleLogin}>
-            <div className="mb-3">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Digite seu CPF"
-                value={cpf}
-                onChange={(e) => setCpf(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="mb-3">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="DD/MM/YYYY"
-                value={dataNascimento}
-                onChange={handleDataNascimentoChange}
-                required
-                maxLength={10}
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="btn w-100 d-flex justify-content-center align-items-center gap-2 text-white"
-              style={{
-                backgroundColor: "#8dc63f", // verde parecido
-                height: "45px",
-                fontWeight: 500,
-                borderRadius: "8px",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#79b92f")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#8dc63f")}
-              disabled={loading}
-            >
-              <i className="bi bi-box-arrow-in-right"></i>
-              {loading ? <Loading /> : "Entrar"}
-            </button>
-          </form>
-
-          <div className="text-center mt-4">
-            <a href="#" className="me-3 small text-primary text-decoration-none">
-              <i className="bi bi-question-circle me-1"></i>Precisa de ajuda?
-            </a>
-
-          </div>
+        <div className="text-center mt-4">
+          <a href="#" className="small text-primary text-decoration-none">
+            <i className="bi bi-question-circle me-1"></i>Precisa de ajuda?
+          </a>
         </div>
       </div>
     </div>
   );
-
 }

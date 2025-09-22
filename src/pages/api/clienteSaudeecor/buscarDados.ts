@@ -136,8 +136,9 @@ async function verificarOuCriarCliente(clienteData: any) {
         `INSERT INTO tb_clientes (
           nome, telefone, email, cpf, data_nascimento, 
           idClienteDependente, data_vinculo, creditos, senha, perfil, 
-          id_instituicao, cep, registro_geral, primeiro_acesso, contrato_assinado
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id_instituicao, cep, registro_geral, primeiro_acesso, contrato_assinado,
+          cadastroSulamerica
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           clienteData.nom_cliente,
           clienteData.num_celular,
@@ -153,7 +154,8 @@ async function verificarOuCriarCliente(clienteData: any) {
           null, // cep
           null, // registro_geral
           0, // primeiro_acesso = false (0)
-          0  // contrato_assinado = false (0)
+          0, // contrato_assinado = false (0)
+          0  // cadastroSulamerica = false (0)
         ]
       );
       

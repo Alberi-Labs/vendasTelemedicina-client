@@ -1,0 +1,676 @@
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+export const apiClient = {
+  async request(endpoint: string, options: RequestInit = {}) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    
+    const config: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    try {
+      const response = await fetch(url, config);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('API Request failed:', error);
+      throw error;
+    }
+  },
+
+  get(endpoint: string, options?: RequestInit) {
+    return this.request(endpoint, { method: 'GET', ...options });
+  },
+
+  post(endpoint: string, data: any, options?: RequestInit) {
+    return this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      ...options,
+    });
+  },
+
+  put(endpoint: string, data: any, options?: RequestInit) {
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      ...options,
+    });
+  },
+
+  delete(endpoint: string, options?: RequestInit) {
+    return this.request(endpoint, { method: 'DELETE', ...options });
+  },
+};
+
+// Funções específicas para cada módulo
+export const authApi = {
+  login: (cpf: string, password: string) =>
+    apiClient.post('/auth/login', { cpf, password }),
+};
+
+export const clientesApi = {
+  cadastrar: (clienteData: any) =>
+    apiClient.post('/clientes/cadastrar', clienteData),
+  
+  consultar: () =>
+    apiClient.get('/clientes/consultar'),
+
+  buscarDadosSaudeECor: (cpf: string) =>
+    apiClient.post('/clientes/buscar-dados-saudecor', { cpf }),
+  
+  editar: (id: number, clienteData: any) =>
+    apiClient.put(`/clientes/editar/${id}`, clienteData),
+  
+  deletar: (id: number) =>
+    apiClient.delete(`/clientes/deletar/${id}`),
+};
+
+export const vendaTelemedicinaApi = {
+  criar: (vendaData: any) =>
+    apiClient.post('/venda-telemedicina/criar', vendaData),
+  
+  consultar: (id?: number) =>
+    id ? apiClient.get(`/venda-telemedicina/consultar/${id}`) 
+      : apiClient.get('/venda-telemedicina/consultar'),
+  
+  deletar: (id: number) =>
+    apiClient.delete(`/venda-telemedicina/deletar/${id}`),
+};
+
+export const empresasApi = {
+  listar: (filtros?: { cnpj?: string; search?: string }) => {
+    const params = new URLSearchParams();
+    if (filtros?.cnpj) params.append('cnpj', filtros.cnpj);
+    if (filtros?.search) params.append('search', filtros.search);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/empresas/listar?${queryString}` : '/empresas/listar';
+    
+    return apiClient.get(endpoint);
+  },
+  
+  adicionar: (empresaData: any) =>
+    apiClient.post('/empresas/adicionar', empresaData),
+  
+  editar: (id: number, empresaData: any) =>
+    apiClient.put(`/empresas/editar/${id}`, empresaData),
+  
+  deletar: (id: number) =>
+    apiClient.delete(`/empresas/deletar/${id}`),
+};
+
+export const usuariosApi = {
+  buscar: (id?: number) =>
+    id ? apiClient.get(`/usuarios/buscar/${id}`) 
+      : apiClient.get('/usuarios/buscar'),
+  
+  cadastrar: (usuarioData: any) =>
+    apiClient.post('/usuarios/cadastrar', usuarioData),
+  
+  editar: (id: number, usuarioData: any) =>
+    apiClient.put(`/usuarios/editar/${id}`, usuarioData),
+  
+  deletar: (id: number) =>
+    apiClient.delete(`/usuarios/deletar/${id}`),
+};
+
+export const usuarioApi = {
+  buscarUsuario: (idUsuario?: number) => {
+    const params = new URLSearchParams();
+    if (idUsuario) params.append('idUsuario', idUsuario.toString());
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/usuario/buscarUsuario?${queryString}` : '/usuario/buscarUsuario';
+    
+    return apiClient.get(endpoint);
+  },
+
+  cadastrarClienteUsuario: (dadosUsuario: {
+    nome: string;
+    email?: string;
+    senha?: string;
+    telefone?: string;
+    role?: string;
+    cpf: string;
+    data_nascimento?: string;
+    id_instituicao?: number;
+    login_sistema?: string;
+    senha_sistema?: string;
+  }) =>
+    apiClient.post('/usuario/cadastrarClienteUsuario', dadosUsuario),
+
+  deletarUsuario: (idUsuario: number) => {
+    const params = new URLSearchParams({ idUsuario: idUsuario.toString() });
+    return apiClient.delete(`/usuario/deletarUsuario?${params.toString()}`);
+  },
+
+  editarUsuario: (dadosUsuario: {
+    id: number;
+    nome?: string;
+    email?: string;
+    telefone?: string;
+    perfil?: string;
+    imagem?: string;
+    cpf?: string;
+    data_nascimento?: string;
+    id_instituicao?: number;
+    login_sistema?: string;
+    senha_sistema?: string;
+  }) =>
+    apiClient.put('/usuario/editarUsuario', dadosUsuario),
+};
+
+export const apolicesApi = {
+  consultar: (cpf: string) => {
+    const params = new URLSearchParams({ cpf });
+    return apiClient.get(`/apolices/consultar?${params.toString()}`);
+  },
+  
+  inserir: (file: File, fields?: any) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    if (fields) {
+      Object.keys(fields).forEach(key => {
+        formData.append(key, fields[key]);
+      });
+    }
+    
+    return apiClient.request('/apolices/inserir', {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Remove Content-Type para que o browser configure automaticamente para FormData
+    });
+  },
+  
+  gerar: (dados: any) => {
+    return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/apolices/gerar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    });
+  },
+};
+
+export const arquivoApi = {
+  download: (dscEmpresa: string) => {
+    const params = new URLSearchParams({ dscEmpresa });
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/download?${params.toString()}`;
+    
+    // Retorna a URL para download direto ou para usar com fetch
+    return {
+      url,
+      fetch: () => fetch(url),
+    };
+  },
+  
+  listar: () =>
+    apiClient.get('/arquivo/listar'),
+  
+  verificar: (fileName: string) => {
+    const params = new URLSearchParams({ fileName });
+    return apiClient.get(`/arquivo/verificar?${params.toString()}`);
+  },
+};
+
+export const carteirinhaApi = {
+  gerar: (dados: {
+    nome: string;
+    cpf: string;
+    vigenciaInicio: string;
+    vigenciaFinal: string;
+    apolice: string;
+    operacao: string;
+    certificado: string;
+    empresa?: string;
+  }) => {
+    return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/carteirinha/gerar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    });
+  },
+  
+  gerarDependente: (dados: {
+    nome: string;
+    cpf: string;
+    empresa?: string;
+  }) => {
+    return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/carteirinha/gerar-dependente`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    });
+  },
+};
+
+export const notasFiscaisApi = {
+  consultarAsaas: (query: { assinaturaId: string }) => {
+    const params = new URLSearchParams(query);
+    return apiClient.get(`/notas-fiscais/consultar-asaas?${params.toString()}`);
+  },
+
+  consultarAssinaturas: (query: { offset?: number; limit?: number } = {}) => {
+    const params = new URLSearchParams(
+      Object.entries(query).map(([key, value]) => [key, value?.toString() || ''])
+    );
+    return apiClient.get(`/notas-fiscais/consultar-assinaturas?${params.toString()}`);
+  },
+
+  emitir: (data: {
+    empresaNome: string;
+    empresaEmail: string;
+    empresaTelefone: string;
+    empresaCnpj: string;
+    empresaEndereco: string;
+    clienteNome: string;
+    clienteEmail: string;
+    clienteCpfCnpj: string;
+    descricao: string;
+    valor: number;
+    observacoes?: string;
+    assinaturaId: string;
+    serie: string;
+  }) => {
+    return apiClient.post('/notas-fiscais/emitir', data);
+  },
+
+  listar: (query: { 
+    page?: number; 
+    limit?: number; 
+    status?: string; 
+    dataInicio?: string; 
+    dataFim?: string; 
+  } = {}) => {
+    const params = new URLSearchParams(
+      Object.entries(query).map(([key, value]) => [key, value?.toString() || ''])
+    );
+    return apiClient.get(`/notas-fiscais/listar?${params.toString()}`);
+  },
+
+  visualizar: (query: { notaFiscalId: string }) => {
+    const params = new URLSearchParams(query);
+    return apiClient.get(`/notas-fiscais/visualizar?${params.toString()}`);
+  },
+};
+
+export const cobrancaApi = {
+  consultar: (cpf?: string) => {
+    if (cpf) {
+      const params = new URLSearchParams({ cpf });
+      return apiClient.get(`/cobranca/consultar?${params.toString()}`);
+    }
+    return apiClient.get('/cobranca/consultar');
+  },
+
+  gerar: (dados: {
+    nome: string;
+    cpf: string;
+    email: string;
+    telefone?: string;
+    valor: number;
+    descricao: string;
+    dueDate?: string;
+    installmentCount?: number;
+    installmentValue?: number;
+    discount?: {
+      value?: number;
+      dueDateLimitDays?: number;
+      type?: string;
+    };
+    interest?: {
+      value?: number;
+    };
+    fine?: {
+      value?: number;
+    };
+    postalService?: boolean;
+  }) => {
+    return apiClient.post('/cobranca/gerar', dados);
+  },
+
+  atualizar: (id: string, dados: any) =>
+    apiClient.put(`/cobranca/atualizar/${id}`, dados),
+
+  deletar: (id: string) =>
+    apiClient.delete(`/cobranca/deletar/${id}`),
+
+  gerarPixQr: (dados: {
+    nome: string;
+    cpf: string;
+    email: string;
+    valor: number;
+    descricao: string;
+  }) => {
+    return apiClient.post('/cobranca/gerar-pix-qr', dados);
+  },
+};
+
+export const contratoApi = {
+  gerar: (dados: {
+    tipoContrato: string;
+    dadosCliente: any;
+    dadosEmpresa?: any;
+    configuracoes?: any;
+  }) => {
+    return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/contrato/gerar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    });
+  },
+
+  assinar: (contratoId: string, assinatura: {
+    nome: string;
+    cpf: string;
+    email: string;
+    data: string;
+  }) => {
+    return apiClient.post(`/contrato/assinar/${contratoId}`, assinatura);
+  },
+
+  verificar: (contratoId: string) =>
+    apiClient.get(`/contrato/verificar/${contratoId}`),
+
+  listar: (filtros?: { 
+    status?: string; 
+    dataInicio?: string; 
+    dataFim?: string; 
+    clienteCpf?: string;
+  }) => {
+    if (filtros && Object.keys(filtros).length > 0) {
+      const params = new URLSearchParams(
+        Object.entries(filtros).filter(([, value]) => value).map(([key, value]) => [key, value as string])
+      );
+      return apiClient.get(`/contrato/listar?${params.toString()}`);
+    }
+    return apiClient.get('/contrato/listar');
+  },
+};
+
+export const crmVendasApi = {
+  buscar: (usuarioId?: number) => {
+    if (usuarioId) {
+      const params = new URLSearchParams({ usuarioId: usuarioId.toString() });
+      return apiClient.get(`/crm-vendas/buscar?${params.toString()}`);
+    }
+    return apiClient.get('/crm-vendas/buscar');
+  },
+
+  criar: (dados: {
+    codigoUsuario: number;
+    nomeCliente: string;
+    cpfCliente: string;
+    emailCliente?: string;
+    telefoneCliente?: string;
+    statusVenda: string;
+    valorVenda?: number;
+    observacoes?: string;
+    dataContato?: string;
+  }) => {
+    return apiClient.post('/crm-vendas/criar', dados);
+  },
+
+  atualizar: (id: number, dados: any) =>
+    apiClient.put(`/crm-vendas/atualizar/${id}`, dados),
+
+  deletar: (id: number) =>
+    apiClient.delete(`/crm-vendas/deletar/${id}`),
+
+  relatorio: (filtros?: {
+    usuarioId?: number;
+    dataInicio?: string;
+    dataFim?: string;
+    status?: string;
+  }) => {
+    if (filtros && Object.keys(filtros).length > 0) {
+      const params = new URLSearchParams(
+        Object.entries(filtros).filter(([, value]) => value).map(([key, value]) => [key, value!.toString()])
+      );
+      return apiClient.get(`/crm-vendas/relatorio?${params.toString()}`);
+    }
+    return apiClient.get('/crm-vendas/relatorio');
+  },
+};
+
+export const dependenteApi = {
+  cadastrar: (dados: {
+    nomeDependente: string;
+    cpfDependente: string;
+    emailDependente?: string;
+    telefoneDependente?: string;
+    parentesco: string;
+    cpfTitular: string;
+  }) => {
+    return apiClient.post('/dependente/cadastrar', dados);
+  },
+
+  consultar: (cpfTitular?: string) => {
+    if (cpfTitular) {
+      const params = new URLSearchParams({ cpfTitular });
+      return apiClient.get(`/dependente/consultar?${params.toString()}`);
+    }
+    return apiClient.get('/dependente/consultar');
+  },
+
+  atualizar: (id: number, dados: any) =>
+    apiClient.put(`/dependente/atualizar/${id}`, dados),
+
+  deletar: (id: number) =>
+    apiClient.delete(`/dependente/deletar/${id}`),
+
+  sincronizar: (cpfTitular: string) => {
+    return apiClient.post('/dependente/sincronizar', { cpfTitular });
+  },
+};
+
+export const instituicoesApi = {
+  listar: (filtros?: { 
+    nome?: string; 
+    tipo?: string; 
+    ativo?: boolean;
+  }) => {
+    if (filtros && Object.keys(filtros).length > 0) {
+      const params = new URLSearchParams();
+      Object.entries(filtros).forEach(([key, value]) => {
+        if (value !== undefined) {
+          params.append(key, value.toString());
+        }
+      });
+      return apiClient.get(`/instituicoes/listar?${params.toString()}`);
+    }
+    return apiClient.get('/instituicoes/listar');
+  },
+
+  criar: (dados: {
+    nome: string;
+    tipo: string;
+    endereco?: string;
+    telefone?: string;
+    email?: string;
+    responsavel?: string;
+    ativo?: boolean;
+  }) => {
+    return apiClient.post('/instituicoes/criar', dados);
+  },
+
+  atualizar: (id: number, dados: any) =>
+    apiClient.put(`/instituicoes/atualizar/${id}`, dados),
+
+  deletar: (id: number) =>
+    apiClient.delete(`/instituicoes/deletar/${id}`),
+
+  upload: (file: File, instituicaoId: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('instituicaoId', instituicaoId.toString());
+    
+    return apiClient.request('/instituicoes/upload', {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Remove Content-Type para FormData
+    });
+  },
+};
+
+export const clienteSaudeeCorApi = {
+  consultar: (cpf: string) => {
+    const params = new URLSearchParams({ cpf });
+    return apiClient.get(`/cliente-saudeecor?${params.toString()}`);
+  },
+};
+
+export const relatorioAsaasApi = {
+  buscarClientes: () =>
+    apiClient.get('/relatorio-asaas/buscar-clientes'),
+
+  buscarCobrancas: () =>
+    apiClient.get('/relatorio-asaas/buscar-cobrancas'),
+
+  uploadArquivo: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return apiClient.request('/relatorio-asaas/upload-arquivo', {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Remove Content-Type para FormData
+    });
+  },
+
+  vincularCliente: (registros: Array<{
+    nom_cliente?: string;
+    nom_empresa?: string;
+    num_cpf?: string;
+    num_cnpj?: string;
+    dsc_email?: string;
+    num_celular?: string;
+    dsc_instituicao?: string;
+    quantidade_vidas?: string | number;
+  }>) => {
+    return apiClient.post('/relatorio-asaas/vincular-cliente', registros);
+  },
+};
+
+export const vendaConsultaApi = {
+  consultar: (id_cliente?: number) => {
+    const params = new URLSearchParams();
+    if (id_cliente) params.append('id_cliente', id_cliente.toString());
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/vendaConsulta/consultar?${queryString}` : '/vendaConsulta/consultar';
+    
+    return apiClient.get(endpoint);
+  },
+
+  criar: (novaVenda: {
+    id_cliente: number;
+    data: string;
+    valor: number;
+    forma_pagamento: string;
+    status_pagamento: string;
+    data_pagamento?: string | null;
+  }) =>
+    apiClient.post('/vendaConsulta/criar', novaVenda),
+
+  deletar: (idVenda: number) => {
+    const params = new URLSearchParams({ idVenda: idVenda.toString() });
+    return apiClient.delete(`/vendaConsulta/deletar?${params.toString()}`);
+  },
+};
+
+export const vendaPlanoPf = {
+  cadastroClientePf: (dados: any) =>
+    apiClient.post('/vendaPlanoPf/cadastroClientePf', dados),
+
+  cadastroClientePfDB: (dados: any) =>
+    apiClient.post('/vendaPlanoPf/cadastroClientePfDB', dados),
+
+  cadastroSaudeECor: (dados: any) =>
+    apiClient.post('/vendaPlanoPf/cadastroSaudeECor', dados),
+
+  gerarCobrancaPf: (dados: any) =>
+    apiClient.post('/vendaPlanoPf/gerarCobrancaPf', dados),
+
+  vendaClienteOnline: (dados: any) =>
+    apiClient.post('/vendaPlanoPf/vendaClienteOnlline', dados),
+
+  vendaClientePf: (dados: any) =>
+    apiClient.post('/vendaPlanoPf/vendaClientePf', dados),
+};
+
+// Venda Plano PJ (compatível com o padrão camelCase usado no backend)
+export const vendaPlanoPj = {
+  // Envia CSV (em base64) para upload de vidas no Saúde e Cor
+  subirVidaSaudeECor: (dados: {
+    instituicao: string;
+    login_sistema: string;
+    senha_sistema: string; // esperado criptografado conforme backend
+    arquivoBase64: string; // data URL ou base64 puro do CSV
+  }) => apiClient.post('/vendaPlanoPj/subirVidaSaudeECor', dados),
+
+  // Cria assinatura simples PJ (sem lista de funcionários)
+  vendaClientePj: (dados: {
+    nomeEmpresa: string;
+    cnpj: string;
+    formaPagamento: string; // PIX, CREDIT_CARD, BOLETO, etc.
+    valorPlano: string; // enviado como string no backend
+    idUsuario: string;
+  }) => apiClient.post('/vendaPlanoPj/vendaClientePj', dados),
+
+  // Processa venda PJ Saúde e Cor (com funcionários)
+  vendaPjSaudeECor: (dados: {
+    nomeEmpresa: string;
+    cnpj: string;
+    formaPagamento: string;
+    valorPlano: string;
+    idUsuario: string;
+    funcionarios: Array<{
+      nome: string;
+      cpf: string;
+      dataNascimento: string;
+      codigoPlano?: string;
+      uf: string;
+      sexo: string;
+    }>;
+  }) => apiClient.post('/vendaPlanoPj/vendaPjSaudeECor', dados),
+};
+
+// Alias compatível com as rotas camelCase do backend de venda telemedicina
+export const vendaTelemedicinaApiCompat = {
+  criarVenda: (vendaData: any) =>
+    apiClient.post('/vendaTelemedicina/criarVenda', vendaData),
+
+  criarPf: (vendaData: any) =>
+    apiClient.post('/vendaTelemedicina/criarPf', vendaData),
+
+  consultarVenda: (id_usuario?: number) => {
+    const params = new URLSearchParams();
+    if (id_usuario !== undefined) params.append('id_usuario', id_usuario.toString());
+    const qs = params.toString();
+    const endpoint = qs
+      ? `/vendaTelemedicina/consultarVenda?${qs}`
+      : '/vendaTelemedicina/consultarVenda';
+    return apiClient.get(endpoint);
+  },
+
+  deletarVenda: (idVenda: number) => {
+    const params = new URLSearchParams({ idVenda: idVenda.toString() });
+    return apiClient.delete(`/vendaTelemedicina/deletarVenda?${params.toString()}`);
+  },
+
+  deletarPf: (idVenda: number) => {
+    const params = new URLSearchParams({ idVenda: idVenda.toString() });
+    return apiClient.delete(`/vendaTelemedicina/deletarPf?${params.toString()}`);
+  },
+};

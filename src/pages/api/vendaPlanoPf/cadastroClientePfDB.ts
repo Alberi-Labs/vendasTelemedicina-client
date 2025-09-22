@@ -90,8 +90,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         INSERT INTO tb_clientes (
           nome, telefone, email, cpf, data_nascimento, 
           idClienteDependente, data_vinculo, creditos, senha, perfil, 
-          id_instituicao, cep, registro_geral, primeiro_acesso, contrato_assinado
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          id_instituicao, cep, registro_geral, primeiro_acesso, contrato_assinado,
+          cadastroSulamerica
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const [resultCliente] = await pool.execute(insertClienteQuery, [
@@ -109,7 +110,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         dados.cep,                  // cep
         null,                       // registro_geral
         0,                          // primeiro_acesso (false)
-        0                           // contrato_assinado (false)
+  0,                          // contrato_assinado (false)
+  0                           // cadastroSulamerica (false)
       ]);
 
       clienteId = (resultCliente as any).insertId;

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { useAuth, User } from "@/app/context/AuthContext";
+import { authApi } from "@/lib/api-client";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 import Loading from "@/components/loading/loading";
 
@@ -26,23 +27,18 @@ export default function LoginFuncionario() {
       // Limpa o CPF antes de enviar para a API
       const cleanedCpf = cleanCpf(cpf);
       
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf: cleanedCpf, password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+  // Nova API do backend
+  const data = await authApi.login(cleanedCpf, password);
+  if (!data?.success) throw new Error(data?.error || 'Falha no login');
       const clienteData: User = {
-        id: data.usuario.id,
-        nome: data.usuario.nome,
-        role: data.usuario.role,
-        id_instituicao: data.usuario.id_instituicao,
-        login_sistema:data.usuario.login_sistema,
-        senha_sistema:data.usuario.senha_sistema,
-        dsc_instituicao: data.usuario.instituicao.nomeInstituicao,
-        imagem_empresa: data.usuario.instituicao.imagem_perfil,
+  id: data.user.id,
+  nome: data.user.nome,
+  role: data.user.role,
+  id_instituicao: data.user.id_instituicao,
+  login_sistema: data.user.login_sistema,
+  senha_sistema: data.user.senha_sistema,
+  dsc_instituicao: data.user.nomeInstituicao,
+  imagem_empresa: data.user.imagem_perfil,
       }
 
       login(clienteData, false);
@@ -60,107 +56,98 @@ return (
     className="d-flex justify-content-center align-items-center"
     style={{
       minHeight: "100vh",
-      background: "linear-gradient(135deg, #0f172a, #1e293b)",
-      padding: "1rem",
+      background: "#0f172a",
+      padding: "1rem"
     }}
   >
     <div
-      className="row shadow-lg rounded overflow-hidden w-100"
+      className="shadow p-4 p-md-5 w-100"
       style={{
-        maxWidth: "960px",
-        backgroundColor: "white",
-        borderRadius: "12px",
-        minHeight: "600px",
+        backgroundColor: "#ffffff",
+        borderRadius: "14px",
+        maxWidth: "480px",
+        width: "100%",
+        border: "1px solid #e2e8f0"
       }}
     >
-      {/* Lado da imagem */}
       <div
-        className="col-lg-6 d-none d-lg-block p-0"
         style={{
-          backgroundImage: "url('/image.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          minHeight: "600px",
+          background: "linear-gradient(90deg,#2563eb,#3b82f6)",
+          height: 4,
+          borderRadius: 4,
+          marginBottom: 24
         }}
-      ></div>
-
-      {/* Formulário */}
-      <div
-        className="col-lg-6 col-12 p-3 p-md-4 p-lg-5 d-flex flex-column justify-content-center"
-        style={{ minHeight: "600px" }}
+      />
+      <button
+        type="button"
+        onClick={() => router.back()}
+        className="btn btn-link text-primary text-decoration-none d-flex align-items-center gap-1 p-0 mb-3"
+        style={{ fontSize: ".85rem" }}
       >
-        <div className="mb-2 mb-md-3">
-  <button
-    type="button"
-    onClick={() => router.back()}
-    className="btn btn-link text-primary text-decoration-none d-flex align-items-center gap-1 p-0"
-    style={{ fontSize: "0.9rem" }}
-  >
-    <i className="bi bi-arrow-left"></i>
-    Voltar
-  </button>
-</div>
+        <i className="bi bi-arrow-left"></i>
+        Voltar
+      </button>
 
-        {error && <AvisoAlerta mensagem={error} tipo="danger" />}
+      {error && <AvisoAlerta mensagem={error} tipo="danger" />}
 
-        <div className="text-center mb-2 mb-md-3">
-          <i className="bi bi-person-badge" style={{ fontSize: "1.8rem", color: "#2563eb" }}></i>
+      <div className="text-center mb-3">
+        <i className="bi bi-person-badge" style={{ fontSize: "2rem", color: "#2563eb" }}></i>
+      </div>
+      <h4 className="fw-bold text-center mb-2" style={{ fontSize: "1.4rem" }}>Login Colaborador</h4>
+      <p className="text-muted text-center mb-4" style={{ fontSize: ".85rem" }}>Acesse com seu CPF e senha.</p>
+
+      <form onSubmit={handleLogin} noValidate>
+        <div className="mb-3">
+          <label className="form-label small text-muted">CPF</label>
+          <input
+            type="text"
+            id="cpf"
+            className="form-control"
+            value={cpf}
+            onChange={(e) => setCpf(e.target.value)}
+            required
+            placeholder="Digite seu CPF"
+            aria-label="CPF"
+          />
         </div>
 
-        <h4 className="fw-bold text-center mb-1 mb-md-2" style={{ fontSize: "1.5rem" }}>Login Colaborador</h4>
-        <p className="text-muted text-center mb-3 mb-md-4" style={{ fontSize: "0.9rem" }}>Acesse com seu CPF e senha.</p>
-
-        <form onSubmit={handleLogin}>
-          <div className="mb-2 mb-md-3">
-            <input
-              type="text"
-              id="cpf"
-              className="form-control"
-              value={cpf}
-              onChange={(e) => setCpf(e.target.value)}
-              required
-              placeholder="Digite seu CPF"
-              style={{ height: "45px", fontSize: "1rem" }}
-            />
-          </div>
-
-          <div className="mb-3 mb-md-4">
-            <input
-              type="password"
-              id="password"
-              className="form-control"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="Digite sua senha"
-              style={{ height: "45px", fontSize: "1rem" }}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="btn w-100 d-flex justify-content-center align-items-center gap-2 text-white"
-            style={{
-              backgroundColor: "#8dc63f",
-              height: "45px",
-              fontWeight: 500,
-              borderRadius: "8px",
-              fontSize: "1rem",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#79b92f")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#8dc63f")}
-            disabled={loading}
-          >
-            <i className="bi bi-box-arrow-in-right"></i>
-            {loading ? <Loading /> : "Entrar"}
-          </button>
-        </form>
-
-        <div className="text-center mt-3 mt-md-4">
-          <a href="#" className="small text-primary text-decoration-none" style={{ fontSize: "0.85rem" }}>
-            <i className="bi bi-question-circle me-1"></i>Precisa de ajuda?
-          </a>
+        <div className="mb-4">
+          <label className="form-label small text-muted">Senha</label>
+          <input
+            type="password"
+            id="password"
+            className="form-control"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            placeholder="Digite sua senha"
+            aria-label="Senha"
+          />
         </div>
+
+        <button
+          type="submit"
+          className="btn w-100 d-flex justify-content-center align-items-center gap-2 text-white"
+          style={{
+            backgroundColor: "#8dc63f",
+            height: "46px",
+            fontWeight: 600,
+            borderRadius: "10px",
+            fontSize: ".95rem"
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#79b92f")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#8dc63f")}
+          disabled={loading}
+        >
+          <i className="bi bi-box-arrow-in-right"></i>
+          {loading ? <Loading /> : "Entrar"}
+        </button>
+      </form>
+
+      <div className="text-center mt-4">
+        <a href="#" className="small text-primary text-decoration-none">
+          <i className="bi bi-question-circle me-1"></i>Precisa de ajuda?
+        </a>
       </div>
     </div>
   </div>

@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 
 // Configurações do Asaas
 const ASAAS_API_KEY = process.env.ASAAS_API_KEY ? `$${process.env.ASAAS_API_KEY}` : undefined;
-const ASAAS_BASE_URL = 'https://api.asaas.com/v3';
+const ASAAS_BASE_URL = 'https://api-sandbox.asaas.com/v3';
 
 interface DadosCobrancaPf {
   clienteId: number;
@@ -208,6 +208,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ]);
 
     const vendaId = (resultVenda as any).insertId;
+
+
+    // Registrar cobrança na tabela tb_cobrancas
+    const insertCobrancaQuery = `
+      INSERT INTO tb_cobrancas (
+        id_usuario,
+        id_cliente,
+        valor,
+        forma_pagamento,
+        link_pagamento,
+        criado_em
+      ) VALUES (?, ?, ?, ?, ?, NOW())
+    `;
+    await pool.execute(insertCobrancaQuery, [
+      dados.idUsuario,
+      dados.clienteId,
+      valorPlano,
+      dados.formaDePagamento,
+      paymentLink
+    ]);
 
     return res.status(200).json({
       success: true,

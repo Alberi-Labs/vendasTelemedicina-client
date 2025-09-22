@@ -98,39 +98,39 @@ export default function RelatorioVendas() {
         <div ref={relatorioRef}>
           <h2 className="text-center mb-4">Relatório de Vendas</h2>
           <Row className="mb-4 g-4 text-center">
-          <Row className="mb-4 g-4 text-center">
-  <Col xs={12} md={6} lg={3}>
-    <Card className="text-center shadow-sm border rounded-3 py-3">
-      <h6 className="text-muted">Nº Vendas</h6>
-      <h4 className="fw-bold">{totalVendas}</h4>
-    </Card>
-  </Col>
+            <Row className="mb-4 g-4 text-center">
+              <Col xs={12} md={6} lg={3}>
+                <Card className="text-center shadow-sm border rounded-3 py-3">
+                  <h6 className="text-muted">Nº Vendas</h6>
+                  <h4 className="fw-bold">{totalVendas}</h4>
+                </Card>
+              </Col>
 
-  <Col xs={12} md={6} lg={3}>
-    <Card className="text-center shadow-sm border rounded-3 py-3">
-      <h6 className="text-muted">Faturamento Total</h6>
-      <h4 className="fw-bold">R$ {valorTotalVendas.toFixed(2)}</h4>
-    </Card>
-  </Col>
+              <Col xs={12} md={6} lg={3}>
+                <Card className="text-center shadow-sm border rounded-3 py-3">
+                  <h6 className="text-muted">Faturamento Total</h6>
+                  <h4 className="fw-bold">R$ {valorTotalVendas.toFixed(2)}</h4>
+                </Card>
+              </Col>
 
-  <Col xs={12} md={6} lg={3}>
-    <Card className="text-center shadow-sm border rounded-3 py-3">
-      <h6 className="text-muted">Ticket Médio</h6>
-      <h4 className="fw-bold">R$ {ticketMedio.toFixed(2)}</h4>
-    </Card>
-  </Col>
+              <Col xs={12} md={6} lg={3}>
+                <Card className="text-center shadow-sm border rounded-3 py-3">
+                  <h6 className="text-muted">Ticket Médio</h6>
+                  <h4 className="fw-bold">R$ {ticketMedio.toFixed(2)}</h4>
+                </Card>
+              </Col>
 
-  <Col xs={12} md={6} lg={3}>
-    <Card className="text-center shadow-sm border rounded-3 py-3">
-      <h6 className="text-muted">Período Selecionado</h6>
-      <h4 className="fw-bold">
-        {filtro === "mes"
-          ? nomeDoMes(mesSelecionado)
-          : `${nomeDoMes(mesSelecionado)} - ${quinzenaSelecionada}ª quinzena`}
-      </h4>
-    </Card>
-  </Col>
-</Row>
+              <Col xs={12} md={6} lg={3}>
+                <Card className="text-center shadow-sm border rounded-3 py-3">
+                  <h6 className="text-muted">Período Selecionado</h6>
+                  <h4 className="fw-bold">
+                    {filtro === "mes"
+                      ? nomeDoMes(mesSelecionado)
+                      : `${nomeDoMes(mesSelecionado)} - ${quinzenaSelecionada}ª quinzena`}
+                  </h4>
+                </Card>
+              </Col>
+            </Row>
 
           </Row>
 

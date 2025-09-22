@@ -11,9 +11,10 @@ import TelaCarregamento from "@/components/telaCarregamento/TelaCarregamento";
 import PaymentLinkPopup from "@/components/paymentLinkPopup/PaymentLinkPopup";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 import { useAuth } from "@/app/context/AuthContext";
+import { vendaPlanoPf, vendaTelemedicinaApiCompat } from "@/lib/api-client";
 
 export default function CadastroPf() {
-  const [currentStep, setCurrentStep] = useState(0);
+    const [currentStep, setCurrentStep] = useState(0);
     const [formData, setFormData] = useState({
         nome: "",
         email: "",
@@ -36,7 +37,7 @@ export default function CadastroPf() {
     const [showPopup, setShowPopup] = useState(false);
     const [paymentLink, setPaymentLink] = useState("");
     const [mensagemDeErro, setMensagemDeErro] = useState<string | null>(null);
-    const { user } = useAuth(); 
+    const { user } = useAuth();
 
     let idUsuario: string = "";
 
@@ -117,7 +118,15 @@ export default function CadastroPf() {
     const handleUfChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setFormData({ ...formData, uf: e.target.value, cidade: "" });
     };
-    
+
+    // Converte 'DD/MM/AAAA' para 'YYYY-MM-DD' (formato DATE do MySQL)
+    const toDbDate = (value: string) => {
+        const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!m) return "";
+        const [, dd, mm, yyyy] = m;
+        return `${yyyy}-${mm}-${dd}`;
+    };
+
     const nextStep = async () => {
         if (currentStep === 2) {
             // Validar se forma de pagamento foi selecionada
@@ -129,13 +138,14 @@ export default function CadastroPf() {
             setLoading(true);
             try {
                 const sexoFormatado = formData.sexo.toLowerCase() === 'feminino' ? 'F' : 'M';
-                
+                const nascimentoDb = toDbDate(formData.nascimento);
+
                 const dadosCompletos = {
                     nomeCliente: formData.nome,
                     email: formData.email,
                     cpf: formData.cpf,
                     celular: formData.celular,
-                    dataNascimento: formData.nascimento,
+                    dataNascimento: nascimentoDb,
                     cep: formData.cep,
                     endereco: formData.endereco,
                     casa: formData.casa,
@@ -148,46 +158,17 @@ export default function CadastroPf() {
                     senha_sistema: user?.senha_sistema,
                     idUsuario: user?.id,
                 };
+                console.log("🔸 Dados completos para venda:", dadosCompletos);
+                // Novo fluxo: usar endpoint unificado de Telemedicina (camelCase compat)
+                const respostaTele = await vendaTelemedicinaApiCompat.criarPf(dadosCompletos);
 
-                // ETAPA 1: Cadastrar no sistema Saúde e Cor
-                const responseSaudeECor = await fetch('/api/vendaPlanoPf/cadastroSaudeECor', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(dadosCompletos),
-                });
-
-                const dataSaudeECor = await responseSaudeECor.json();
-
-                if (!responseSaudeECor.ok) {
-                    throw new Error(dataSaudeECor.error || 'Erro no cadastro Saúde e Cor');
-                }
-
-
-                // ETAPA 2: Cadastrar no banco de dados
-                const responseDB = await fetch('/api/vendaPlanoPf/cadastroClientePfDB', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(dadosCompletos),
-                });
-
-                const dataDB = await responseDB.json();
-
-                if (!responseDB.ok) {
-                    throw new Error(dataDB.error || 'Erro no cadastro no banco');
-                }
-
-
-                // ETAPA 3: Gerar cobrança
-                const responseCobranca = await fetch('/api/vendaPlanoPf/gerarCobrancaPf', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
+                if (respostaTele?.paymentLink) {
+                    setPaymentLink(respostaTele.paymentLink);
+                    setShowPopup(true);
+                } else {
+                    // Fallback para o fluxo anterior em duas etapas
+                    const dataDB = await vendaPlanoPf.cadastroClientePfDB(dadosCompletos);
+                    const dataCobranca = await vendaPlanoPf.gerarCobrancaPf({
                         clienteId: dataDB.clienteId,
                         nomeCliente: formData.nome,
                         email: formData.email,
@@ -199,21 +180,14 @@ export default function CadastroPf() {
                         numero: formData.casa,
                         bairro: formData.bairro,
                         telefone: formData.celular,
-                    }),
-                });
+                    });
 
-                const dataCobranca = await responseCobranca.json();
-
-                if (!responseCobranca.ok) {
-                    throw new Error(dataCobranca.error || 'Erro na geração de cobrança');
-                }
-
-
-                if (dataCobranca.paymentLink) {
-                    setPaymentLink(dataCobranca.paymentLink);
-                    setShowPopup(true);
-                } else {
-                    setMensagemDeErro('Erro: o link de pagamento não foi retornado.');
+                    if (dataCobranca?.paymentLink) {
+                        setPaymentLink(dataCobranca.paymentLink);
+                        setShowPopup(true);
+                    } else {
+                        setMensagemDeErro('Erro: o link de pagamento não foi retornado.');
+                    }
                 }
 
             } catch (error: any) {
@@ -227,7 +201,7 @@ export default function CadastroPf() {
             setCurrentStep((prev) => prev + 1);
         }
     };
-    
+
 
     const prevStep = () => setCurrentStep((prev) => prev - 1);
 
@@ -429,9 +403,9 @@ export default function CadastroPf() {
                         </Button>
                     )}
                     {currentStep === 2 && (
-                        <Button 
-                            variant="contained" 
-                            color="success" 
+                        <Button
+                            variant="contained"
+                            color="success"
                             onClick={nextStep}
                             disabled={!formData.formaPagamento}
                         >

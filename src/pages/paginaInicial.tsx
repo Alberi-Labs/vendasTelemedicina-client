@@ -28,13 +28,13 @@ export default function PaginaInicial() {
   };
 
   const cards = [
-    {
-      path: "/paginaCadastroPf",
-      icon: "bi-person",
-      text: "Venda de Consulta",
-      allowedRoles: ["admin", "vendedorFarmacia", "gerente"],
-      description: "Cadastre clientes e realize vendas de consultas avulsas."
-    },
+    // {
+    //   path: "/paginaCadastroPf",
+    //   icon: "bi-person",
+    //   text: "Venda de Consulta",
+    //   allowedRoles: ["admin", "vendedorFarmacia", "gerente"],
+    //   description: "Cadastre clientes e realize vendas de consultas avulsas."
+    // },
     {
       path: "/paginaVendaPj",
       icon: "bi-briefcase",
