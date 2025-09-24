@@ -6,6 +6,7 @@ import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 import AssinaturaDigital from "@/components/assinaturaDigital/AssinaturaDigital";
 import ContratoPopup from "@/components/contratoPopup/ContratoPopup";
 import Loading from "@/components/loading/loading";
+import { apolicesApi, carteirinhaApi, arquivoApi, contratoApi } from "@/lib/api-client";
 
 type Apolice = {
   link: string;
@@ -38,19 +39,11 @@ export default function PaginaApolice() {
       }
 
       try {
-        const response = await fetch("/api/contrato/verificarStatusContrato", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cpf: user.cpf }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Atualizar contexto se o status for diferente
-          if (data.contrato_assinado !== user.contrato_assinado) {
-            updateUser({ contrato_assinado: data.contrato_assinado });
-          }
+        const response = await contratoApi.verificar(user.cpf);
+        
+        // Atualizar contexto se o status for diferente
+        if (response.contrato_assinado !== user.contrato_assinado) {
+          updateUser({ contrato_assinado: response.contrato_assinado });
         }
       } catch (error) {
         console.error("Erro ao verificar status do contrato:", error);
@@ -142,11 +135,7 @@ export default function PaginaApolice() {
     };
 
     try {
-      const response = await fetch("/api/apolices/gerarApolice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dadosApolice),
-      });
+      const response = await apolicesApi.gerar(dadosApolice);
 
       if (!response.ok) {
         console.error("Erro ao gerar PDF");
@@ -178,7 +167,7 @@ export default function PaginaApolice() {
 
     const dadosCarteirinha = {
       nome: user.nome,
-      cpf: user.cpf,
+      cpf: user.cpf || "",
       vigenciaInicio: formatarDataVigencia(user.data_contrato_vigencia_inicio),
       vigenciaFinal: formatarDataVigencia(user.data_contrato_vigencia_final),
       apolice: user.num_contrato_retorno_apolice || "—",
@@ -188,11 +177,7 @@ export default function PaginaApolice() {
     };
 
     try {
-      const response = await fetch("/api/carteirinha/gerarCarteirinha", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dadosCarteirinha),
-      });
+      const response = await carteirinhaApi.gerar(dadosCarteirinha);
 
       if (!response.ok) {
         console.error("Erro ao gerar carteirinha");
@@ -261,10 +246,9 @@ export default function PaginaApolice() {
     }
 
     try {
-      const response = await fetch("/api/contrato/gerarContratoVita", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dadosContrato),
+      const response = await contratoApi.gerar({
+        tipoContrato: "vita",
+        dadosCliente: dadosContrato
       });
 
       if (!response.ok) {
@@ -310,11 +294,7 @@ export default function PaginaApolice() {
     setShowAviso(true);
 
     try {
-      const response = await fetch("/api/contrato/baixarContratoAssinado", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf_usuario: user.cpf }),
-      });
+      const response = await contratoApi.baixarContratoAssinado(user.cpf);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -394,38 +374,20 @@ export default function PaginaApolice() {
       setAvisoMensagem("Salvando assinatura no banco de dados...");
 
       // Salvar a assinatura no banco de dados
-      const salvarAssinaturaResponse = await fetch("/api/contrato/salvarAssinatura", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cpf_usuario: user.cpf,
-          tipo_contrato: "vita",
-          dados_contrato: dadosContrato,
-          assinatura_digital: assinaturaBase64,
-          ip_assinatura: ipAddress,
-          user_agent: userAgent
-        }),
+      await contratoApi.salvarAssinatura({
+        cpf_usuario: user.cpf || "",
+        tipo_contrato: "vita",
+        dados_contrato: dadosContrato,
+        assinatura_digital: assinaturaBase64,
+        ip_assinatura: ipAddress,
+        user_agent: userAgent
       });
-
-      if (!salvarAssinaturaResponse.ok) {
-        throw new Error("Erro ao salvar assinatura");
-      }
 
       // Atualizar mensagem de progresso
       setAvisoMensagem("Atualizando status do contrato...");
 
       // Marcar contrato como assinado na tabela tb_clientes
-      const marcarAssinadoResponse = await fetch("/api/contrato/marcarAssinado", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cpf: user.cpf
-        }),
-      });
-
-      if (!marcarAssinadoResponse.ok) {
-        throw new Error("Erro ao atualizar status do contrato");
-      }
+      await contratoApi.marcarAssinado(user.cpf || "");
 
       // Atualizar mensagem de progresso
       setAvisoMensagem("Gerando contrato assinado...");
@@ -436,10 +398,9 @@ export default function PaginaApolice() {
         assinaturaDigital: assinaturaBase64
       };
 
-      const response = await fetch("/api/contrato/gerarContratoVita", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dadosComAssinatura),
+      const response = await contratoApi.gerar({
+        tipoContrato: "vita",
+        dadosCliente: dadosComAssinatura
       });
 
       if (!response.ok) {
@@ -597,7 +558,7 @@ export default function PaginaApolice() {
           )}
 
           <a
-            href={`/api/arquivo/downloadArquivo?dscEmpresa=${dscEmpresa}`}
+            href={arquivoApi.download(dscEmpresa).url}
             className="btn btn-danger d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3"
           >
             <i className="bi bi-file-earmark-pdf fs-5"></i>

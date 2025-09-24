@@ -203,9 +203,20 @@ export const apolicesApi = {
 };
 
 export const arquivoApi = {
+  downloadArquivo: (dscEmpresa: string) => {
+    const params = new URLSearchParams({ dscEmpresa });
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/downloadArquivo?${params.toString()}`;
+    
+    // Retorna a URL para download direto ou para usar com fetch
+    return {
+      url,
+      fetch: () => fetch(url),
+    };
+  },
+  
   download: (dscEmpresa: string) => {
     const params = new URLSearchParams({ dscEmpresa });
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/download?${params.toString()}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/downloadArquivo?${params.toString()}`;
     
     // Retorna a URL para download direto ou para usar com fetch
     return {
@@ -379,8 +390,31 @@ export const contratoApi = {
     return apiClient.post(`/contrato/assinar/${contratoId}`, assinatura);
   },
 
-  verificar: (contratoId: string) =>
-    apiClient.get(`/contrato/verificar/${contratoId}`),
+  verificar: (cpf: string) => {
+    const params = new URLSearchParams({ cpf });
+    return apiClient.get(`/contrato/verificar-status?${params.toString()}`);
+  },
+
+  baixarContratoAssinado: (cpf: string) => {
+    return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/contrato/baixarContratoAssinado`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cpf_usuario: cpf }),
+    });
+  },
+
+  salvarAssinatura: (dados: {
+    cpf_usuario: string;
+    tipo_contrato: string;
+    dados_contrato: any;
+    assinatura_digital: string;
+    ip_assinatura: string;
+    user_agent: string;
+  }) =>
+    apiClient.post('/contrato/salvarAssinatura', dados),
+
+  marcarAssinado: (cpf: string) =>
+    apiClient.post('/contrato/marcarAssinado', { cpf }),
 
   listar: (filtros?: { 
     status?: string; 
