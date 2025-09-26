@@ -708,3 +708,153 @@ export const vendaTelemedicinaApiCompat = {
     return apiClient.delete(`/vendaTelemedicina/deletarPf?${params.toString()}`);
   },
 };
+
+// API específica para operações com Asaas
+export const asaasApiClient = {
+  buscarCliente: (filtros: {
+    cpf?: string;
+    cnpj?: string;
+    email?: string;
+    name?: string;
+  }) => {
+    const params = new URLSearchParams();
+    if (filtros.cpf) params.append('cpf', filtros.cpf);
+    if (filtros.cnpj) params.append('cnpj', filtros.cnpj);
+    if (filtros.email) params.append('email', filtros.email);
+    if (filtros.name) params.append('name', filtros.name);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/asaas-api/buscar-cliente?${queryString}` : '/asaas-api/buscar-cliente';
+    
+    return apiClient.get(endpoint);
+  },
+
+  buscarCobrancasCliente: (customerId: string, filtros: {
+    status?: string;
+    billingType?: string;
+    dateCreatedGE?: string;
+    dateCreatedLE?: string;
+    paymentDateGE?: string;
+    paymentDateLE?: string;
+    estimatedCreditDateGE?: string;
+    estimatedCreditDateLE?: string;
+    dueDate?: string;
+    dueDateGE?: string;
+    dueDateLE?: string;
+    user?: string;
+    subscription?: string;
+    installment?: string;
+    offset?: number;
+    limit?: number;
+  } = {}) => {
+    const params = new URLSearchParams();
+    if (filtros.status) params.append('status', filtros.status);
+    if (filtros.billingType) params.append('billingType', filtros.billingType);
+    if (filtros.dateCreatedGE) params.append('dateCreatedGE', filtros.dateCreatedGE);
+    if (filtros.dateCreatedLE) params.append('dateCreatedLE', filtros.dateCreatedLE);
+    if (filtros.paymentDateGE) params.append('paymentDateGE', filtros.paymentDateGE);
+    if (filtros.paymentDateLE) params.append('paymentDateLE', filtros.paymentDateLE);
+    if (filtros.estimatedCreditDateGE) params.append('estimatedCreditDateGE', filtros.estimatedCreditDateGE);
+    if (filtros.estimatedCreditDateLE) params.append('estimatedCreditDateLE', filtros.estimatedCreditDateLE);
+    if (filtros.dueDate) params.append('dueDate', filtros.dueDate);
+    if (filtros.dueDateGE) params.append('dueDateGE', filtros.dueDateGE);
+    if (filtros.dueDateLE) params.append('dueDateLE', filtros.dueDateLE);
+    if (filtros.user) params.append('user', filtros.user);
+    if (filtros.subscription) params.append('subscription', filtros.subscription);
+    if (filtros.installment) params.append('installment', filtros.installment);
+    if (filtros.offset) params.append('offset', filtros.offset.toString());
+    if (filtros.limit) params.append('limit', filtros.limit.toString());
+    
+    const queryString = params.toString();
+    const endpoint = queryString 
+      ? `/asaas-api/buscar-cobrancas/${customerId}?${queryString}` 
+      : `/asaas-api/buscar-cobrancas/${customerId}`;
+    
+    return apiClient.get(endpoint);
+  },
+
+  buscarCobrancas: (filtros: {
+    customer?: string;
+    status?: string;
+    billingType?: string;
+    dateCreatedGE?: string;
+    dateCreatedLE?: string;
+    paymentDateGE?: string;
+    paymentDateLE?: string;
+    estimatedCreditDateGE?: string;
+    estimatedCreditDateLE?: string;
+    dueDate?: string;
+    dueDateGE?: string;
+    dueDateLE?: string;
+    user?: string;
+    subscription?: string;
+    installment?: string;
+    offset?: number;
+    limit?: number;
+  } = {}) => {
+    const params = new URLSearchParams();
+    if (filtros.customer) params.append('customer', filtros.customer);
+    if (filtros.status) params.append('status', filtros.status);
+    if (filtros.billingType) params.append('billingType', filtros.billingType);
+    if (filtros.dateCreatedGE) params.append('dateCreatedGE', filtros.dateCreatedGE);
+    if (filtros.dateCreatedLE) params.append('dateCreatedLE', filtros.dateCreatedLE);
+    if (filtros.paymentDateGE) params.append('paymentDateGE', filtros.paymentDateGE);
+    if (filtros.paymentDateLE) params.append('paymentDateLE', filtros.paymentDateLE);
+    if (filtros.estimatedCreditDateGE) params.append('estimatedCreditDateGE', filtros.estimatedCreditDateGE);
+    if (filtros.estimatedCreditDateLE) params.append('estimatedCreditDateLE', filtros.estimatedCreditDateLE);
+    if (filtros.dueDate) params.append('dueDate', filtros.dueDate);
+    if (filtros.dueDateGE) params.append('dueDateGE', filtros.dueDateGE);
+    if (filtros.dueDateLE) params.append('dueDateLE', filtros.dueDateLE);
+    if (filtros.user) params.append('user', filtros.user);
+    if (filtros.subscription) params.append('subscription', filtros.subscription);
+    if (filtros.installment) params.append('installment', filtros.installment);
+    if (filtros.offset) params.append('offset', filtros.offset.toString());
+    if (filtros.limit) params.append('limit', filtros.limit.toString());
+    
+    const queryString = params.toString();
+    const endpoint = queryString 
+      ? `/asaas-api/buscar-cobrancas?${queryString}` 
+      : '/asaas-api/buscar-cobrancas';
+    
+    return apiClient.get(endpoint);
+  },
+
+  obterClientePorId: (id: string) =>
+    apiClient.get(`/asaas-api/cliente/${id}`),
+
+  obterCobrancaPorId: (id: string) =>
+    apiClient.get(`/asaas-api/cobranca/${id}`),
+
+  // Função específica para buscar pagamentos pendentes - ideal para controle de pagamentos
+  buscarPagamentosPendentes: (filtros: {
+    dateCreatedGE?: string;
+    dateCreatedLE?: string;
+    dueDateGE?: string;
+    dueDateLE?: string;
+    customer?: string;
+    billingType?: string;
+    offset?: number;
+    limit?: number;
+  } = {}) => {
+    const params = new URLSearchParams();
+    if (filtros.dateCreatedGE) params.append('dateCreatedGE', filtros.dateCreatedGE);
+    if (filtros.dateCreatedLE) params.append('dateCreatedLE', filtros.dateCreatedLE);
+    if (filtros.dueDateGE) params.append('dueDateGE', filtros.dueDateGE);
+    if (filtros.dueDateLE) params.append('dueDateLE', filtros.dueDateLE);
+    if (filtros.customer) params.append('customer', filtros.customer);
+    if (filtros.billingType) params.append('billingType', filtros.billingType);
+    if (filtros.offset) params.append('offset', filtros.offset.toString());
+    if (filtros.limit) params.append('limit', filtros.limit.toString());
+    
+    const queryString = params.toString();
+    const endpoint = queryString 
+      ? `/asaas-api/pagamentos-pendentes?${queryString}` 
+      : '/asaas-api/pagamentos-pendentes';
+    
+    return apiClient.get(endpoint);
+  },
+
+  // Função otimizada para buscar TODAS as cobranças de um CPF (todos os clientes com esse CPF)
+  buscarTodasCobrancasPorCpf: (cpf: string) =>
+    apiClient.get(`/asaas-api/cobrancas/cpf/${cpf}`),
+};

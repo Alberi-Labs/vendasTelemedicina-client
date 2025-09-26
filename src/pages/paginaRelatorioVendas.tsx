@@ -7,6 +7,7 @@ import { BsFileEarmarkPdf } from "react-icons/bs";
 import { Bar, Pie } from "react-chartjs-2";
 import { Chart, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
 import { motion } from "framer-motion";
+import { vendaTelemedicinaApi } from "@/lib/api-client";
 
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
@@ -39,12 +40,21 @@ export default function RelatorioVendas() {
   useEffect(() => {
     async function fetchVendas() {
       try {
-        const response = await fetch("/api/venda/consultar", {
-          method: "GET",
-          headers: { "Cache-Control": "no-cache, no-store, must-revalidate", Pragma: "no-cache", Expires: "0" },
-        });
-        const data = await response.json();
-        if (data.success) setVendas(data.vendas);
+        const response = await vendaTelemedicinaApi.consultar();
+        if (response.success && response.data?.vendas) {
+          // Mapear os dados para o formato esperado pela página
+          const vendasFormatadas = response.data.vendas.map((venda: any) => ({
+            idVenda: venda.idVenda,
+            id_cliente: venda.id_cliente,
+            nome_cliente: venda.nome_cliente || venda.cliente?.nome,
+            data: venda.criado_em, // Data da venda
+            valor: venda.valor_venda,
+            forma_pagamento: venda.forma_pagamento,
+            status_pagamento: venda.situacao_pagamento,
+            data_pagamento: venda.situacao_pagamento === 'RECEIVED' ? venda.criado_em : null,
+          }));
+          setVendas(vendasFormatadas);
+        }
       } catch (error) {
         console.error("Erro ao conectar com API:", error);
       }
