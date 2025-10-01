@@ -3,7 +3,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 export const apiClient = {
   async request(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -15,11 +15,11 @@ export const apiClient = {
     try {
       const response = await fetch(url, config);
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
-      
+
       return data;
     } catch (error) {
       console.error('API Request failed:', error);
@@ -61,16 +61,25 @@ export const authApi = {
 export const clientesApi = {
   cadastrar: (clienteData: any) =>
     apiClient.post('/clientes/cadastrar', clienteData),
-  
-  consultar: () =>
-    apiClient.get('/clientes/consultar'),
+
+  consultar: (filtros?: { cpf?: string; id_instituicao?: number }) => {
+    console.log('Consultando clientes com filtros:', filtros);
+    if (filtros && (filtros.cpf || filtros.id_instituicao)) {
+      const params = new URLSearchParams();
+      if (filtros.cpf) params.append('cpf', filtros.cpf);
+      if (filtros.id_instituicao) params.append('id_instituicao', String(filtros.id_instituicao));
+      console.log('Parâmetros da consulta:', params.toString());
+      return apiClient.get(`/clientes/consultar?${params.toString()}`);
+    }
+    return apiClient.get('/clientes/consultar');
+  },
 
   buscarDadosSaudeECor: (cpf: string) =>
     apiClient.post('/clientes/buscar-dados-saudecor', { cpf }),
-  
+
   editar: (id: number, clienteData: any) =>
     apiClient.put(`/clientes/editar/${id}`, clienteData),
-  
+
   deletar: (id: number) =>
     apiClient.delete(`/clientes/deletar/${id}`),
 };
@@ -79,9 +88,16 @@ export const vendaTelemedicinaApi = {
   criar: (vendaData: any) =>
     apiClient.post('/venda-telemedicina/criar', vendaData),
   
-  consultar: (id?: number) =>
-    id ? apiClient.get(`/venda-telemedicina/consultar/${id}`) 
-      : apiClient.get('/venda-telemedicina/consultar'),
+  consultar: (id?: number, filtros?: { id_usuario?: number; id_instituicao?: number }) => {
+    if (id) return apiClient.get(`/venda-telemedicina/consultar/${id}`);
+    if (filtros && (filtros.id_usuario || filtros.id_instituicao)) {
+      const params = new URLSearchParams();
+      if (filtros.id_usuario) params.append('id_usuario', String(filtros.id_usuario));
+      if (filtros.id_instituicao) params.append('id_instituicao', String(filtros.id_instituicao));
+      return apiClient.get(`/venda-telemedicina/consultar?${params.toString()}`);
+    }
+    return apiClient.get('/venda-telemedicina/consultar');
+  },
   
   deletar: (id: number) =>
     apiClient.delete(`/venda-telemedicina/deletar/${id}`),
@@ -92,34 +108,34 @@ export const empresasApi = {
     const params = new URLSearchParams();
     if (filtros?.cnpj) params.append('cnpj', filtros.cnpj);
     if (filtros?.search) params.append('search', filtros.search);
-    
+
     const queryString = params.toString();
     const endpoint = queryString ? `/empresas/listar?${queryString}` : '/empresas/listar';
-    
+
     return apiClient.get(endpoint);
   },
-  
+
   adicionar: (empresaData: any) =>
     apiClient.post('/empresas/adicionar', empresaData),
-  
+
   editar: (id: number, empresaData: any) =>
     apiClient.put(`/empresas/editar/${id}`, empresaData),
-  
+
   deletar: (id: number) =>
     apiClient.delete(`/empresas/deletar/${id}`),
 };
 
 export const usuariosApi = {
   buscar: (id?: number) =>
-    id ? apiClient.get(`/usuarios/buscar/${id}`) 
+    id ? apiClient.get(`/usuarios/buscar/${id}`)
       : apiClient.get('/usuarios/buscar'),
-  
+
   cadastrar: (usuarioData: any) =>
     apiClient.post('/usuarios/cadastrar', usuarioData),
-  
+
   editar: (id: number, usuarioData: any) =>
     apiClient.put(`/usuarios/editar/${id}`, usuarioData),
-  
+
   deletar: (id: number) =>
     apiClient.delete(`/usuarios/deletar/${id}`),
 };
@@ -128,10 +144,10 @@ export const usuarioApi = {
   buscarUsuario: (idUsuario?: number) => {
     const params = new URLSearchParams();
     if (idUsuario) params.append('idUsuario', idUsuario.toString());
-    
+
     const queryString = params.toString();
     const endpoint = queryString ? `/usuario/buscarUsuario?${queryString}` : '/usuario/buscarUsuario';
-    
+
     return apiClient.get(endpoint);
   },
 
@@ -175,24 +191,24 @@ export const apolicesApi = {
     const params = new URLSearchParams({ cpf });
     return apiClient.get(`/apolices/consultar?${params.toString()}`);
   },
-  
+
   inserir: (file: File, fields?: any) => {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     if (fields) {
       Object.keys(fields).forEach(key => {
         formData.append(key, fields[key]);
       });
     }
-    
+
     return apiClient.request('/apolices/inserir', {
       method: 'POST',
       body: formData,
       headers: {}, // Remove Content-Type para que o browser configure automaticamente para FormData
     });
   },
-  
+
   gerar: (dados: any) => {
     return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/apolices/gerar`, {
       method: 'POST',
@@ -206,28 +222,28 @@ export const arquivoApi = {
   downloadArquivo: (dscEmpresa: string) => {
     const params = new URLSearchParams({ dscEmpresa });
     const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/downloadArquivo?${params.toString()}`;
-    
+
     // Retorna a URL para download direto ou para usar com fetch
     return {
       url,
       fetch: () => fetch(url),
     };
   },
-  
+
   download: (dscEmpresa: string) => {
     const params = new URLSearchParams({ dscEmpresa });
     const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/downloadArquivo?${params.toString()}`;
-    
+
     // Retorna a URL para download direto ou para usar com fetch
     return {
       url,
       fetch: () => fetch(url),
     };
   },
-  
+
   listar: () =>
     apiClient.get('/arquivo/listar'),
-  
+
   verificar: (fileName: string) => {
     const params = new URLSearchParams({ fileName });
     return apiClient.get(`/arquivo/verificar?${params.toString()}`);
@@ -251,7 +267,7 @@ export const carteirinhaApi = {
       body: JSON.stringify(dados),
     });
   },
-  
+
   gerarDependente: (dados: {
     nome: string;
     cpf: string;
@@ -296,12 +312,12 @@ export const notasFiscaisApi = {
     return apiClient.post('/notas-fiscais/emitir', data);
   },
 
-  listar: (query: { 
-    page?: number; 
-    limit?: number; 
-    status?: string; 
-    dataInicio?: string; 
-    dataFim?: string; 
+  listar: (query: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    dataInicio?: string;
+    dataFim?: string;
   } = {}) => {
     const params = new URLSearchParams(
       Object.entries(query).map(([key, value]) => [key, value?.toString() || ''])
@@ -416,10 +432,10 @@ export const contratoApi = {
   marcarAssinado: (cpf: string) =>
     apiClient.post('/contrato/marcarAssinado', { cpf }),
 
-  listar: (filtros?: { 
-    status?: string; 
-    dataInicio?: string; 
-    dataFim?: string; 
+  listar: (filtros?: {
+    status?: string;
+    dataInicio?: string;
+    dataFim?: string;
     clienteCpf?: string;
   }) => {
     if (filtros && Object.keys(filtros).length > 0) {
@@ -509,9 +525,9 @@ export const dependenteApi = {
 };
 
 export const instituicoesApi = {
-  listar: (filtros?: { 
-    nome?: string; 
-    tipo?: string; 
+  listar: (filtros?: {
+    nome?: string;
+    tipo?: string;
     ativo?: boolean;
   }) => {
     if (filtros && Object.keys(filtros).length > 0) {
@@ -521,9 +537,9 @@ export const instituicoesApi = {
           params.append(key, value.toString());
         }
       });
-      return apiClient.get(`/instituicoes/listar?${params.toString()}`);
+      return apiClient.get(`/instituicoes/buscar?${params.toString()}`);
     }
-    return apiClient.get('/instituicoes/listar');
+    return apiClient.get('/instituicoes/buscar');
   },
 
   criar: (dados: {
@@ -548,13 +564,43 @@ export const instituicoesApi = {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('instituicaoId', instituicaoId.toString());
-    
+
     return apiClient.request('/instituicoes/upload', {
       method: 'POST',
       body: formData,
       headers: {}, // Remove Content-Type para FormData
     });
   },
+};
+
+// Wrapper específico para as rotas de empresa (empresa = instituicao) usadas na página de gestão
+// Mantém compatibilidade com endpoints já existentes no front original (buscarEmpresa, criarEmpresa, editarEmpresa, deletarEmpresa)
+export const instituicoesEmpresaApi = {
+  buscarEmpresa: () => apiClient.get('/instituicoes/buscar'),
+
+  criarEmpresa: (dados: FormData | Record<string, any>) => {
+    if (dados instanceof FormData) {
+      return apiClient.request('/instituicoes/criarEmpresa', {
+        method: 'POST',
+        body: dados,
+        headers: {},
+      });
+    }
+    return apiClient.post('/instituicoes/criarEmpresa', dados);
+  },
+
+  editarEmpresa: (dados: FormData | (Record<string, any> & { idInstituicao: number })) => {
+    if (dados instanceof FormData) {
+      return apiClient.request('/instituicoes/editarEmpresa', {
+        method: 'PUT',
+        body: dados,
+        headers: {},
+      });
+    }
+    return apiClient.put('/instituicoes/editarEmpresa', dados);
+  },
+
+  deletarEmpresa: (id: number) => apiClient.delete(`/instituicao/deletarEmpresa?id=${id}`),
 };
 
 export const clienteSaudeeCorApi = {
@@ -574,7 +620,7 @@ export const relatorioAsaasApi = {
   uploadArquivo: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     return apiClient.request('/relatorio-asaas/upload-arquivo', {
       method: 'POST',
       body: formData,
@@ -600,10 +646,10 @@ export const vendaConsultaApi = {
   consultar: (id_cliente?: number) => {
     const params = new URLSearchParams();
     if (id_cliente) params.append('id_cliente', id_cliente.toString());
-    
+
     const queryString = params.toString();
     const endpoint = queryString ? `/vendaConsulta/consultar?${queryString}` : '/vendaConsulta/consultar';
-    
+
     return apiClient.get(endpoint);
   },
 
@@ -688,9 +734,10 @@ export const vendaTelemedicinaApiCompat = {
   criarPf: (vendaData: any) =>
     apiClient.post('/vendaTelemedicina/criarPf', vendaData),
 
-  consultarVenda: (id_usuario?: number) => {
+  consultarVenda: (id_usuario?: number, filtros?: { id_instituicao?: number }) => {
     const params = new URLSearchParams();
     if (id_usuario !== undefined) params.append('id_usuario', id_usuario.toString());
+    if (filtros?.id_instituicao) params.append('id_instituicao', filtros.id_instituicao.toString());
     const qs = params.toString();
     const endpoint = qs
       ? `/vendaTelemedicina/consultarVenda?${qs}`
@@ -722,10 +769,10 @@ export const asaasApiClient = {
     if (filtros.cnpj) params.append('cnpj', filtros.cnpj);
     if (filtros.email) params.append('email', filtros.email);
     if (filtros.name) params.append('name', filtros.name);
-    
+
     const queryString = params.toString();
     const endpoint = queryString ? `/asaas-api/buscar-cliente?${queryString}` : '/asaas-api/buscar-cliente';
-    
+
     return apiClient.get(endpoint);
   },
 
@@ -764,12 +811,12 @@ export const asaasApiClient = {
     if (filtros.installment) params.append('installment', filtros.installment);
     if (filtros.offset) params.append('offset', filtros.offset.toString());
     if (filtros.limit) params.append('limit', filtros.limit.toString());
-    
+
     const queryString = params.toString();
-    const endpoint = queryString 
-      ? `/asaas-api/buscar-cobrancas/${customerId}?${queryString}` 
+    const endpoint = queryString
+      ? `/asaas-api/buscar-cobrancas/${customerId}?${queryString}`
       : `/asaas-api/buscar-cobrancas/${customerId}`;
-    
+
     return apiClient.get(endpoint);
   },
 
@@ -810,12 +857,12 @@ export const asaasApiClient = {
     if (filtros.installment) params.append('installment', filtros.installment);
     if (filtros.offset) params.append('offset', filtros.offset.toString());
     if (filtros.limit) params.append('limit', filtros.limit.toString());
-    
+
     const queryString = params.toString();
-    const endpoint = queryString 
-      ? `/asaas-api/buscar-cobrancas?${queryString}` 
+    const endpoint = queryString
+      ? `/asaas-api/buscar-cobrancas?${queryString}`
       : '/asaas-api/buscar-cobrancas';
-    
+
     return apiClient.get(endpoint);
   },
 
@@ -845,16 +892,33 @@ export const asaasApiClient = {
     if (filtros.billingType) params.append('billingType', filtros.billingType);
     if (filtros.offset) params.append('offset', filtros.offset.toString());
     if (filtros.limit) params.append('limit', filtros.limit.toString());
-    
+
     const queryString = params.toString();
-    const endpoint = queryString 
-      ? `/asaas-api/pagamentos-pendentes?${queryString}` 
+    const endpoint = queryString
+      ? `/asaas-api/pagamentos-pendentes?${queryString}`
       : '/asaas-api/pagamentos-pendentes';
-    
+
     return apiClient.get(endpoint);
   },
 
   // Função otimizada para buscar TODAS as cobranças de um CPF (todos os clientes com esse CPF)
   buscarTodasCobrancasPorCpf: (cpf: string) =>
     apiClient.get(`/asaas-api/cobrancas/cpf/${cpf}`),
+
+  criarCobrancas: (dados: {
+    cpf?: string;
+    customerId?: string;
+    value: number;
+    description?: string;
+    billingType?: string;
+    firstDueDate: string; // YYYY-MM-DD
+    months?: number; // quantidade de meses
+    intervalMonths?: number; // espaçamento entre dueDates
+  }) => apiClient.post('/asaas-api/cobrancas', dados),
+
+  configurarNotificacoes: (customerId: string, enable: boolean = true) =>
+    apiClient.post(`/asaas-api/clientes/${customerId}/notificacoes/configurar`, { enable }),
+
+  listarNotificacoes: (customerId: string) =>
+    apiClient.get(`/asaas-api/clientes/${customerId}/notificacoes`),
 };

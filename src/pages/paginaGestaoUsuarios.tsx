@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Button, Modal, Form, Table } from "react-bootstrap";
+import { useEffect, useMemo, useState } from "react";
+import { Button, Modal, Form, Table, Badge, OverlayTrigger, Tooltip, InputGroup } from "react-bootstrap";
+import '../styles/gestaoUsuarios.css';
 import { motion } from "framer-motion";
 import { Usuario } from "./api/usuario/buscarUsuario";
 import { useAuth } from "@/app/context/AuthContext";
@@ -26,6 +27,9 @@ export default function PaginaGestaoUsuario() {
     senha_sistema: "",
   });
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [filtroInstituicao, setFiltroInstituicao] = useState<string>('');
+  const [filtroRole, setFiltroRole] = useState<string>('');
+  const [busca, setBusca] = useState<string>('');
 
 
   useEffect(() => {
@@ -77,7 +81,12 @@ export default function PaginaGestaoUsuario() {
       });
 
     } else {
-      setFormData({ nome: "", email: "", cpf: "", role: "", id_instituicao: "", login_sistema: "", senha_sistema: "" });
+      // Se gestor criando, força vendedor e instituição dele
+      if (user?.role === 'gestor') {
+        setFormData({ nome: "", email: "", cpf: "", role: "vendedor", id_instituicao: user.id_instituicao?.toString() || "", login_sistema: "", senha_sistema: "" });
+      } else {
+        setFormData({ nome: "", email: "", cpf: "", role: "", id_instituicao: "", login_sistema: "", senha_sistema: "" });
+      }
     }
     setShowModal(true);
   };
@@ -86,14 +95,16 @@ export default function PaginaGestaoUsuario() {
     const payload = {
       nome: formData.nome,
       email: formData.email || "",
-      role: formData.role,
+      role: user?.role === 'gestor' ? 'vendedor' : formData.role, // gestor só cria/edita vendedores
       senha: "123456", // senha padrão
       telefone: "",
       imagem: null,
       cpf: formData.cpf,
       creditos: 0,
       data_nascimento: null,
-      id_instituicao: formData.id_instituicao ? parseInt(formData.id_instituicao) : null,
+      id_instituicao: user?.role === 'gestor'
+        ? (user.id_instituicao ?? null)
+        : (formData.id_instituicao ? parseInt(formData.id_instituicao) : null),
       ...(user?.role === "admin" && {
         login_sistema: formData.login_sistema,
         senha_sistema: formData.senha_sistema,
@@ -113,7 +124,11 @@ export default function PaginaGestaoUsuario() {
     );
 
     if (res.ok) {
-      fetchUsuarios();
+      // Se admin está promovendo a gestor, garantir unicidade por instituição
+      if (user?.role === 'admin' && payload.role === 'gestor' && payload.id_instituicao) {
+        await garantirGestorUnico(payload.id_instituicao, editing?.id);
+      }
+      await fetchUsuarios();
       handleClose();
     } else {
       const errorData = await res.json();
@@ -140,16 +155,111 @@ export default function PaginaGestaoUsuario() {
     });
   }
 
+  // Filtragem de visibilidade: gestor só vê seus vendedores / admin vê tudo
+  const usuariosVisiveis = useMemo(() => {
+    let base: Usuario[];
+    if (user?.role === 'admin') base = usuarios;
+    else if (user?.role === 'gestor') {
+      base = usuarios.filter(u => u.id_instituicao === user.id_instituicao && u.perfil.toLowerCase() === 'vendedor');
+    } else base = usuarios;
+
+    // Filtros adicionais
+    return base.filter(u => {
+      if (filtroInstituicao) {
+        if (!u.id_instituicao || u.id_instituicao.toString() !== filtroInstituicao) return false;
+      }
+      if (filtroRole) {
+        if (u.perfil.toLowerCase() !== filtroRole) return false;
+      }
+      if (busca) {
+        const b = busca.toLowerCase();
+        const alvo = `${u.nome} ${u.email || ''} ${u.cpf}`.toLowerCase();
+        if (!alvo.includes(b)) return false;
+      }
+      return true;
+    });
+  }, [usuarios, user, filtroInstituicao, filtroRole, busca]);
+
+  // Checa se linha pode ser editada pelo usuário logado
+  const podeEditar = (u: Usuario) => {
+    if (user?.role === 'admin') return true;
+    if (user?.role === 'gestor') {
+      return u.id_instituicao === user.id_instituicao && u.perfil.toLowerCase() === 'vendedor';
+    }
+    return false;
+  };
+
+  // Garantir gestor único por instituição (frontend) - troca antigos gestores para vendedor
+  const garantirGestorUnico = async (idInstituicao: number, novoGestorId?: number) => {
+    const gestoresMesma = usuarios.filter(u => u.id_instituicao === idInstituicao && u.perfil.toLowerCase() === 'gestor' && u.id !== novoGestorId);
+    for (const g of gestoresMesma) {
+      try {
+        await fetch('/api/usuario/editarUsuario', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: g.id, perfil: 'vendedor' })
+        });
+      } catch (e) {
+        console.warn('Falha ao rebaixar gestor antigo', g.id);
+      }
+    }
+  };
+
+  const badgeForPerfil = (perfil: string) => {
+    const p = perfil.toLowerCase();
+    const map: Record<string, string> = { admin: 'danger', gestor: 'warning', vendedor: 'info', cliente: 'secondary' };
+    const variant = map[p] || 'secondary';
+    return <Badge bg={variant} className="text-uppercase small fw-semibold">{perfil}</Badge>;
+  };
+
 
   return (
     <div className="container py-5">
       <motion.h2 className="text-center mb-5 fw-bold">Gestão de Usuários</motion.h2>
-      <div className="mb-3 text-end">
-        <Button variant="success" onClick={() => handleShow()}>
-          <i className="bi bi-person-plus me-2"></i>Adicionar Usuário
-        </Button>
+      <div className="d-flex flex-column flex-lg-row gap-3 mb-4 align-items-lg-end justify-content-between">
+        <div className="flex-grow-1 d-flex flex-column flex-md-row gap-3">
+          <div style={{ minWidth: 240 }}>
+            <Form.Label className="small text-uppercase fw-semibold text-muted mb-1">Pesquisar</Form.Label>
+            <InputGroup>
+              <InputGroup.Text className="bg-white"><i className="bi bi-search" /></InputGroup.Text>
+              <Form.Control placeholder="Nome, email ou CPF" value={busca} onChange={e => setBusca(e.target.value)} />
+            </InputGroup>
+          </div>
+          <div style={{ minWidth: 200 }}>
+            <Form.Label className="small text-uppercase fw-semibold text-muted mb-1">Instituição</Form.Label>
+            <Form.Select value={filtroInstituicao} onChange={e => setFiltroInstituicao(e.target.value)} disabled={user?.role === 'gestor'}>
+              <option value="">Todas</option>
+              {instituicoes.map(i => (
+                <option key={i.idInstituicao} value={i.idInstituicao}>{i.nomeInstituicao}</option>
+              ))}
+            </Form.Select>
+          </div>
+          <div style={{ minWidth: 180 }}>
+            <Form.Label className="small text-uppercase fw-semibold text-muted mb-1">Função</Form.Label>
+            <Form.Select value={filtroRole} onChange={e => setFiltroRole(e.target.value)}>
+              <option value="">Todas</option>
+              <option value="admin">Admin</option>
+              <option value="gestor">Gestor</option>
+              <option value="vendedor">Vendedor</option>
+              <option value="cliente">Cliente</option>
+            </Form.Select>
+          </div>
+        </div>
+        <div className="d-flex gap-2">
+          {(filtroInstituicao || filtroRole || busca) && (
+            <Button variant="outline-secondary" onClick={() => { setFiltroInstituicao(''); setFiltroRole(''); setBusca(''); }}>Limpar</Button>
+          )}
+          <Button variant="success" onClick={() => handleShow()}>
+            <i className="bi bi-person-plus me-2"></i>Novo Usuário
+          </Button>
+        </div>
       </div>
-      <Table striped bordered hover responsive>
+
+      <div className="d-flex justify-content-between align-items-center mb-2 small text-muted">
+        <span>Total: {usuariosVisiveis.length}</span>
+        {(filtroInstituicao || filtroRole || busca) && <span>Filtros ativos</span>}
+      </div>
+      <Table striped bordered hover responsive className="align-middle">
         <thead className="table-dark">
           <tr>
             <th>Nome</th>
@@ -161,28 +271,34 @@ export default function PaginaGestaoUsuario() {
           </tr>
         </thead>
         <tbody>
-          {usuarios.map((user) => {
-            const empresaDoUsuario = instituicoes.find((e) => e.idInstituicao === user.id_instituicao);
+          {usuariosVisiveis.map((userRow) => {
+            const empresaDoUsuario = instituicoes.find((e) => e.idInstituicao === userRow.id_instituicao);
+            const disabled = !podeEditar(userRow);
 
             return (
-              <tr key={user.id}>
-                <td>{user.nome}</td>
-                <td>{user.email}</td>
-                <td>{user.cpf}</td>
-                <td>{user.perfil}</td>
-                <td>{empresaDoUsuario?.nomeInstituicao || "Não vinculada"}</td> {/* NOVO */}
+              <tr key={userRow.id} className={userRow.perfil.toLowerCase()==='gestor' ? 'table-warning' : ''}>
+                <td className="fw-semibold">{userRow.nome}</td>
+                <td>{userRow.email}</td>
+                <td>{userRow.cpf}</td>
+                <td>{badgeForPerfil(userRow.perfil)}</td>
+                <td>{empresaDoUsuario?.nomeInstituicao || "Não vinculada"}</td>
                 <td>
-                  <Button size="sm" variant="outline-primary" onClick={() => handleShow(user)}>
-                    <i className="bi bi-pencil"></i>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline-danger"
-                    className="ms-2"
-                    onClick={() => handleDelete(user.id)}
-                  >
-                    <i className="bi bi-trash"></i>
-                  </Button>
+                  <div className="d-flex gap-2">
+                    <OverlayTrigger overlay={<Tooltip>Editar</Tooltip>}>
+                      <span className="d-inline-block">
+                        <Button size="sm" variant="outline-primary" disabled={disabled} onClick={() => !disabled && handleShow(userRow)}>
+                          <i className="bi bi-pencil" />
+                        </Button>
+                      </span>
+                    </OverlayTrigger>
+                    <OverlayTrigger overlay={<Tooltip>Excluir</Tooltip>}>
+                      <span className="d-inline-block">
+                        <Button size="sm" variant="outline-danger" disabled={disabled} onClick={() => !disabled && handleDelete(userRow.id)}>
+                          <i className="bi bi-trash" />
+                        </Button>
+                      </span>
+                    </OverlayTrigger>
+                  </div>
                 </td>
               </tr>
             );
@@ -230,34 +346,49 @@ export default function PaginaGestaoUsuario() {
             </Form.Group>
 
 
-            <Form.Group className="mb-3">
-              <Form.Label>Função</Form.Label>
-              <Form.Select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              >
-                <option value="">Selecione um perfil</option>
-                <option value="cliente">Cliente</option>
-                <option value="admin">Admin</option>
-                <option value="gestor">Gestor</option>
-                <option value="vendedor">Vendedor</option>
-              </Form.Select>
-            </Form.Group>
+            {user?.role === 'gestor' ? (
+              <Form.Group className="mb-3">
+                <Form.Label>Função</Form.Label>
+                <Form.Control value="vendedor" disabled readOnly />
+                <Form.Text className="text-muted">Gestores só podem criar/editar vendedores.</Form.Text>
+              </Form.Group>
+            ) : (
+              <Form.Group className="mb-3">
+                <Form.Label>Função</Form.Label>
+                <Form.Select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                >
+                  <option value="">Selecione um perfil</option>
+                  <option value="cliente">Cliente</option>
+                  <option value="admin">Admin</option>
+                  <option value="gestor">Gestor</option>
+                  <option value="vendedor">Vendedor</option>
+                </Form.Select>
+              </Form.Group>
+            )}
 
-            <Form.Group>
-              <Form.Label>Instituicao</Form.Label>
-              <Form.Select
-                value={formData.id_instituicao}
-                onChange={(e) => setFormData({ ...formData, id_instituicao: e.target.value })}
-              >
-                <option value="">Selecione a instituicao</option>
-                {instituicoes.map((instituicao) => (
-                  <option key={instituicao.idInstituicao} value={instituicao.idInstituicao}>
-                    {instituicao.nomeInstituicao}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
+            {user?.role === 'gestor' ? (
+              <Form.Group className="mb-3">
+                <Form.Label>Instituição</Form.Label>
+                <Form.Control value={instituicoes.find(i => i.idInstituicao === user.id_instituicao)?.nomeInstituicao || ''} disabled />
+              </Form.Group>
+            ) : (
+              <Form.Group className="mb-3">
+                <Form.Label>Instituicao</Form.Label>
+                <Form.Select
+                  value={formData.id_instituicao}
+                  onChange={(e) => setFormData({ ...formData, id_instituicao: e.target.value })}
+                >
+                  <option value="">Selecione a instituicao</option>
+                  {instituicoes.map((instituicao) => (
+                    <option key={instituicao.idInstituicao} value={instituicao.idInstituicao}>
+                      {instituicao.nomeInstituicao}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            )}
 
             {user?.role === "admin" && (
               <>

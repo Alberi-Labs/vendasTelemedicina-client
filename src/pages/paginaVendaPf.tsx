@@ -7,11 +7,24 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Paper from "@mui/material/Paper";
 import Container from "@mui/material/Container";
+import Grid from "@mui/material/Grid";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import Radio from "@mui/material/Radio";
+import RadioGroup from "@mui/material/RadioGroup";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import FormLabel from "@mui/material/FormLabel";
+import Divider from "@mui/material/Divider";
+import Alert from "@mui/material/Alert";
 import TelaCarregamento from "@/components/telaCarregamento/TelaCarregamento";
 import PaymentLinkPopup from "@/components/paymentLinkPopup/PaymentLinkPopup";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 import { useAuth } from "@/app/context/AuthContext";
-import { vendaPlanoPf, vendaTelemedicinaApiCompat } from "@/lib/api-client";
+import { vendaPlanoPf, vendaTelemedicinaApiCompat, instituicoesApi } from "@/lib/api-client";
+import type { SelectChangeEvent } from '@mui/material/Select';
 
 export default function CadastroPf() {
     const [currentStep, setCurrentStep] = useState(0);
@@ -29,6 +42,8 @@ export default function CadastroPf() {
         uf: "",
         cidade: "",
         formaPagamento: "",
+        instituicao: "", // nome da instituição
+        id_instituicao: "", // id se admin selecionar
     });
     const [erros, setErros] = useState<{ [key: string]: string }>({});
     const [estados, setEstados] = useState<{ sigla: string; nome: string }[]>([]);
@@ -37,6 +52,8 @@ export default function CadastroPf() {
     const [showPopup, setShowPopup] = useState(false);
     const [paymentLink, setPaymentLink] = useState("");
     const [mensagemDeErro, setMensagemDeErro] = useState<string | null>(null);
+    const [instituicoes, setInstituicoes] = useState<Array<{ id: number; nome: string }>>([]);
+    const [validating, setValidating] = useState(false);
     const { user } = useAuth();
 
     let idUsuario: string = "";
@@ -48,6 +65,26 @@ export default function CadastroPf() {
                 setEstados(data.map((estado: any) => ({ sigla: estado.sigla, nome: estado.nome })));
             });
     }, []);
+
+    // Carrega instituições se usuário for admin
+    useEffect(() => {
+        const isAdmin = user?.role?.toLowerCase() === 'admin';
+        if (isAdmin) {
+            instituicoesApi.listar()
+                .then((data: any) => {
+                    console.log('🔸 Instituições carregadas:', data);
+                    const lista = Array.isArray(data) ? data : data?.instituicoes || [];
+                    const mapped = lista.map((i: any) => ({
+                        id: i.idInstituicao || i.id || i.id_instituicao,
+                        nome: i.nomeInstituicao || i.nome || i.nome_instituicao,
+                    })).filter((i: any) => i.id && i.nome);
+                    setInstituicoes(mapped);
+                })
+                .catch(err => console.error('Erro ao listar instituições', err));
+        } else if (user?.dsc_instituicao) {
+            setFormData(prev => ({ ...prev, instituicao: user.dsc_instituicao || "" }));
+        }
+    }, [user]);
 
     useEffect(() => {
         if (formData.uf) {
@@ -105,18 +142,22 @@ export default function CadastroPf() {
             .slice(0, 10);
     };
 
-    const handleChangeFormat = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        let { name, value } = e.target;
+    const handleChangeFormat = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | any) => {
+        const target = e.target;
+        let { name, value } = target;
 
         if (name === "cpf") value = formatCpf(value);
         if (name === "celular") value = formatTelefone(value);
         if (name === "nascimento") value = formatNascimento(value);
 
         setFormData((prev) => ({ ...prev, [name]: value }));
+        if (erros[name]) setErros(prev => ({ ...prev, [name]: "" }));
     };
 
-    const handleUfChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setFormData({ ...formData, uf: e.target.value, cidade: "" });
+    const handleUfChange = (e: SelectChangeEvent<string>) => {
+        const value = e.target.value as string;
+        setFormData(prev => ({ ...prev, uf: value, cidade: "" }));
+        if (erros.uf) setErros(prev => ({ ...prev, uf: '' }));
     };
 
     // Converte 'DD/MM/AAAA' para 'YYYY-MM-DD' (formato DATE do MySQL)
@@ -127,23 +168,50 @@ export default function CadastroPf() {
         return `${yyyy}-${mm}-${dd}`;
     };
 
+    const camposObrigatorios: { [key: number]: string[] } = {
+        0: ['nome', 'email', 'cpf', 'celular', 'nascimento', 'sexo', 'instituicao'],
+        1: ['cep', 'endereco', 'casa', 'uf', 'cidade'],
+        2: ['formaPagamento'],
+    };
+
+    const validarCamposStep = (step: number) => {
+        const lista = camposObrigatorios[step] || [];
+        const novosErros: any = {};
+        lista.forEach(c => {
+            if (!formData[c as keyof typeof formData]) {
+                novosErros[c] = 'Obrigatório';
+            }
+        });
+        // valida formatos
+        if (lista.includes('cpf') && formData.cpf && formData.cpf.replace(/\D/g,'').length !== 11) {
+            novosErros.cpf = 'CPF inválido';
+        }
+        if (lista.includes('nascimento') && formData.nascimento) {
+            const db = toDbDate(formData.nascimento);
+            if (!db) novosErros.nascimento = 'Data inválida';
+        }
+        setErros((prev) => ({ ...prev, ...novosErros }));
+        return Object.keys(novosErros).length === 0;
+    };
+
     const nextStep = async () => {
+        if (!validarCamposStep(currentStep)) return;
+
         if (currentStep === 2) {
-            // Validar se forma de pagamento foi selecionada
             if (!formData.formaPagamento) {
                 setMensagemDeErro('Por favor, selecione uma forma de pagamento.');
                 return;
             }
 
             setLoading(true);
+            setValidating(true);
             try {
                 const sexoFormatado = formData.sexo.toLowerCase() === 'feminino' ? 'F' : 'M';
                 const nascimentoDb = toDbDate(formData.nascimento);
-
-                const dadosCompletos = {
+                const dadosCompletos: any = {
                     nomeCliente: formData.nome,
                     email: formData.email,
-                    cpf: formData.cpf,
+                    cpf: formData.cpf.replace(/\D/g, ''),
                     celular: formData.celular,
                     dataNascimento: nascimentoDb,
                     cep: formData.cep,
@@ -153,20 +221,19 @@ export default function CadastroPf() {
                     uf: formData.uf,
                     cidade: formData.cidade,
                     formaDePagamento: formData.formaPagamento,
-                    instituicao: user?.dsc_instituicao,
+                    instituicao: formData.instituicao || user?.dsc_instituicao,
+                    id_instituicao: formData.id_instituicao || user?.id_instituicao,
                     login_sistema: user?.login_sistema,
                     senha_sistema: user?.senha_sistema,
                     idUsuario: user?.id,
                 };
-                console.log("🔸 Dados completos para venda:", dadosCompletos);
-                // Novo fluxo: usar endpoint unificado de Telemedicina (camelCase compat)
-                const respostaTele = await vendaTelemedicinaApiCompat.criarPf(dadosCompletos);
+                console.log('🔸 Dados completos para venda:', dadosCompletos);
 
+                const respostaTele = await vendaTelemedicinaApiCompat.criarPf(dadosCompletos);
                 if (respostaTele?.paymentLink) {
                     setPaymentLink(respostaTele.paymentLink);
                     setShowPopup(true);
                 } else {
-                    // Fallback para o fluxo anterior em duas etapas
                     const dataDB = await vendaPlanoPf.cadastroClientePfDB(dadosCompletos);
                     const dataCobranca = await vendaPlanoPf.gerarCobrancaPf({
                         clienteId: dataDB.clienteId,
@@ -181,7 +248,6 @@ export default function CadastroPf() {
                         bairro: formData.bairro,
                         telefone: formData.celular,
                     });
-
                     if (dataCobranca?.paymentLink) {
                         setPaymentLink(dataCobranca.paymentLink);
                         setShowPopup(true);
@@ -189,13 +255,13 @@ export default function CadastroPf() {
                         setMensagemDeErro('Erro: o link de pagamento não foi retornado.');
                     }
                 }
-
             } catch (error: any) {
                 console.error('Erro no processamento da venda:', error);
                 setMensagemDeErro(error.message || 'Erro inesperado.');
                 return;
             } finally {
                 setLoading(false);
+                setValidating(false);
             }
         } else {
             setCurrentStep((prev) => prev + 1);
@@ -206,6 +272,8 @@ export default function CadastroPf() {
     const prevStep = () => setCurrentStep((prev) => prev - 1);
 
     const steps = ["Dados Pessoais", "Endereço", "Pagamento"];
+
+    const isAdmin = user?.role?.toLowerCase() === 'admin';
 
     return (
         <Container maxWidth="md">
@@ -225,193 +293,275 @@ export default function CadastroPf() {
                 <Box mt={4}>
                     {currentStep === 0 && (
                         <>
-                            <Typography variant="h6" align="center" gutterBottom>
-                                Preencha as informações pessoais
+                            <Typography variant="h6" gutterBottom align="left">
+                                Informações do Titular
                             </Typography>
-                            {[
-                                { label: "Nome", name: "nome", type: "text" },
-                                { label: "E-mail", name: "email", type: "email" },
-                                { label: "CPF", name: "cpf", type: "text" },
-                                { label: "Celular", name: "celular", type: "text", placeholder: "(DD) 12345-1234" },
-                                { label: "Data de nascimento", name: "nascimento", type: "text", placeholder: "DD/MM/AAAA" },
-                            ].map(({ label, name, type, placeholder }) => (
-                                <Box className="mb-3" key={name}>
-                                    <label className="form-label">{label}</label>
-                                    <input
-                                        type={type}
-                                        className="form-control"
-                                        name={name}
-                                        value={formData[name as keyof typeof formData]}
+                            <Divider sx={{ mb: 3 }} />
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} md={8}>
+                                    <TextField
+                                        label="Nome completo"
+                                        name="nome"
+                                        fullWidth
+                                        value={formData.nome}
                                         onChange={handleChangeFormat}
-                                        placeholder={placeholder}
-                                        required
+                                        error={!!erros.nome}
+                                        helperText={erros.nome}
                                     />
-                                </Box>
-                            ))}
-                            <Box className="mb-3">
-                                <label className="form-label">Gênero</label>
-                                <select
-                                    className="form-control"
-                                    name="sexo"
-                                    value={formData.sexo}
-                                    onChange={handleChangeFormat}
-                                    required
-                                >
-                                    <option value="">Selecione</option>
-                                    <option value="masculino">Masculino</option>
-                                    <option value="feminino">Feminino</option>
-                                </select>
-                            </Box>
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <TextField
+                                        label="CPF"
+                                        name="cpf"
+                                        fullWidth
+                                        value={formData.cpf}
+                                        onChange={handleChangeFormat}
+                                        error={!!erros.cpf}
+                                        helperText={erros.cpf || 'Somente números'}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <TextField
+                                        label="Data de Nascimento"
+                                        name="nascimento"
+                                        fullWidth
+                                        value={formData.nascimento}
+                                        onChange={handleChangeFormat}
+                                        error={!!erros.nascimento}
+                                        helperText={erros.nascimento || 'Formato: DD/MM/AAAA'}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <TextField
+                                        label="Celular"
+                                        name="celular"
+                                        fullWidth
+                                        value={formData.celular}
+                                        onChange={handleChangeFormat}
+                                        error={!!erros.celular}
+                                        helperText={erros.celular}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <TextField
+                                        label="E-mail"
+                                        name="email"
+                                        type="email"
+                                        fullWidth
+                                        value={formData.email}
+                                        onChange={handleChangeFormat}
+                                        error={!!erros.email}
+                                        helperText={erros.email}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={4}>
+                                    <FormControl fullWidth error={!!erros.sexo}>
+                                        <InputLabel id="sexo-label">Gênero</InputLabel>
+                                        <Select
+                                            labelId="sexo-label"
+                                            label="Gênero"
+                                            name="sexo"
+                                            value={formData.sexo}
+                                            onChange={handleChangeFormat}
+                                        >
+                                            <MenuItem value="masculino">Masculino</MenuItem>
+                                            <MenuItem value="feminino">Feminino</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                {isAdmin && (
+                                    <Grid item xs={12} md={8}>
+                                        <FormControl fullWidth error={!!erros.instituicao}>
+                                            <InputLabel id="instituicao-label">Instituição</InputLabel>
+                                            <Select
+                                                labelId="instituicao-label"
+                                                label="Instituição"
+                                                name="instituicao"
+                                                value={formData.instituicao}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    const inst = instituicoes.find(i => i.nome === value || String(i.id) === String(value));
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        instituicao: inst?.nome || value,
+                                                        id_instituicao: inst?.id ? String(inst.id) : ''
+                                                    }));
+                                                    if (erros.instituicao) setErros(prev => ({ ...prev, instituicao: '' }));
+                                                }}
+                                            >
+                                                {instituicoes.map(i => (
+                                                    <MenuItem key={i.id} value={i.nome}>{i.nome}</MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                )}
+                                {!isAdmin && (
+                                    <Grid item xs={12} md={8}>
+                                        <TextField
+                                            label="Instituição"
+                                            name="instituicao"
+                                            fullWidth
+                                            value={formData.instituicao || user?.dsc_instituicao || ''}
+                                            InputProps={{ readOnly: true }}
+                                        />
+                                    </Grid>
+                                )}
+                            </Grid>
                         </>
-
                     )}
 
                     {currentStep === 1 && (
                         <>
-                            <Typography variant="h6" align="center" gutterBottom>
-                                Preencha o endereço
+                            <Typography variant="h6" gutterBottom align="left">
+                                Endereço de Correspondência
                             </Typography>
-                            {[
-                                { label: "CEP", name: "cep", type: "text" },
-                                { label: "Endereço", name: "endereco", type: "text", disabled: true },
-                                { label: "Casa", name: "casa", type: "text", placeholder: "Número da casa" },
-                            ].map(({ label, name, type, placeholder, disabled }) => (
-                                <Box className="mb-3" key={name}>
-                                    <label className="form-label">{label}</label>
-                                    <input
-                                        type={type}
-                                        className="form-control"
-                                        name={name}
-                                        value={formData[name as keyof typeof formData]}
+                            <Divider sx={{ mb: 3 }} />
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} sm={4} md={3}>
+                                    <TextField
+                                        label="CEP"
+                                        name="cep"
+                                        fullWidth
+                                        value={formData.cep}
                                         onChange={(e) => {
-                                            const value = e.target.value;
-                                            const formattedValue =
-                                                name === "cep"
-                                                    ? value.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2").slice(0, 9)
-                                                    : value;
-                                            setFormData((prev) => ({ ...prev, [name]: formattedValue }));
+                                            let v = e.target.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').slice(0,9);
+                                            setFormData(prev => ({ ...prev, cep: v }));
+                                            if (erros.cep) setErros(prev => ({ ...prev, cep: '' }));
                                         }}
-                                        placeholder={placeholder}
-                                        disabled={disabled}
-                                        required
+                                        error={!!erros.cep}
+                                        helperText={erros.cep}
                                     />
-                                </Box>
-                            ))}
-
-                            <Box className="mb-3">
-                                <label className="form-label">Estado</label>
-                                <select
-                                    className="form-control"
-                                    name="uf"
-                                    value={formData.uf}
-                                    onChange={handleUfChange}
-                                    required
-                                >
-                                    <option value="">Selecione o Estado</option>
-                                    {estados.map((estado) => (
-                                        <option key={estado.sigla} value={estado.sigla}>
-                                            {estado.nome}
-                                        </option>
-                                    ))}
-                                </select>
-                            </Box>
-
-                            <Box className="mb-3">
-                                <label className="form-label">Cidade</label>
-                                <select
-                                    className="form-control"
-                                    name="cidade"
-                                    value={formData.cidade}
-                                    onChange={handleChangeFormat}
-                                    required
-                                >
-                                    <option value="">Selecione a Cidade</option>
-                                    {cidades.map((cidade, index) => (
-                                        <option key={index} value={cidade}>
-                                            {cidade}
-                                        </option>
-                                    ))}
-                                </select>
-                            </Box>
+                                </Grid>
+                                <Grid item xs={12} sm={8} md={5}>
+                                    <TextField
+                                        label="Endereço"
+                                        name="endereco"
+                                        fullWidth
+                                        value={formData.endereco}
+                                        onChange={handleChangeFormat}
+                                        InputProps={{ readOnly: true }}
+                                        error={!!erros.endereco}
+                                        helperText={erros.endereco}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={4} md={2}>
+                                    <TextField
+                                        label="Número"
+                                        name="casa"
+                                        fullWidth
+                                        value={formData.casa}
+                                        onChange={handleChangeFormat}
+                                        error={!!erros.casa}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={8} md={2}>
+                                    <TextField
+                                        label="Bairro"
+                                        name="bairro"
+                                        fullWidth
+                                        value={formData.bairro}
+                                        onChange={handleChangeFormat}
+                                        error={!!erros.bairro}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={3}>
+                                    <FormControl fullWidth error={!!erros.uf}>
+                                        <InputLabel id="uf-label">Estado</InputLabel>
+                                        <Select
+                                            labelId="uf-label"
+                                            label="Estado"
+                                            name="uf"
+                                            value={formData.uf}
+                                            onChange={handleUfChange}
+                                        >
+                                            {estados.map((estado) => (
+                                                <MenuItem key={estado.sigla} value={estado.sigla}>{estado.nome}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={5}>
+                                    <FormControl fullWidth error={!!erros.cidade}>
+                                        <InputLabel id="cidade-label">Cidade</InputLabel>
+                                        <Select
+                                            labelId="cidade-label"
+                                            label="Cidade"
+                                            name="cidade"
+                                            value={formData.cidade}
+                                            onChange={handleChangeFormat}
+                                        >
+                                            {cidades.map((cidade, index) => (
+                                                <MenuItem key={index} value={cidade}>{cidade}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                            </Grid>
                         </>
                     )}
 
-
                     {currentStep === 2 && (
                         <>
-                            <Typography variant="h6" align="center" gutterBottom>
-                                Pagamento
+                            <Typography variant="h6" gutterBottom align="left">
+                                Forma de Pagamento
                             </Typography>
-                            <Typography align="center">Selecione uma forma de pagamento:</Typography>
-                            <Box className="text-center mt-3">
-                                <Box className="mb-3">
-                                    <div>
-                                        <input
-                                            type="radio"
-                                            id="cartao"
-                                            name="formaPagamento"
-                                            value="cartao"
-                                            onChange={handleChangeFormat}
-                                            checked={formData.formaPagamento === "cartao"}
-                                        />
-                                        <label htmlFor="cartao">Cartão de Crédito</label>
-                                    </div>
-                                    <div>
-                                        <input
-                                            type="radio"
-                                            id="pix"
-                                            name="formaPagamento"
-                                            value="pix"
-                                            onChange={handleChangeFormat}
-                                            checked={formData.formaPagamento === "pix"}
-                                        />
-                                        <label htmlFor="pix">Pix</label>
-                                    </div>
-                                    <div>
-                                        <input
-                                            type="radio"
-                                            id="boleto"
-                                            name="formaPagamento"
-                                            value="boleto"
-                                            onChange={handleChangeFormat}
-                                            checked={formData.formaPagamento === "boleto"}
-                                        />
-                                        <label htmlFor="boleto">Boleto</label>
-                                    </div>
-                                </Box>
-                            </Box>
-                            <Box className="text-center mt-4">
-                                <Typography variant="body2" color="textSecondary">
-                                    Após selecionar a forma de pagamento, clique em "Avançar" para processar a venda.
+                            <Divider sx={{ mb: 3 }} />
+                            <FormControl component="fieldset">
+                                <FormLabel component="legend">Selecione</FormLabel>
+                                <RadioGroup
+                                    row
+                                    name="formaPagamento"
+                                    value={formData.formaPagamento}
+                                    onChange={handleChangeFormat}
+                                >
+                                    <FormControlLabel value="cartao" control={<Radio />} label="Cartão" />
+                                    <FormControlLabel value="pix" control={<Radio />} label="Pix" />
+                                    <FormControlLabel value="boleto" control={<Radio />} label="Boleto" />
+                                </RadioGroup>
+                            </FormControl>
+                            {!formData.formaPagamento && (
+                                <Alert sx={{ mt:2 }} severity="info">Escolha uma forma de pagamento para prosseguir.</Alert>
+                            )}
+                            <Box mt={2}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Ao finalizar, geraremos automaticamente o cadastro, assinatura e cobrança.
                                 </Typography>
                             </Box>
                         </>
                     )}
-
-
                 </Box>
 
                 <Box className="d-flex justify-content-between mt-4">
-                    {currentStep > 0 && (
-                        <Button variant="outlined" color="secondary" onClick={prevStep}>
-                            Voltar
-                        </Button>
-                    )}
-                    {currentStep < 2 && (
-                        <Button variant="contained" sx={{ backgroundColor: "rgb(181, 205, 0)" }} onClick={nextStep}>
-                            Avançar
-                        </Button>
-                    )}
-                    {currentStep === 2 && (
-                        <Button
-                            variant="contained"
-                            color="success"
-                            onClick={nextStep}
-                            disabled={!formData.formaPagamento}
-                        >
-                            Finalizar Venda
-                        </Button>
-                    )}
+                    <Box>
+                        {currentStep > 0 && (
+                            <Button variant="outlined" color="inherit" onClick={prevStep} disabled={loading}>
+                                Voltar
+                            </Button>
+                        )}
+                    </Box>
+                    <Box display="flex" gap={2}>
+                        {currentStep < 2 && (
+                            <Button
+                                variant="contained"
+                                sx={{ backgroundColor: "#607d8b" }}
+                                onClick={nextStep}
+                                disabled={loading}
+                            >
+                                Próximo
+                            </Button>
+                        )}
+                        {currentStep === 2 && (
+                            <Button
+                                variant="contained"
+                                color="success"
+                                onClick={nextStep}
+                                disabled={!formData.formaPagamento || loading || validating}
+                            >
+                                {loading ? 'Processando...' : 'Finalizar' }
+                            </Button>
+                        )}
+                    </Box>
                 </Box>
             </Paper>
             {loading && (

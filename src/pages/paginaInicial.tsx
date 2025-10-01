@@ -35,13 +35,13 @@ export default function PaginaInicial() {
     //   allowedRoles: ["admin", "vendedorFarmacia", "gerente"],
     //   description: "Cadastre clientes e realize vendas de consultas avulsas."
     // },
-    {
-      path: "/paginaVendaPj",
-      icon: "bi-briefcase",
-      text: "Venda Empresarial",
-      allowedRoles: ["admin", "vendedor", "gerente"],
-      description: "Gerencie vendas de planos para empresas com CNPJ."
-    },
+    // {
+    //   path: "/paginaVendaPj",
+    //   icon: "bi-briefcase",
+    //   text: "Venda Empresarial",
+    //   allowedRoles: ["admin", "vendedor", "gerente"],
+    //   description: "Gerencie vendas de planos para empresas com CNPJ."
+    // },
     {
       path: "/paginaVendaPf",
       icon: "bi-cash-coin",
@@ -62,6 +62,13 @@ export default function PaginaInicial() {
       text: "Gestão de Clientes",
       allowedRoles: ["admin", "vendedor", "gerente"],
       description: "Visualize, edite ou remova dados de clientes cadastrados."
+    },
+    {
+      path: "/paginaGestaoInstituicoes",
+      icon: "bi-building",
+      text: "Gestão de Instituições",
+      allowedRoles: ["admin", "vendedor", "gerente"],
+      description: "Visualize, edite ou remova dados de instituições cadastradas."
     },
     {
       path: "/paginaTelemedicina",
@@ -112,13 +119,13 @@ export default function PaginaInicial() {
       allowedRoles: ["admin", "gerente"],
       description: "Visualize gráficos e indicadores financeiros atualizados."
     },
-    {
-      path: "/paginaGestaoEmpresas",
-      icon: "bi-buildings",
-      text: "Página Gestão de Empresas",
-      allowedRoles: ["admin"],
-      description: "Gerencie dados das empresas clientes com CNPJ."
-    },
+    // {
+    //   path: "/paginaGestaoEmpresas",
+    //   icon: "bi-buildings",
+    //   text: "Página Gestão de Empresas",
+    //   allowedRoles: ["admin"],
+    //   description: "Gerencie dados das empresas clientes com CNPJ."
+    // },
     {
       path: "/relatorioAsass",
       icon: "bi-file-earmark-medical",
@@ -164,16 +171,6 @@ export default function PaginaInicial() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <h1 className="fw-bold">
-          {user?.role === "cliente"
-            ? "Olá, seja bem-vindo(a) à área do cliente!"
-            : "Olá, seja bem-vindo ao nosso sistema de vendas!"}
-        </h1>
-        <p className="text-muted">
-          {user?.role === "cliente" || user?.role === "clientePJ"
-            ? "Aqui você pode realizar consultas, baixar apólices e acessar informações importantes do seu plano."
-            : "Aqui você pode gerenciar vendas, clientes e relatórios do sistema."}
-        </p>
 
         {user?.role === "cliente" || user?.role === "clientePJ" ? (
           <motion.div

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import Container from "@mui/material/Container";
 import Paper from "@mui/material/Paper";
@@ -17,6 +17,17 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import { motion } from "framer-motion";
+import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
+import Grid from '@mui/material/Grid';
+import Chip from '@mui/material/Chip';
+import Tooltip from '@mui/material/Tooltip';
+import { clientesApi, instituicoesEmpresaApi } from '../lib/api-client';
+import { ActionButtons } from '@/components/gestao-clientes/ActionButtons';
+import { ChargesModal } from '@/components/gestao-clientes/ChargesModal';
+import { GenerateCarteirinhaModal } from '@/components/gestao-clientes/GenerateCarteirinhaModal';
+import { EditClienteDialog } from '@/components/gestao-clientes/EditClienteDialog';
+import { useAuth } from '@/app/context/AuthContext';
 
 // 🔹 Interface para Cliente
 interface Cliente {
@@ -38,6 +49,8 @@ interface Venda {
   valor: number;
 }
 
+interface InstituicaoOption { idInstituicao: number; nomeInstituicao: string; }
+
 export default function PaginaGestaoClientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,27 +61,50 @@ export default function PaginaGestaoClientes() {
   const router = useRouter();
   const [modalEditarOpen, setModalEditarOpen] = useState(false);
   const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
+  const [chargesOpen, setChargesOpen] = useState(false);
+  const [carteirinhaOpen, setCarteirinhaOpen] = useState(false);
+  const [instituicoes, setInstituicoes] = useState<InstituicaoOption[]>([]);
+  const [instituicaoFiltro, setInstituicaoFiltro] = useState<string>('');
+  const [busca, setBusca] = useState('');
+  const { user } = useAuth();
+
+  console.log("cliente selecionado", selectedCliente);
+  useEffect(() => {
+    // Carregar instituições só para admin (para filtro)
+    if (user?.role === 'admin') {
+      instituicoesEmpresaApi.buscarEmpresa().then(data => {
+        if (data.success) setInstituicoes(data.instituicoes || []);
+      }).catch(() => {});
+    }
+  }, [user]);
+
+  const carregarClientes = async () => {
+    setLoading(true);
+    try {
+      const filtros: any = {};
+      if (user?.role === 'admin' && instituicaoFiltro) filtros.id_instituicao = parseInt(instituicaoFiltro);
+      // (backend ainda ignora id_instituicao; fallback filtra no front)
+      console.log('Carregando clientes com filtros:', filtros);
+      const data = await clientesApi.consultar(filtros);
+      console.log('Dados de clientes recebidos:', data);
+      const lista = data.clientes || data.data?.clientes || [];
+      setClientes(lista);
+    } catch (e) {
+      console.error('Erro ao carregar clientes', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchClientes = async () => {
-      try {
-        const response = await fetch("/api/cliente/consultar");
-        const data = await response.json();
-        setClientes(data.clientes);
-      } catch (error) {
-        console.error("Erro ao buscar clientes:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchClientes();
-  }, []);
+    if (user) carregarClientes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, instituicaoFiltro]);
 
   const handleClienteClick = async (cliente: Cliente) => {
     setSelectedCliente(cliente);
     setModalOpen(true);
     setLoadingVendas(true);
-
     try {
       const response = await fetch(`/api/venda/consultar?id_cliente=${cliente.idCliente}`);
       const data = await response.json();
@@ -158,6 +194,22 @@ export default function PaginaGestaoClientes() {
     }
   };
 
+  // Filtro derivado (caso backend não filtre por instituicao)
+  const clientesFiltrados = useMemo(() => {
+    let base = clientes;
+    if (user?.role !== 'admin' && user?.id_instituicao) {
+      // TODO: Quando backend relacionar clientes a instituicoes dinamicamente, aplicar aqui
+      // Sem origem no payload atual, mantemos todos (placeholder)
+    } else if (user?.role === 'admin' && instituicaoFiltro) {
+      // Se tivéssemos id_instituicao no cliente, filtraria aqui
+    }
+    if (busca) {
+      const b = busca.toLowerCase();
+      base = base.filter(c => `${c.nome} ${c.email} ${c.cpf}`.toLowerCase().includes(b));
+    }
+    return base;
+  }, [clientes, busca, user, instituicaoFiltro]);
+
   return (
     <Container maxWidth="lg">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
@@ -165,6 +217,27 @@ export default function PaginaGestaoClientes() {
           <Typography variant="h4" align="center" gutterBottom>
             Gestão de Clientes
           </Typography>
+          <Grid container spacing={2} mt={1} alignItems="flex-end">
+            <Grid item xs={12} md={4}>
+              <TextField label="Pesquisar" size="small" fullWidth placeholder="Nome, email ou CPF" value={busca} onChange={e => setBusca(e.target.value)} />
+            </Grid>
+            {user?.role === 'admin' && (
+              <Grid item xs={12} md={4}>
+                <TextField label="Instituição" size="small" select fullWidth value={instituicaoFiltro} onChange={e => setInstituicaoFiltro(e.target.value)}>
+                  <MenuItem value="">Todas</MenuItem>
+                  {instituicoes.map(inst => (
+                    <MenuItem key={inst.idInstituicao} value={inst.idInstituicao}>{inst.nomeInstituicao}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+            )}
+            <Grid item xs={12} md={4} textAlign={{ xs: 'left', md: 'right' }}>
+              <Chip label={`Total: ${clientesFiltrados.length}`} color="primary" variant="outlined" />
+              {(busca || (user?.role==='admin' && instituicaoFiltro)) && (
+                <Button size="small" sx={{ ml: 1 }} onClick={() => { setBusca(''); setInstituicaoFiltro(''); }}>Limpar</Button>
+              )}
+            </Grid>
+          </Grid>
           {loading ? (
             <Box display="flex" justifyContent="center">
               <CircularProgress />
@@ -181,17 +254,19 @@ export default function PaginaGestaoClientes() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {clientes?.map((cliente) => (
+                  {clientesFiltrados?.map((cliente) => (
                     <TableRow key={cliente.idCliente}>
                       <TableCell>{cliente.nome}</TableCell>
                       <TableCell>{cliente.cpf}</TableCell>
                       <TableCell>{cliente.email}</TableCell>
                       <TableCell>
                         <div className="d-flex gap-2">
-                          <Button variant="contained" size="small" onClick={() => handleClienteClick(cliente)}>👁 Ver</Button>
-                          <Button variant="contained" size="small" onClick={() => handleEditarClick(cliente)}>✏️</Button>
-                          <Button variant="contained" color="error" size="small" onClick={() => handleDeletarClick(cliente)}>🗑️</Button>
-                          <Button variant="contained" size="small" onClick={() => router.push(`/gerarApolice?cliente=${cliente.idCliente}`)}>📄</Button>
+                          <ActionButtons
+                            onView={() => handleClienteClick(cliente)}
+                            onEdit={() => handleEditarClick(cliente)}
+                            onCharges={() => { setSelectedCliente(cliente); setChargesOpen(true); }}
+                            onCarteirinha={() => { setSelectedCliente(cliente); setCarteirinhaOpen(true); }}
+                          />
                         </div>
                       </TableCell>
 
@@ -253,85 +328,32 @@ export default function PaginaGestaoClientes() {
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={modalEditarOpen} onClose={() => setModalEditarOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Editar Cliente</DialogTitle>
-        <DialogContent>
-          {clienteEditando && (
-            <>
-              <Box className="mb-3">
-                <label>Nome</label>
-                <input
-                  className="form-control"
-                  value={clienteEditando.nome}
-                  onChange={(e) =>
-                    setClienteEditando({ ...clienteEditando, nome: e.target.value })
-                  }
-                />
-              </Box>
-              <Box className="mb-3">
-                <label>CPF</label>
-                <input
-                  className="form-control"
-                  value={clienteEditando.cpf}
-                  onChange={(e) => {
-                    const onlyNumbers = e.target.value.replace(/\D/g, "");
-                    const formattedCpf = onlyNumbers
-                      .replace(/^(\d{3})(\d)/, "$1.$2")
-                      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-                      .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+      <EditClienteDialog
+        open={modalEditarOpen}
+        onClose={() => setModalEditarOpen(false)}
+        cliente={clienteEditando as any}
+        onChange={(data) => setClienteEditando(data as any)}
+        onSave={handleSalvarEdicao}
+      />
 
-                    setClienteEditando({ ...clienteEditando, cpf: formattedCpf });
-                  }}
-                />
-              </Box>
-
-              <Box className="mb-3">
-                <label>Telefone</label>
-                <input
-                  className="form-control"
-                  value={clienteEditando.telefone || ""}
-                  onChange={(e) =>
-                    setClienteEditando({ ...clienteEditando, telefone: e.target.value })
-                  }
-                />
-              </Box>
-
-              <Box className="mb-3">
-                <label>Email</label>
-                <input
-                  className="form-control"
-                  value={clienteEditando.email}
-                  onChange={(e) =>
-                    setClienteEditando({ ...clienteEditando, email: e.target.value })
-                  }
-                />
-              </Box>
-
-              <Box className="mb-3">
-                <label>Data de Nascimento</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={clienteEditando.data_nascimento || ""}
-                  onChange={(e) =>
-                    setClienteEditando({ ...clienteEditando, data_nascimento: e.target.value })
-                  }
-                />
-              </Box>
-
-            </>
-          )}
-
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModalEditarOpen(false)} color="secondary">
-            Cancelar
-          </Button>
-          <Button variant="contained" onClick={handleSalvarEdicao}>
-            Salvar Alterações
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ChargesModal
+        open={chargesOpen}
+        onClose={() => setChargesOpen(false)}
+        cpf={selectedCliente?.cpf}
+        email={selectedCliente?.email}
+      />
+      <GenerateCarteirinhaModal
+        open={carteirinhaOpen}
+        onClose={() => setCarteirinhaOpen(false)}
+        clienteNome={selectedCliente?.nome}
+        clienteCpf={selectedCliente?.cpf}
+        vigencia={(selectedCliente as any)?.vigencia_contrato || null}
+        apolice={(selectedCliente as any)?.numero_apolice || null}
+        operacao={(selectedCliente as any)?.numero_operacao || null}
+        certificado={(selectedCliente as any)?.numero_certificado || null}
+        contratoAssinado={(selectedCliente as any)?.contrato_assinado || false}
+        nomeInstituicao={(selectedCliente as any)?.nomeInstituicao || (selectedCliente as any)?.dsc_instituicao || null}
+      />
 
     </Container>
   );

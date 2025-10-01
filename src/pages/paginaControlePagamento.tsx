@@ -78,7 +78,7 @@ export default function PaginaControlePagamento() {
 
         const processarPagamentos = todasCobrancas.map((cobranca: any): Pagamento => {
           const dataVencimento = new Date(cobranca.dueDate);
-
+          console.log('Processando cobrança:', cobranca);
           let situacao: "Pago" | "Pendente" | "Atrasado";
           if (cobranca.status === "RECEIVED") {
             situacao = "Pago";
@@ -91,7 +91,7 @@ export default function PaginaControlePagamento() {
           return {
             id: cobranca.id,
             data: new Date(cobranca.dueDate).toLocaleDateString("pt-BR"),
-            valor: `R$ ${parseFloat(cobranca.value).toFixed(2).replace(".", ",")}`,
+            valor: `R$ ${parseFloat(cobranca.valor).toFixed(2).replace(".", ",")}`,
             situacao,
             link: cobranca.invoiceUrl || null,
             descricao: cobranca.description || "Cobrança",

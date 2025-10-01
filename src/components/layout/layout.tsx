@@ -8,12 +8,12 @@ import Sidebar from "./sideBar";
 import AvisoManutencao from "../avisoManutencao/AvisoManutencao";
 import { AtendimentoProvider } from "@/app/context/AtendimentoContex";
 import { useAuth } from "@/app/context/AuthContext";
+import TopBar from './TopBar';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isAuthLoaded } = useAuth();
 
-  // Verifica se a página é uma das que não devem exibir o Sidebar ou FooterBar
   const isLoginPage = router.pathname === '/' || router.pathname === '/loginCliente' || router.pathname === '/loginFuncionario' || router.pathname === '/vendaOnlline';
 
   // Verifica se o sistema está em manutenção baseado na variável de ambiente
@@ -35,24 +35,28 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AtendimentoProvider>
-      <AvisoManutencao show={isMaintenanceMode} />
-      <div style={{ 
-        display: "flex", 
-        minHeight: "100vh", 
-        width: "100vw", 
+  <AtendimentoProvider>
+    <AvisoManutencao show={isMaintenanceMode} />
+    {!isLoginPage && <TopBar />}
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        width: "100vw",
         backgroundColor: "white",
-        marginTop: isMaintenanceMode ? "80px" : "0" // Adiciona margem quando há aviso de manutenção
-      }}>
-        {!isLoginPage && <Sidebar />}
-        <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-          <div style={{ backgroundColor: "#f1f5f9", flex: 1, display: "flex", flexDirection: "column" }}>
-            {children}
-          </div>
-
-          {!isLoginPage && <FooterBar />}
+        marginTop: isMaintenanceMode ? "80px" : (!isLoginPage ? "54px" : "0px"), 
+      }}
+    >
+      {!isLoginPage && <Sidebar />}
+      <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+        <div style={{ backgroundColor: "#f1f5f9", flex: 1, display: "flex", flexDirection: "column" }}>
+          {children}
         </div>
+
+        {!isLoginPage && <FooterBar />}
       </div>
-    </AtendimentoProvider>
-  );
-} 
+    </div>
+  </AtendimentoProvider>
+);
+
+}

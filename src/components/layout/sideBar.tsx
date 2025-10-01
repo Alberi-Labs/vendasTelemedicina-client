@@ -7,10 +7,9 @@ import { useAuth } from "@/app/context/AuthContext";
 
 export default function Sidebar() {
   const router = useRouter();
-  const [vendasOpen, setVendasOpen] = useState(false);
   const [relatoriosOpen, setRelatoriosOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [bgColor, setBgColor] = useState("#0d1b2a");
+  const [bgColor, setBgColor] = useState("#232230");
   const [userName, setUserName] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,7 +20,7 @@ export default function Sidebar() {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const empresaNome = user?.dsc_instituicao ?? null;
-    const empresaImagem = user?.imagem_empresa || localStorage.getItem("imagem_empresa") || "/default.jpg";
+    const empresaImagem = user?.imagem_empresa || localStorage.getItem("imagem_empresa") || "/default2.png";
 
     try {
       if (storedUser) {
@@ -39,6 +38,19 @@ export default function Sidebar() {
     } catch (error) {
       console.error("Erro ao parsear JSON do usuário ou dados da instituicao:", error);
     }
+  }, []);
+
+  // Escuta evento da TopBar para abrir/fechar
+  useEffect(() => {
+    const handler = () => setMenuOpen(m => !m);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('toggle-sidebar', handler);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('toggle-sidebar', handler);
+      }
+    };
   }, []);
 
   const handleMenuClick = () => {
@@ -91,13 +103,13 @@ export default function Sidebar() {
             boxShadow: "2px 0 5px rgba(0,0,0,0.1)",
             position: "fixed",
             left: menuOpen ? "0" : "-250px",
-            top: "0",
+            top: "54px", // abaixo da TopBar fixa
             transition: "left 0.3s ease-in-out",
             overflowX: "hidden",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
-            zIndex: 999,
+            zIndex: 1050,
               borderTopRightRadius: "12px"
 
           }}
@@ -171,7 +183,7 @@ export default function Sidebar() {
                       marginBottom: "5px"
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaRelatorioVendas" || router.pathname === "/paginaGestaoClientes" ? "#b5cd00" : "transparent")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaCadastroPf" ? "#b5cd00" : "transparent")}
                   >
                     <i className="bi bi-clipboard-data me-2"></i>Relatórios e Gestão
                   </button>
@@ -373,30 +385,6 @@ export default function Sidebar() {
               <i className="bi bi-box-arrow-right me-2"></i>Sair
             </button>
           </div>
-        </div>
-
-        <div
-          style={{
-            position: "fixed",
-            top: "10px",
-            left: menuOpen ? "260px" : "10px", // Move junto com a Sidebar
-            transition: "left 0.3s ease-in-out",
-            zIndex: 1000,
-          }}
-        >
-          <button
-            className="btn btn-light d-flex align-items-center"
-            onClick={handleToggleMenu}
-            style={{
-              backgroundColor: "#0d1b2a",
-              borderColor: "rgb(22 22 33)",
-            }}
-          >
-            <i className="bi bi-list" style={{ fontSize: "1.5rem", color: "white" }}></i>
-            <span style={{ marginLeft: "10px", fontSize: "1.2rem", fontWeight: "bold", color: "white" }}>
-              Menu
-            </span>
-          </button>
         </div>
       </div>
     </>
