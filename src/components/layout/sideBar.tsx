@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Nav } from "react-bootstrap";
 import Loading from "../loading/loading";
 import { useAuth } from "@/app/context/AuthContext";
+import { sidebarModules } from "@/config/modulesConfig";
 
 export default function Sidebar() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function Sidebar() {
     } catch (error) {
       console.error("Erro ao parsear JSON do usuário ou dados da instituicao:", error);
     }
-  }, []);
+  }, [user]);
 
   // Escuta evento da TopBar para abrir/fechar
   useEffect(() => {
@@ -66,21 +67,11 @@ export default function Sidebar() {
     }
     setMenuOpen(!menuOpen);
   };
-  const canAccess = {
-    vendas: userRole === "admin" || userRole === "vendedor",
-    relatorios: userRole === "admin",
-    consulta: userRole === "admin" || userRole === "cliente" || userRole === "clientePJ",
-    apolice: userRole === "admin" || userRole === "cliente" || userRole === "clientePJ",
-    controleDependentes: userRole === "admin" || userRole === "cliente",
-    controleDePagamento: userRole === "admin" || userRole === "cliente",
-    cancelamento: userRole === "admin" || userRole === "cliente",
-    dashboard: userRole === "admin" || userRole === "gerente",
-    gestaoUsuarios: userRole === "admin" || userRole === "gerente",
-    gestaoDependentes: userRole === "admin" || userRole === "cliente" || userRole === "clientePJ",
-    notasFiscais: userRole === "admin" || userRole === "gerente",
-    suporte: true,
-  };
 
+  const modules = sidebarModules(userRole || undefined);
+  const relatorioGroupKeys = new Set(["relatorioVendas","gestaoClientes","gestaoInstituicoes","gestaoUsuarios","dashboardFinanceiro","relatorioAsaas","crmVendas"]);
+  const simpleModules = modules.filter(m => !relatorioGroupKeys.has(m.key));
+  const relatorioModules = modules.filter(m => relatorioGroupKeys.has(m.key));
 
   return (
     <>
@@ -148,27 +139,30 @@ export default function Sidebar() {
 
             </h2>
             <Nav className="flex-column">
-              {canAccess.vendas && (
+              {simpleModules.map(mod => (
                 <Nav.Link
-                  as={Link}
-                  href="/paginaCadastroPf"
+                  key={mod.key}
+                  as={mod.href ? 'a' : (Link as any)}
+                  href={mod.href || mod.path}
+                  target={mod.href ? '_blank' : undefined}
+                  rel={mod.href ? 'noopener noreferrer' : undefined}
                   onClick={handleMenuClick}
                   style={{
-                    color: router.pathname === "/paginaCadastroPf" ? "#000" : "#FFF",
-                    backgroundColor: router.pathname === "/paginaCadastroPf" ? "#b5cd00" : "transparent",
+                    color: router.pathname === mod.path ? "#000" : "#FFF",
+                    backgroundColor: router.pathname === mod.path ? "#b5cd00" : "transparent",
                     borderRadius: "10px",
                     padding: "10px",
                     transition: "background-color 0.3s ease-in-out",
                     marginBottom: "5px"
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaCadastroPf" ? "#b5cd00" : "transparent")}
+                  onMouseEnter={(e: any) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                  onMouseLeave={(e: any) => (e.currentTarget.style.backgroundColor = router.pathname === mod.path ? "#b5cd00" : "transparent")}
                 >
-                  <i className="bi bi-cart me-2"></i>Vendas
+                  <i className={`bi ${mod.icon} me-2`}></i>{mod.label}
                 </Nav.Link>
-              )}
+              ))}
 
-              {canAccess.relatorios && (
+              {relatorioModules.length > 0 && (
                 <>
                   <button
                     className="btn btn-link text-start w-100"
@@ -183,192 +177,34 @@ export default function Sidebar() {
                       marginBottom: "5px"
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaCadastroPf" ? "#b5cd00" : "transparent")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = relatoriosOpen ? "#b5cd00" : "transparent")}
                   >
                     <i className="bi bi-clipboard-data me-2"></i>Relatórios e Gestão
                   </button>
-
                   {relatoriosOpen && (
                     <div className="ps-3">
-                      {/* 🔹 Link para Relatório de Vendas */}
-                      <Nav.Link
-                        as={Link}
-                        href="/paginaRelatorioVendas"
-                        onClick={handleMenuClick}
-                        style={{
-                          color: "#FFF",
-                          borderRadius: "10px",
-                          marginBottom: "5px",
-                          backgroundColor: router.pathname === "/paginaRelatorioVendas" ? "#b5cd00" : "transparent"
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaRelatorioVendas" ? "#b5cd00" : "transparent")}
-                      >
-                        <i className="bi bi-file-earmark-bar-graph me-2"></i>Relatório de Vendas
-                      </Nav.Link>
-
-                      {/* 🔹 Link para Gestão de Clientes */}
-                      <Nav.Link
-                        as={Link}
-                        href="/paginaGestaoClientes"
-                        onClick={handleMenuClick}
-                        style={{
-                          color: "#FFF",
-                          borderRadius: "10px",
-                          marginBottom: "5px",
-                          backgroundColor: router.pathname === "/paginaGestaoClientes" ? "#b5cd00" : "transparent"
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaGestaoClientes" ? "#b5cd00" : "transparent")}
-                      >
-                        <i className="bi bi-people me-2"></i>Gestão de Clientes
-                      </Nav.Link>
-                      <Nav.Link as={Link} href="/paginaDashboardFinanceiro" onClick={handleMenuClick} style={{
-                        color: "#FFF",
-                        borderRadius: "10px",
-                        marginBottom: "5px",
-                        backgroundColor: router.pathname === "/paginaDashboardFinanceiro" ? "#b5cd00" : "transparent"
-                      }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaDashboardFinanceiro" ? "#b5cd00" : "transparent")}>
-                        <i className="bi-bar-chart-line me-2"></i>Dashboard Financeiro
-                      </Nav.Link>
+                      {relatorioModules.map(mod => (
+                        <Nav.Link
+                          key={mod.key}
+                          as={Link as any}
+                          href={mod.path}
+                          onClick={handleMenuClick}
+                          style={{
+                            color: "#FFF",
+                            borderRadius: "10px",
+                            marginBottom: "5px",
+                            backgroundColor: router.pathname === mod.path ? "#b5cd00" : "transparent"
+                          }}
+                          onMouseEnter={(e: any) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
+                          onMouseLeave={(e: any) => (e.currentTarget.style.backgroundColor = router.pathname === mod.path ? "#b5cd00" : "transparent")}
+                        >
+                          <i className={`bi ${mod.icon} me-2`}></i>{mod.label}
+                        </Nav.Link>
+                      ))}
                     </div>
                   )}
                 </>
               )}
-
-
-              {canAccess.consulta && (
-                <Nav.Link as={Link} href="/paginaTelemedicina" onClick={handleMenuClick} style={{
-                  color: router.pathname === "/paginaTelemedicina" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/paginaTelemedicina" ? "#b5cd00" : "transparent",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out",
-                  marginBottom: "5px"
-
-                }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaTelemedicina" ? "#b5cd00" : "transparent")}>
-                  <i className="bi bi-clipboard-heart me-2"></i>Consultar com médico online
-                </Nav.Link>
-              )}
-
-              {canAccess.apolice && (
-                <Nav.Link as={Link} href="/paginaApolice" onClick={handleMenuClick} style={{
-                  color: router.pathname === "/paginaApolice" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/paginaApolice" ? "#b5cd00" : "transparent",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out",
-                  marginBottom: "5px"
-
-                }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaApolice" ? "#b5cd00" : "transparent")}>
-                  <i className="bi-download me-2"></i>Baixar Apólice/Guia Explicativo
-                </Nav.Link>
-              )}
-
-              {canAccess.controleDependentes && (
-                <Nav.Link as={Link} href="/paginaControleDependentes" onClick={handleMenuClick} style={{
-                  color: router.pathname === "/paginaControleDependentes" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/paginaControleDependentes" ? "#b5cd00" : "transparent",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out",
-                  marginBottom: "5px"
-
-                }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaControleDependentes" ? "#b5cd00" : "transparent")}>
-                  <i className="bi-people-fill me-2"></i>Controle de Dependentes
-                </Nav.Link>
-              )}
-              {canAccess.controleDePagamento && (
-                <Nav.Link as={Link} href="/paginaControlePagamento" onClick={handleMenuClick} style={{
-                  color: router.pathname === "/paginaControlePagamento" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/paginaControlePagamento" ? "#b5cd00" : "transparent",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out",
-                  marginBottom: "5px"
-
-                }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaControlePagamento" ? "#b5cd00" : "transparent")}>
-                  <i className="bi-credit-card me-2"></i>Controle de Pagamento
-                </Nav.Link>
-              )}
-              {canAccess.gestaoUsuarios && (
-                <Nav.Link as={Link} href="/paginaGestaoUsuarios" onClick={handleMenuClick} style={{
-                  color: router.pathname === "/paginaGestaoUsuarios" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/paginaGestaoUsuarios" ? "#b5cd00" : "transparent",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out",
-                  marginBottom: "5px"
-
-                }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaGestaoUsuarios" ? "#b5cd00" : "transparent")}>
-                  <i className="bi-person-gear me-2"></i> Gestão de Usuários
-                </Nav.Link>
-              )}
-
-              {canAccess.notasFiscais && (
-                <Nav.Link as={Link} href="/paginaNotasFiscais" onClick={handleMenuClick} style={{
-                  color: router.pathname === "/paginaNotasFiscais" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/paginaNotasFiscais" ? "#b5cd00" : "transparent",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out",
-                  marginBottom: "5px"
-                }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaNotasFiscais" ? "#b5cd00" : "transparent")}>
-                  <i className="bi-receipt me-2"></i>Notas Fiscais
-                </Nav.Link>
-              )}
-
-              {canAccess.cancelamento && (
-                <Nav.Link as={Link} href="/paginaCancelamento" onClick={handleMenuClick} style={{
-                  color: router.pathname === "/paginaCancelamento" ? "#000" : "#FFF",
-                  backgroundColor: router.pathname === "/paginaCancelamento" ? "#b5cd00" : "transparent",
-                  borderRadius: "10px",
-                  padding: "10px",
-                  transition: "background-color 0.3s ease-in-out",
-                  marginBottom: "5px"
-
-                }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = router.pathname === "/paginaCancelamento" ? "#b5cd00" : "transparent")}>
-                  <i className="bi-x-circle me-2"></i>Cancelamento
-                </Nav.Link>
-              )}
-              {canAccess.suporte && (
-                <Nav.Link
-                  as="a"
-                  href="https://wa.me/5561996363963"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: "#FFF",
-                    backgroundColor: "transparent",
-                    borderRadius: "10px",
-                    padding: "10px",
-                    transition: "background-color 0.3s ease-in-out",
-                    marginBottom: "5px"
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                >
-                  <i className="bi bi-question-circle me-2"></i>Suporte e Ajuda
-                </Nav.Link>
-
-              )}
-
             </Nav>
           </div>
 
@@ -379,7 +215,7 @@ export default function Sidebar() {
               style={{ borderRadius: "10px", padding: "10px" }}
               onClick={() => {
                 localStorage.removeItem("user");
-                router.push("/");
+                window.location.href = "/";
               }}
             >
               <i className="bi bi-box-arrow-right me-2"></i>Sair

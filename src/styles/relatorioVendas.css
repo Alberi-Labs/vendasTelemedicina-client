@@ -153,19 +153,20 @@ body.dashboard-relatorio {
   border-bottom: 1px solid var(--rv-border) !important;
 }
 
-.rv-status-badge {
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: 600;
-  letter-spacing: .3px;
-  text-transform: uppercase;
+.rv-status-badge { 
+  display:inline-block; 
+  padding:2px 8px; 
+  border-radius:12px; 
+  font-size:11px; 
+  font-weight:600; 
+  background:#ececec; 
+  color:#333; 
+  text-transform:uppercase; 
+  letter-spacing:.5px; 
 }
-
-.rv-status-pendente { background:#fff3cd; color:#8a6d00; }
-.rv-status-received { background:#e0f7e9; color:#1b5e20; }
-.rv-status-cancelled { background:#fdecea; color:#b71c1c; }
-.rv-status-overdue { background:#ffe0e0; color:#9c1c1c; }
+.rv-status-received, .rv-status-confirmed, .rv-status-received_in_cash { background:#d1f5e0; color:#0d6832; }
+.rv-status-pending, .rv-status-pendente, .rv-status-awaiting_payment { background:#fff4d6; color:#8a5b00; }
+.rv-status-cancelled, .rv-status-canceled, .rv-status-refunded { background:#f9d7d7; color:#8b0000; }
 
 /* Scroll refinado */
 .rv-table-wrapper tbody {
@@ -186,3 +187,35 @@ body.dashboard-relatorio {
   .rv-metric-value { font-size:22px; }
   .rv-chart-card { min-height:260px; }
 }
+
+.rv-advanced-kpis .rv-subcard {
+  background: var(--rv-card-bg);
+  border: 1px solid var(--rv-border);
+  border-radius: var(--rv-radius);
+  padding: 14px 16px 10px;
+  box-shadow: var(--rv-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 92px;
+}
+.rv-advanced-kpis .rv-subcard label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--rv-muted);
+  margin: 0;
+  font-weight: 600;
+}
+.rv-advanced-kpis .rv-subcard strong { font-size: 15px; color: var(--rv-text); }
+.rv-advanced-kpis .rv-subcard .rv-sub { font-size: 11px; color: var(--rv-muted); line-height: 1.2; }
+
+/* Skeleton */
+.rv-skeleton { position: relative; background: #e9edf2; overflow: hidden; border-radius: 6px; }
+.rv-skeleton::after { content: ""; position: absolute; inset:0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); animation: rv-shine 1.2s infinite; }
+@keyframes rv-shine { 0% { transform: translateX(-100%);} 100% { transform: translateX(100%);} }
+.rv-skel-line { height: 14px; margin-bottom:8px; }
+.rv-skel-small { height:10px; width:60%; }
+.rv-skel-value { height:28px; width:70%; margin-top:4px; }
+
+.rv-empty-cta button { box-shadow: var(--rv-shadow-sm); }

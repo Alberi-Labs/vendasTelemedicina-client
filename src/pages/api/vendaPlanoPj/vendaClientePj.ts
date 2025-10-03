@@ -201,16 +201,7 @@ async function criarAssinaturaAsaas(dados: DadosAssinaturaAsaas): Promise<string
         // Configurações específicas da assinatura
         endDate: null, // Sem data de fim (assinatura contínua)
         maxPayments: 12, // Máximo 12 pagamentos (12 meses)
-        
-        // Configurações de cobrança
-        fine: {
-          value: 2.00,
-          type: 'PERCENTAGE'
-        },
-        interest: {
-          value: 1.00,
-          type: 'PERCENTAGE'
-        },
+      
         
         // Configurações específicas por tipo de pagamento
         ...(billingType === 'CREDIT_CARD' && {

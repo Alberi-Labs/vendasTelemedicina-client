@@ -285,15 +285,6 @@ async function criarAssinaturaAsaas(dados: DadosAssinaturaAsaas): Promise<string
         endDate: null, // Sem data de fim (assinatura contínua)
         maxPayments: 12, // Máximo 12 pagamentos (12 meses)
         
-        // Configurações de notificação e cobrança
-        fine: {
-          value: 2.00,
-          type: 'PERCENTAGE'
-        },
-        interest: {
-          value: 1.00,
-          type: 'PERCENTAGE'
-        },
         discount: {
           value: 0,
           dueDateLimitDays: 0

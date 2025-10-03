@@ -355,12 +355,6 @@ export const cobrancaApi = {
       dueDateLimitDays?: number;
       type?: string;
     };
-    interest?: {
-      value?: number;
-    };
-    fine?: {
-      value?: number;
-    };
     postalService?: boolean;
   }) => {
     return apiClient.post('/cobranca/gerar', dados);

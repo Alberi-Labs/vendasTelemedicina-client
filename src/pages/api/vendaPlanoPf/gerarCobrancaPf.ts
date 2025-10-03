@@ -296,8 +296,6 @@ async function criarAssinaturaAsaasComId(dados: DadosAssinaturaAsaas): Promise<{
         cycle: 'MONTHLY',
         description: 'Assinatura de Beneficios Saude e Cor',
         externalReference: `ASSINATURA_PF_${Date.now()}`,
-        fine: { value: 2.00, type: 'PERCENTAGE' },
-        interest: { value: 1.00, type: 'PERCENTAGE' },
         ...(billingType === 'CREDIT_CARD' && { creditCard: { automaticRoutingEnabled: true } })
       })
     });
