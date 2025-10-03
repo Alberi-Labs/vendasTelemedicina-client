@@ -17,7 +17,7 @@ export default function Breadcrumbs() {
   const path = router.pathname; // ex: /paginaRelatorioVendas
 
   // Esconder em rotas de login/manutenção
-  if (['/', '/manutencao', '/paginaInicial'].includes(path)) return null;
+  if (['/', '/manutencao', '/paginaInicial', '/loginCliente', '/loginFuncionario'].includes(path)) return null;
 
   const allowedModules = modulesForRole(user?.perfil);
   const byPath = new Map<string, string>();
