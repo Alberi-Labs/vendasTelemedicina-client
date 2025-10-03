@@ -139,7 +139,7 @@ const AssinaturaDigital: React.FC<AssinaturaDigitalProps> = ({
           <p className="text-muted">
             Após ler e revisar seu contrato, confirme sua concordância assinando digitalmente no campo abaixo.
           </p>
-          <div className="alert alert-info" perfil="alert">
+          <div className="alert alert-info" role="alert">
             <i className="bi bi-info-circle me-2"></i>
             <strong>Importante:</strong> Certifique-se de ter lido todo o contrato antes de assinar.
           </div>
