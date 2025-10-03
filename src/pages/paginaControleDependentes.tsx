@@ -3,6 +3,7 @@ import { Button, Modal, Form } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { useAuth } from "@/app/context/AuthContext";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
+import { dependenteApi } from '@/lib/api-client';
 
 interface Dependente {
   id: number;
@@ -24,78 +25,33 @@ export default function PaginaControleDependentes() {
   const [avisoTipo, setAvisoTipo] = useState<"success" | "warning" | "danger">("warning");
 
 const buscarDependentesDoServidor = async () => {
+  if (!user?.cpf) return;
   setLoading(true);
   try {
-    const response = await fetch("/api/dependente/consultarDependente", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        titularCpf: user?.cpf,
-        titularNascimento: user?.dt_nascimento,
-      }),
-    });
+    // 1. Sincroniza com backend (Sulamérica + banco consolidado)
+    const dadosSincronizar = {
+      cpfTitular: user.cpf,
+      nascimentoTitular: user.dt_nascimento // Incluir nascimento para consulta Sulamérica
+    };
+    await dependenteApi.sincronizar(dadosSincronizar);
 
-    const responseText = await response.text();
-    let result;
+    // 2. Consulta dependentes (já consolidados no backend após sincronização)
+    const consulta = await dependenteApi.consultar(user.cpf);
+    const resposta = (consulta as any);
+    const lista = Array.isArray(resposta?.dependentes || resposta?.data?.dependentes)
+      ? (resposta.dependentes || resposta.data.dependentes) : [];
 
-    try {
-      result = JSON.parse(responseText);
-    } catch (err) {
-      setErroBusca("⚠️ Resposta inválida do servidor (não é JSON).");
-      return;
-    }
-
-    if (!response.ok) {
-      setErroBusca(result?.error || "⚠️ Erro ao buscar dependentes do servidor.");
-      return;
-    }
-
-    let dependentesAPI: any[] = [];
-
-    if (Array.isArray(result.dependentes)) {
-      dependentesAPI = result.dependentes.map((dep: any, i: number) => ({
-        id: i + 1,
-        nome: dep.nome,
-        cpf: dep.cpf,
-        nascimento: dep.nascimento,
-      }));
-    }
-
-    // 🔄 Consulta os dependentes salvos no banco
-    const bancoResponse = await fetch("/api/dependente/consultarBanco", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cpfTitular: user?.cpf }),
-    });
-
-    const bancoJson = await bancoResponse.json();
-    const dependentesBanco = Array.isArray(bancoJson.dependentes)
-      ? bancoJson.dependentes.map((dep: any) => ({
-          nome: dep.nome,
-          cpf: dep.cpf,
-          nascimento: dep.nascimento,
-        }))
-      : [];
-
-    // 🔀 Junta os dois, evitando CPFs duplicados
-    const mapa = new Map();
-    [...dependentesAPI, ...dependentesBanco].forEach((d) => {
-      mapa.set(d.cpf, d);
-    });
-
-    const dependentesUnificados = Array.from(mapa.values()).map((d, i) => ({
+    const adaptado = lista.map((dep: any, i: number) => ({
       id: i + 1,
-      nome: d.nome,
-      cpf: d.cpf,
-      nascimento: d.nascimento,
+      nome: dep.nome,
+      cpf: dep.cpf,
+      nascimento: dep.nascimento,
     }));
-
-    setDependentes(dependentesUnificados);
+    setDependentes(adaptado);
+    setErroBusca(null);
   } catch (error: any) {
-    console.error("❌ Erro ao buscar dependentes:", error);
-    setErroBusca("❌ Erro ao buscar dependentes: " + error.message);
+    console.error('❌ Erro ao sincronizar/consultar dependentes', error);
+    setErroBusca(error.message || 'Erro ao buscar dependentes');
   } finally {
     setLoading(false);
   }
@@ -124,28 +80,22 @@ const buscarDependentesDoServidor = async () => {
     };
 
     try {
-      const response = await fetch("/api/dependente/cadastrarSulamerica", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          nomeDependente: formData.nome,
-          cpfDependente: formData.cpf,
-          nascimentoDependente: formData.nascimento,
-          cpfTitular: user?.cpf,
-          nascimentoTitular: user?.dt_nascimento,
-        }),
+      const cadastro = await dependenteApi.cadastrar({
+        nomeDependente: formData.nome,
+        cpfDependente: formData.cpf,
+        cpfTitular: user?.cpf || '',
+        parentesco: 'dependente'
       });
-      const result = await response.json();
 
-      if (!response.ok || !result.success) {
-        console.error("❌ Erro ao cadastrar dependente:", result.error);
-        alert("Erro ao cadastrar dependente na SulAmérica: " + result.error);
+      if (!cadastro.success) {
+        console.error('❌ Erro ao cadastrar dependente:', cadastro.error);
+        alert('Erro ao cadastrar dependente: ' + (cadastro.error || 'Falha desconhecida'));
         setLoadingSave(false);
         return;
       }
-      await cadastrarBanco(novoDependente);
+
+      // Recarrega lista após cadastro bem sucedido
+      await buscarDependentesDoServidor();
 
     } catch (error: any) {
       console.error("❌ Erro ao chamar a API de cadastro:", error);
@@ -160,34 +110,7 @@ const buscarDependentesDoServidor = async () => {
     handleClose();
   };
 
-  const cadastrarBanco = async (dependente: Dependente) => {
-    try {
-      const response = await fetch("/api/dependente/cadastrarBanco", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          cpf: dependente.cpf,
-          nascimento: dependente.nascimento,
-          nome: dependente.nome,
-          cpfTitular: user?.cpf,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        console.error("❌ Erro ao cadastrar no banco:", result.error);
-        alert("Erro ao cadastrar dependente no banco: " + result.error);
-      } else {
-        console.log("✅ Cadastro no banco realizado com sucesso!");
-      }
-    } catch (err: any) {
-      console.error("❌ Erro ao chamar cadastrarBanco:", err);
-      alert("Erro ao cadastrar banco: " + err.message);
-    }
-  };
+  // Cadastro direto já consolidado no backend → função auxiliar removida
 
   const handleGerarCarteirinha = async (dependente: Dependente) => {
     if (!user) {
@@ -204,21 +127,21 @@ const buscarDependentesDoServidor = async () => {
     };
 
     try {
-      const response = await fetch("/api/carteirinha/gerarCarteirinhaDependente", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dadosCarteirinha),
+      const blobResp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/carteirinha/gerar-dependente`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dadosCarteirinha)
       });
 
-      if (!response.ok) {
-        console.error("Erro ao gerar carteirinha do dependente");
-        setAvisoMensagem("Erro ao gerar carteirinha. Tente novamente mais tarde.");
-        setAvisoTipo("danger");
+      if (!blobResp.ok) {
+        console.error('Erro ao gerar carteirinha do dependente');
+        setAvisoMensagem('Erro ao gerar carteirinha. Tente novamente mais tarde.');
+        setAvisoTipo('danger');
         setShowAviso(true);
         return;
       }
 
-      const blob = await response.blob();
+      const blob = await blobResp.blob();
       
       // Criar nome do arquivo com primeiro nome + CPF
       const primeiroNome = dependente.nome.split(' ')[0];
@@ -272,7 +195,7 @@ const buscarDependentesDoServidor = async () => {
 
       {loading ? (
         <div className="text-center my-5">
-          <div className="spinner-border text-primary" perfil="status">
+          <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Carregando dependentes...</span>
           </div>
           <p className="mt-2">Carregando dependentes...</p>
@@ -382,7 +305,7 @@ const buscarDependentesDoServidor = async () => {
           >
             {loadingSave ? (
               <>
-                <span className="spinner-border spinner-border-sm me-2" perfil="status" aria-hidden="true"></span>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                 Salvando...
               </>
             ) : (

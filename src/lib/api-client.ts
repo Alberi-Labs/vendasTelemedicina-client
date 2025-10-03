@@ -519,8 +519,12 @@ export const dependenteApi = {
   deletar: (id: number) =>
     apiClient.delete(`/dependente/deletar/${id}`),
 
-  sincronizar: (cpfTitular: string) => {
-    return apiClient.post('/dependente/sincronizar', { cpfTitular });
+  sincronizar: (dados: { cpfTitular: string; nascimentoTitular?: string } | string) => {
+    // Compatibilidade: aceita string (apenas cpfTitular) ou objeto completo
+    const payload = typeof dados === 'string' 
+      ? { cpfTitular: dados } 
+      : dados;
+    return apiClient.post('/dependente/sincronizar', payload);
   },
 };
 
