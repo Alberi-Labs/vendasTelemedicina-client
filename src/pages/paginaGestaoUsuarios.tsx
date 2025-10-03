@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Usuario } from "./api/usuario/buscarUsuario";
 import { useAuth } from "@/app/context/AuthContext";
 import { decrypt } from "@/lib/cryptoHelper";
+import { usuariosApi, instituicoesApi } from "@/lib/api-client";
 
 type Instituicao = {
   idInstituicao: number;
@@ -21,12 +22,9 @@ export default function PaginaGestaoUsuario() {
     nome: "",
     email: "",
     cpf: "",
-    role: "",
+    perfil: "",
     id_instituicao: "",
-    login_sistema: "",
-    senha_sistema: "",
   });
-  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [filtroInstituicao, setFiltroInstituicao] = useState<string>('');
   const [filtroRole, setFiltroRole] = useState<string>('');
   const [busca, setBusca] = useState<string>('');
@@ -38,33 +36,39 @@ export default function PaginaGestaoUsuario() {
   }, []);
 
   const fetchUsuarios = async () => {
-    const res = await fetch("/api/usuario/buscarUsuario");
-    const data = await res.json();
-    if (data.success) {
-      const adaptado = data.usuarios.map((u: any) => ({
-        id: u.id,
-        nome: u.nome,
-        email: u.email,
-        cpf: u.cpf,
-        perfil: u.perfil,
-        id_instituicao: u.id_instituicao,
-        login_sistema: u.login_sistema,
-        senha_sistema: u.senha_sistema,
-      }));
-      setUsuarios(adaptado);
+    try {
+      const response = await usuariosApi.buscar();
+      if (response.success) {
+        const adaptado = response.usuarios.map((u: any) => ({
+          id: u.id,
+          nome: u.nome,
+          email: u.email,
+          cpf: u.cpf,
+          perfil: u.perfil,
+          id_instituicao: u.id_instituicao,
+        }));
+        setUsuarios(adaptado);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error);
     }
   };
 
   const fetchInstituicoes = async () => {
-    const res = await fetch("/api/instituicoes/buscarInstituicao");
-    const data = await res.json();
-    if (data.success) setInstituicoes(data.instituicoes);
+    try {
+      const response = await instituicoesApi.listar();
+      if (response.success) {
+        setInstituicoes(response.instituicoes);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar instituições:', error);
+    }
   };
 
   const handleClose = () => {
     setShowModal(false);
     setEditing(null);
-    setFormData({ nome: "", email: "", cpf: "", role: "", id_instituicao: "", login_sistema: "", senha_sistema: "" });
+    setFormData({ nome: "", email: "", cpf: "", perfil: "", id_instituicao: "" });
   };
 
   const handleShow = (usuario?: Usuario) => {
@@ -74,78 +78,97 @@ export default function PaginaGestaoUsuario() {
         nome: usuario.nome,
         email: usuario.email,
         cpf: usuario.cpf,
-        role: usuario.perfil.toLowerCase(),
+        perfil: usuario.perfil?.toLowerCase() ?? '',
         id_instituicao: usuario.id_instituicao?.toString() ?? "",
-        login_sistema: usuario.login_sistema || "",
-        senha_sistema: usuario.senha_sistema || "",
       });
 
     } else {
       // Se gestor criando, força vendedor e instituição dele
-      if (user?.role === 'gestor') {
-        setFormData({ nome: "", email: "", cpf: "", role: "vendedor", id_instituicao: user.id_instituicao?.toString() || "", login_sistema: "", senha_sistema: "" });
+      if (user?.perfil === 'gestor') {
+        setFormData({ nome: "", email: "", cpf: "", perfil: "vendedor", id_instituicao: user.id_instituicao?.toString() || "" });
       } else {
-        setFormData({ nome: "", email: "", cpf: "", role: "", id_instituicao: "", login_sistema: "", senha_sistema: "" });
+        setFormData({ nome: "", email: "", cpf: "", perfil: "", id_instituicao: "" });
       }
     }
     setShowModal(true);
+  };
+
+  // Garantir gestor único por instituição (frontend) - troca antigos gestores para vendedor
+  const garantirGestorUnico = async (idInstituicao: number, novoGestorId?: number) => {
+    const gestoresMesma = usuarios.filter(u => u.id_instituicao === idInstituicao && u.perfil?.toLowerCase() === 'gestor' && u.id !== novoGestorId);
+    for (const g of gestoresMesma) {
+      try {
+        await usuariosApi.editar(g.id, { perfil: 'vendedor' });
+      } catch (e) {
+        console.warn('Falha ao rebaixar gestor antigo', g.id);
+      }
+    }
   };
 
   const handleSave = async () => {
     const payload = {
       nome: formData.nome,
       email: formData.email || "",
-      role: user?.role === 'gestor' ? 'vendedor' : formData.role, // gestor só cria/edita vendedores
-      senha: "123456", // senha padrão
+      perfil: user?.perfil === 'gestor' ? 'vendedor' : formData.perfil, // gestor só cria/edita vendedores
+      senha: formData.cpf.replace(/[.\-]/g, ''), // senha padrão é o CPF sem pontos e traços
       telefone: "",
       imagem: null,
       cpf: formData.cpf,
-      creditos: 0,
       data_nascimento: null,
-      id_instituicao: user?.role === 'gestor'
+      id_instituicao: user?.perfil === 'gestor'
         ? (user.id_instituicao ?? null)
         : (formData.id_instituicao ? parseInt(formData.id_instituicao) : null),
-      ...(user?.role === "admin" && {
-        login_sistema: formData.login_sistema,
-        senha_sistema: formData.senha_sistema,
-      }),
     };
 
 
     const isEditando = !!editing;
 
-    const res = await fetch(
-      isEditando ? "/api/usuario/editarUsuario" : "/api/usuario/cadastrarClienteUsuario",
-      {
-        method: isEditando ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isEditando ? { id: editing.id, ...payload } : payload),
+    try {
+      let response;
+      if (isEditando) {
+        response = await usuariosApi.editar(editing.id, payload);
+      } else {
+        response = await usuariosApi.cadastrar(payload);
       }
-    );
 
-    if (res.ok) {
-      // Se admin está promovendo a gestor, garantir unicidade por instituição
-      if (user?.role === 'admin' && payload.role === 'gestor' && payload.id_instituicao) {
-        await garantirGestorUnico(payload.id_instituicao, editing?.id);
+      if (response.success) {
+        // Se admin está promovendo a gestor, garantir unicidade por instituição
+        if (user?.perfil === 'admin' && payload.perfil === 'gestor' && payload.id_instituicao) {
+          await garantirGestorUnico(payload.id_instituicao, editing?.id);
+        }
+        await fetchUsuarios();
+        handleClose();
+      } else {
+        console.error("Erro ao salvar usuário:", response.error);
+        alert(`Erro ao salvar usuário: ${response.error || "Erro desconhecido"}`);
       }
-      await fetchUsuarios();
-      handleClose();
-    } else {
-      const errorData = await res.json();
-      console.error("Erro ao salvar usuário:", errorData);
-      alert(`Erro ao salvar usuário: ${errorData.error || "Erro desconhecido"}`);
+    } catch (error) {
+      console.error("Erro ao salvar usuário:", error);
+      alert("Erro ao salvar usuário");
     }
   };
 
 
   const handleDelete = async (id: number) => {
+    console.log('🗑️ Tentando excluir usuário com ID:', id);
     if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
 
-    const res = await fetch(`/api/usuario/deletarUsuario?idUsuario=${id}`, {
-      method: "DELETE",
-    });
-
-    if (res.ok) fetchUsuarios();
+    try {
+      console.log('📡 Chamando API para excluir usuário...');
+      const response = await usuariosApi.deletar(id);
+      console.log('📡 Resposta da API:', response);
+      
+      if (response.success) {
+        console.log('✅ Usuário excluído com sucesso');
+        await fetchUsuarios();
+      } else {
+        console.error('❌ Erro da API:', response.error);
+        alert(`Erro ao excluir usuário: ${response.error || "Erro desconhecido"}`);
+      }
+    } catch (error) {
+      console.error("❌ Erro ao excluir usuário:", error);
+      alert("Erro ao excluir usuário");
+    }
   };
 
   function formatarCPF(cpf: string) {
@@ -158,9 +181,9 @@ export default function PaginaGestaoUsuario() {
   // Filtragem de visibilidade: gestor só vê seus vendedores / admin vê tudo
   const usuariosVisiveis = useMemo(() => {
     let base: Usuario[];
-    if (user?.role === 'admin') base = usuarios;
-    else if (user?.role === 'gestor') {
-      base = usuarios.filter(u => u.id_instituicao === user.id_instituicao && u.perfil.toLowerCase() === 'vendedor');
+    if (user?.perfil === 'admin') base = usuarios;
+    else if (user?.perfil === 'gestor') {
+      base = usuarios.filter(u => u.id_instituicao === user.id_instituicao && u.perfil?.toLowerCase() === 'vendedor');
     } else base = usuarios;
 
     // Filtros adicionais
@@ -169,7 +192,7 @@ export default function PaginaGestaoUsuario() {
         if (!u.id_instituicao || u.id_instituicao.toString() !== filtroInstituicao) return false;
       }
       if (filtroRole) {
-        if (u.perfil.toLowerCase() !== filtroRole) return false;
+        if (u.perfil?.toLowerCase() !== filtroRole) return false;
       }
       if (busca) {
         const b = busca.toLowerCase();
@@ -182,30 +205,32 @@ export default function PaginaGestaoUsuario() {
 
   // Checa se linha pode ser editada pelo usuário logado
   const podeEditar = (u: Usuario) => {
-    if (user?.role === 'admin') return true;
-    if (user?.role === 'gestor') {
-      return u.id_instituicao === user.id_instituicao && u.perfil.toLowerCase() === 'vendedor';
-    }
-    return false;
-  };
-
-  // Garantir gestor único por instituição (frontend) - troca antigos gestores para vendedor
-  const garantirGestorUnico = async (idInstituicao: number, novoGestorId?: number) => {
-    const gestoresMesma = usuarios.filter(u => u.id_instituicao === idInstituicao && u.perfil.toLowerCase() === 'gestor' && u.id !== novoGestorId);
-    for (const g of gestoresMesma) {
-      try {
-        await fetch('/api/usuario/editarUsuario', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: g.id, perfil: 'vendedor' })
-        });
-      } catch (e) {
-        console.warn('Falha ao rebaixar gestor antigo', g.id);
+    const canEdit = (() => {
+      if (user?.perfil === 'admin') return true;
+      if (user?.perfil === 'gestor') {
+        return u.id_instituicao === user.id_instituicao && u.perfil?.toLowerCase() === 'vendedor';
       }
-    }
+      return false;
+    })();
+    
+    console.log('🔐 Verificando permissão de edição:', {
+      user: user?.perfil,
+      userInst: user?.id_instituicao,
+      targetUser: u.nome,
+      targetInst: u.id_instituicao,
+      targetPerfil: u.perfil,
+      canEdit
+    });
+    
+    return canEdit;
   };
 
-  const badgeForPerfil = (perfil: string) => {
+
+
+  const badgeForPerfil = (perfil: string | null) => {
+    if (!perfil) {
+      return <Badge bg="secondary" className="text-uppercase small fw-semibold">N/A</Badge>;
+    }
     const p = perfil.toLowerCase();
     const map: Record<string, string> = { admin: 'danger', gestor: 'warning', vendedor: 'info', cliente: 'secondary' };
     const variant = map[p] || 'secondary';
@@ -227,7 +252,7 @@ export default function PaginaGestaoUsuario() {
           </div>
           <div style={{ minWidth: 200 }}>
             <Form.Label className="small text-uppercase fw-semibold text-muted mb-1">Instituição</Form.Label>
-            <Form.Select value={filtroInstituicao} onChange={e => setFiltroInstituicao(e.target.value)} disabled={user?.role === 'gestor'}>
+            <Form.Select value={filtroInstituicao} onChange={e => setFiltroInstituicao(e.target.value)} disabled={user?.perfil === 'gestor'}>
               <option value="">Todas</option>
               {instituicoes.map(i => (
                 <option key={i.idInstituicao} value={i.idInstituicao}>{i.nomeInstituicao}</option>
@@ -276,7 +301,7 @@ export default function PaginaGestaoUsuario() {
             const disabled = !podeEditar(userRow);
 
             return (
-              <tr key={userRow.id} className={userRow.perfil.toLowerCase()==='gestor' ? 'table-warning' : ''}>
+              <tr key={userRow.id} className={userRow.perfil?.toLowerCase()==='gestor' ? 'table-warning' : ''}>
                 <td className="fw-semibold">{userRow.nome}</td>
                 <td>{userRow.email}</td>
                 <td>{userRow.cpf}</td>
@@ -293,7 +318,15 @@ export default function PaginaGestaoUsuario() {
                     </OverlayTrigger>
                     <OverlayTrigger overlay={<Tooltip>Excluir</Tooltip>}>
                       <span className="d-inline-block">
-                        <Button size="sm" variant="outline-danger" disabled={disabled} onClick={() => !disabled && handleDelete(userRow.id)}>
+                        <Button 
+                          size="sm" 
+                          variant="outline-danger" 
+                          disabled={disabled} 
+                          onClick={() => {
+                            console.log('🖱️ Clique no botão excluir. Disabled:', disabled, 'UserRow:', userRow);
+                            if (!disabled) handleDelete(userRow.id);
+                          }}
+                        >
                           <i className="bi bi-trash" />
                         </Button>
                       </span>
@@ -346,7 +379,7 @@ export default function PaginaGestaoUsuario() {
             </Form.Group>
 
 
-            {user?.role === 'gestor' ? (
+            {user?.perfil === 'gestor' ? (
               <Form.Group className="mb-3">
                 <Form.Label>Função</Form.Label>
                 <Form.Control value="vendedor" disabled readOnly />
@@ -356,8 +389,8 @@ export default function PaginaGestaoUsuario() {
               <Form.Group className="mb-3">
                 <Form.Label>Função</Form.Label>
                 <Form.Select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  value={formData.perfil}
+                  onChange={(e) => setFormData({ ...formData, perfil: e.target.value })}
                 >
                   <option value="">Selecione um perfil</option>
                   <option value="cliente">Cliente</option>
@@ -368,7 +401,7 @@ export default function PaginaGestaoUsuario() {
               </Form.Group>
             )}
 
-            {user?.role === 'gestor' ? (
+            {user?.perfil === 'gestor' ? (
               <Form.Group className="mb-3">
                 <Form.Label>Instituição</Form.Label>
                 <Form.Control value={instituicoes.find(i => i.idInstituicao === user.id_instituicao)?.nomeInstituicao || ''} disabled />
@@ -390,43 +423,7 @@ export default function PaginaGestaoUsuario() {
               </Form.Group>
             )}
 
-            {user?.role === "admin" && (
-              <>
-                <Form.Group className="mb-3">
-                  <Form.Label>Login do Sistema</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.login_sistema}
-                    onChange={(e) =>
-                      setFormData({ ...formData, login_sistema: e.target.value })
-                    }
-                  />
-                </Form.Group>
 
-                <Form.Group className="mb-3">
-                  <Form.Label>Senha do Sistema</Form.Label>
-                  <div className="input-group">
-                    <Form.Control
-                      type={mostrarSenha ? "text" : "password"}
-                      value={formData.senha_sistema}
-                      onChange={(e) =>
-                        setFormData({ ...formData, senha_sistema: e.target.value })
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={() => setMostrarSenha(!mostrarSenha)}
-                      tabIndex={-1}
-                    >
-                      {mostrarSenha ? "Ocultar" : "Mostrar"}
-                    </button>
-
-                  </div>
-                </Form.Group>
-              </>
-
-            )}
 
           </Form>
 
@@ -438,7 +435,7 @@ export default function PaginaGestaoUsuario() {
           <Button
             variant="primary"
             onClick={handleSave}
-            disabled={!formData.nome || !formData.cpf || !formData.role}
+            disabled={!formData.nome || !formData.cpf || !formData.perfil}
           >
             Salvar
           </Button>

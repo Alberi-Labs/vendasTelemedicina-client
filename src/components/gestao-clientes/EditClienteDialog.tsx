@@ -14,7 +14,6 @@ export interface EditClienteData {
   telefone?: string | null;
   email: string;
   data_nascimento: string | null;
-  creditos: number | null;
 }
 
 interface Props {

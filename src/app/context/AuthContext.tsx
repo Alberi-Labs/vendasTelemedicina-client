@@ -6,7 +6,7 @@ export interface User {
   dsc_email?: string | undefined;
   id?: number;
   nome: string;
-  role: string;
+  perfil: string;
   id_instituicao?: number;
   cpf?: string;
   telefone?: string;
@@ -26,8 +26,6 @@ export interface User {
   dsc_link_pagamento?: string;
   ind_status_pagamento?: string;
   tip_status_pagamento?: string;
-  login_sistema?: string;
-  senha_sistema?: string;
   contrato_assinado?: boolean;
   ind_uf?: string;
   cidade?: string;

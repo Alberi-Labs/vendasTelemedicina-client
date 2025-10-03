@@ -145,7 +145,7 @@ const ContratoPopup: React.FC<ContratoPopupProps> = ({
             </div>
             
             {!contratoAssinado && !scrolledToBottom && contractData && (
-              <div className="alert alert-warning mx-3 mt-3 mb-0" role="alert">
+              <div className="alert alert-warning mx-3 mt-3 mb-0" perfil="alert">
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
                     <i className="bi bi-info-circle me-2"></i>

@@ -33,10 +33,8 @@ export default function LoginFuncionario() {
       const clienteData: User = {
   id: data.user.id,
   nome: data.user.nome,
-  role: data.user.role,
+  perfil: data.user.perfil,
   id_instituicao: data.user.id_instituicao,
-  login_sistema: data.user.login_sistema,
-  senha_sistema: data.user.senha_sistema,
   dsc_instituicao: data.user.nomeInstituicao,
   imagem_empresa: data.user.imagem_perfil,
       }

@@ -8,10 +8,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
-        let {instituicao, login_sistema, senha_sistema, arquivoBase64 } = req.body;
+        let {instituicao, arquivoBase64 } = req.body;
 
         instituicao = "Fernando Card";
-        console.log("Dados recebidos:", {instituicao, login_sistema, senha_sistema, arquivoBase64});
 
         // Salva o arquivo recebido em public/uploadVidaPj
         const fs = require('fs');
@@ -47,8 +46,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         await page.goto("https://saudeecor.i9.dev.br/white/login.php", { waitUntil: "networkidle2" });
-        await page.type('input[name="usuario"]', login_sistema);
-        await page.type('input[name="senha"]', senha_sistema);
         await Promise.all([
             page.click('button[type="submit"]'),
             page.waitForNavigation({ waitUntil: "networkidle2" }),

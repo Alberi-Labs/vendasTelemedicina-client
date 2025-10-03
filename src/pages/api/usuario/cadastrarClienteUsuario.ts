@@ -13,13 +13,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     email,
     senha,
     telefone,
-    role,
+    perfil,
     cpf,
-    creditos,
     data_nascimento,
     id_instituicao,
-    login_sistema,
-    senha_sistema,
   } = req.body;
 
   if (!nome || !cpf) {
@@ -42,15 +39,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const senhaFinal = senha || "123456";
 
-    const senhaSistemaCriptografada = senha_sistema
-      ? encrypt(senha_sistema)
-      : null;
 
-    const roleFinal = role || "cliente";
+
+    const roleFinal = perfil || "cliente";
 
     const [resultado] = await pool.query(
-      `INSERT INTO tb_usuarios (nome, email, senha, telefone, perfil, cpf, creditos, data_nascimento, criado_em, id_instituicao, login_sistema, senha_sistema)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)`,
+      `INSERT INTO tb_usuarios (nome, email, senha, telefone, perfil, cpf, data_nascimento, criado_em, id_instituicao)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
       [
         nome,
         email,
@@ -58,11 +53,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         telefone || null,
         roleFinal,
         cpf,
-        creditos || 0,
         data_nascimento,
         id_instituicao || null,
-        login_sistema || null,
-        senhaSistemaCriptografada,
       ]
     );
 
@@ -73,11 +65,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         nome,
         email,
         telefone,
-        role: roleFinal,
+        perfil: roleFinal,
         cpf,
-        creditos: creditos || 0,
         data_nascimento,
-        login_sistema,
       },
     });
   } catch (error) {

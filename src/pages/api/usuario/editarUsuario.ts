@@ -17,20 +17,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       perfil,
       imagem,
       cpf,
-      creditos,
       data_nascimento,
       id_instituicao,
-      login_sistema,
-      senha_sistema,
     } = req.body;
 
     if (!id) {
       return res.status(400).json({ error: "Campo 'id' do usuário é obrigatório." });
     }
-
-    const senhaSistemaCriptografada = senha_sistema
-      ? encrypt(senha_sistema)
-      : null;
 
     const campos = [
       "nome = ?",
@@ -39,10 +32,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       "perfil = ?",
       "imagem = ?",
       "cpf = ?",
-      "creditos = ?",
       "data_nascimento = ?",
       "id_instituicao = ?",
-      "login_sistema = ?",
     ];
 
     const valores = [
@@ -52,16 +43,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       perfil,
       imagem,
       cpf,
-      creditos,
       data_nascimento,
       id_instituicao,
-      login_sistema,
     ];
-
-    if (senhaSistemaCriptografada) {
-      campos.push("senha_sistema = ?");
-      valores.push(senhaSistemaCriptografada);
-    }
 
     valores.push(id);
 

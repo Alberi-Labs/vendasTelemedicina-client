@@ -12,7 +12,6 @@ export interface Usuario {
   perfil: string;
   imagem: string | null;
   cpf: string;
-  creditos: number | null;
   data_nascimento: string | null;
   id_instituicao: number;
   criado_em: string;
@@ -22,8 +21,6 @@ export interface Usuario {
   uf: string | null;
   cidade: string | null;
   sexo: string | null;
-  login_sistema?: string | null;
-  senha_sistema?: string | null;
 }
 
 
@@ -69,7 +66,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       perfil: u.perfil,
       imagem: u.imagem,
       cpf: u.cpf,
-      creditos: u.creditos,
       data_nascimento: formatarDataParaBrasileiro(u.data_nascimento),
       id_instituicao: u.id_instituicao,
       criado_em: formatarDataParaBrasileiro(u.criado_em),
@@ -79,8 +75,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       uf: u.uf,
       cidade: u.cidade,
       sexo: u.sexo,
-      login_sistema: u.login_sistema || null,
-      senha_sistema: decrypt(u.senha_sistema) || null,
     }));
 
 

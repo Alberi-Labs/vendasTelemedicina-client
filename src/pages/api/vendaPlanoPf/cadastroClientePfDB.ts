@@ -89,10 +89,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const insertClienteQuery = `
         INSERT INTO tb_clientes (
           nome, telefone, email, cpf, data_nascimento, 
-          idClienteDependente, data_vinculo, creditos, senha, perfil, 
+          idClienteDependente, data_vinculo, senha, perfil, 
           id_instituicao, cep, registro_geral, primeiro_acesso, contrato_assinado,
           cadastroSulamerica
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const [resultCliente] = await pool.execute(insertClienteQuery, [
@@ -103,7 +103,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         formatarDataParaMySQL(dados.dataNascimento), // data_nascimento
         null,                       // idClienteDependente
         new Date(),                 // data_vinculo (data atual)
-        0,                          // creditos
         null,                       // senha
         'cliente',                  // perfil
         idInstituicao,              // id_instituicao

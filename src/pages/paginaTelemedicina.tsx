@@ -36,7 +36,7 @@ export default function Consulta() {
         if (data.success) {
           let clientesFiltrados = data.usuarios || [];
   
-          if (user?.role === "cliente" || user?.role === "clientePJ") {
+          if (user?.perfil === "cliente" || user?.perfil === "clientePJ") {
             clientesFiltrados = clientesFiltrados.filter((c: Cliente) => c.cpf === user.cpf);
   
             if (clientesFiltrados.length > 0) {
@@ -54,7 +54,7 @@ export default function Consulta() {
           setClientes(clientesFiltrados);
   
           const cpfNaUrl = searchParams?.get("cpf");
-          if (cpfNaUrl && user?.role !== "cliente" && user?.role !== "clientePJ") {
+          if (cpfNaUrl && user?.perfil !== "cliente" && user?.perfil !== "clientePJ") {
             const clienteEncontrado = clientesFiltrados.find(
               (cliente: Cliente) => cliente.cpf === cpfNaUrl
             );
@@ -80,7 +80,7 @@ export default function Consulta() {
   
     if (!user) return;
   
-    if (user?.role === "cliente" || user?.role === "clientePJ"  && user?.saude_cor) {
+    if (user?.perfil === "cliente" || user?.perfil === "clientePJ"  && user?.saude_cor) {
       const clienteFake: Cliente = {
         id: user.id as number,
         nome: user.nome,

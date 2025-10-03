@@ -118,7 +118,7 @@ export default function LoginCliente() {
       const clienteData: User = {
         id: clienteRaw.seq_cliente,
         nome: clienteRaw.nom_cliente,
-        role: ["EMPRESA", "IMPORTACAO"].includes(clienteRaw.tip_pagamento) ? "clientePJ" : "cliente",
+        perfil: ["EMPRESA", "IMPORTACAO"].includes(clienteRaw.tip_pagamento) ? "clientePJ" : "cliente",
         cpf: cpf,
         saude_cor: true,
         dt_nascimento: dataNascimento,

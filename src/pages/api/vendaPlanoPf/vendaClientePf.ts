@@ -20,8 +20,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     cidade, 
     formaDePagamento, 
     instituicao, 
-    login_sistema, 
-    senha_sistema, 
     idUsuario 
   } = req.body;
   console.log("🔸 Requisição recebida:", req.body);
@@ -46,8 +44,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await page.goto("https://saudeecor.i9.dev.br/white/login.php", { waitUntil: "networkidle2" });
 
     console.log("🔸 Preenchendo login...");
-    await page.type('input[name="usuario"]', login_sistema);
-    await page.type('input[name="senha"]', senha_sistema);
     await Promise.all([
       page.click('button[type="submit"]'),
       page.waitForNavigation({ waitUntil: "networkidle2" }),

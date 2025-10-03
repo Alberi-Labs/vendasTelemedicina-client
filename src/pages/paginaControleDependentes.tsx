@@ -272,7 +272,7 @@ const buscarDependentesDoServidor = async () => {
 
       {loading ? (
         <div className="text-center my-5">
-          <div className="spinner-border text-primary" role="status">
+          <div className="spinner-border text-primary" perfil="status">
             <span className="visually-hidden">Carregando dependentes...</span>
           </div>
           <p className="mt-2">Carregando dependentes...</p>
@@ -382,7 +382,7 @@ const buscarDependentesDoServidor = async () => {
           >
             {loadingSave ? (
               <>
-                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span className="spinner-border spinner-border-sm me-2" perfil="status" aria-hidden="true"></span>
                 Salvando...
               </>
             ) : (

@@ -188,8 +188,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const [usuarioResult]: any = await pool.query(
             `INSERT INTO tb_usuarios 
-    (nome, email, senha, telefone, perfil, imagem, cpf, creditos, data_nascimento, id_instituicao, plano_telemedicina, cep, endereco, uf, cidade, sexo) 
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    (nome, email, senha, telefone, perfil, imagem, cpf, data_nascimento, id_instituicao, plano_telemedicina, cep, endereco, uf, cidade, sexo) 
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 nome,
                 email,

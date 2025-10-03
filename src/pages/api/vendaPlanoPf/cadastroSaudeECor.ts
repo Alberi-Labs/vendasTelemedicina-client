@@ -15,8 +15,6 @@ interface DadosCadastroSaudeECor {
   cidade: string;
   formaDePagamento: string;
   instituicao: string;
-  login_sistema: string;
-  senha_sistema: string;
   idUsuario: string;
 }
 

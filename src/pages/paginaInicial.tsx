@@ -150,7 +150,7 @@ export default function PaginaInicial() {
   ];
 
 
-  const visibleCards = cards.filter(card => card.allowedRoles.includes(user?.role || ""));
+  const visibleCards = cards.filter(card => card.allowedRoles.includes(user?.perfil || ""));
 
   return (
   <div
@@ -172,7 +172,7 @@ export default function PaginaInicial() {
         transition={{ duration: 0.6 }}
       >
 
-        {user?.role === "cliente" || user?.role === "clientePJ" ? (
+        {user?.perfil === "cliente" || user?.perfil === "clientePJ" ? (
           <motion.div
             className="d-flex align-items-start gap-3 p-4 shadow-sm rounded-3 mx-auto mt-4"
             style={{

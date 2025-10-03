@@ -94,7 +94,7 @@ export default function CrmVendas() {
         if (user?.id) {
             carregarVendas();
             // Carregar lista de vendedores apenas se for admin/gerente
-            if (user.role !== 'vendedor') {
+            if (user.perfil !== 'vendedor') {
                 carregarVendedores();
             }
         }
@@ -102,7 +102,7 @@ export default function CrmVendas() {
 
     // Recarregar vendas quando o filtro de vendedor mudar
     useEffect(() => {
-        if (user?.id && user.role !== 'vendedor') {
+        if (user?.id && user.perfil !== 'vendedor') {
             carregarVendas();
         }
     }, [filtros.vendedor]);
@@ -131,11 +131,11 @@ export default function CrmVendas() {
             // Construir a URL com os parâmetros necessários
             const params = new URLSearchParams({
                 id_usuario: user.id.toString(),
-                perfil_usuario: user.role || 'vendedor'
+                perfil_usuario: user.perfil || 'vendedor'
             });
 
             // Adicionar filtro por vendedor se não for "todos" e o usuário não for vendedor
-            if (user.role !== 'vendedor' && filtros.vendedor !== 'todos') {
+            if (user.perfil !== 'vendedor' && filtros.vendedor !== 'todos') {
                 params.append('vendedor_filtro', filtros.vendedor);
             }
 
@@ -388,7 +388,7 @@ export default function CrmVendas() {
                             CRM de Propostas
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            {user?.role === 'vendedor' 
+                            {user?.perfil === 'vendedor' 
                                 ? `Visualizando apenas suas propostas (${user.nome})` 
                                 : 'Visualizando todas as propostas do sistema'
                             }
@@ -437,7 +437,7 @@ export default function CrmVendas() {
                             />
                         </Grid>
                         {/* Filtro por vendedor - apenas para admins */}
-                        {user?.role !== 'vendedor' && (
+                        {user?.perfil !== 'vendedor' && (
                             <Grid item xs={12} sm={6} md={3}>
                                 <FormControl fullWidth size="small">
                                     <InputLabel>Vendedor</InputLabel>

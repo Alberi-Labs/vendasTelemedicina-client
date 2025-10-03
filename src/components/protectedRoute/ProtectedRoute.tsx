@@ -15,13 +15,13 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     if (isAuthLoaded) {
       if (!user) {
         router.push("/login");
-      } else if (!allowedRoles.includes(user.role)) {
+      } else if (!allowedRoles.includes(user.perfil)) {
         router.push("/unauthorized");
       }
     }
   }, [user, isAuthLoaded, allowedRoles, router]);
 
-  if (!isAuthLoaded || !user || !allowedRoles.includes(user.role)) {
+  if (!isAuthLoaded || !user || !allowedRoles.includes(user.perfil)) {
     return null; 
   }
 

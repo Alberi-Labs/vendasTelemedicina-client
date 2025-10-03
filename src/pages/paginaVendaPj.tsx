@@ -254,8 +254,6 @@ export default function CadastroPj() {
 
                 const payload = {
                     instituicao: formData.nomeEmpresa,
-                    login_sistema: user?.login_sistema || '',
-                    senha_sistema: user?.senha_sistema || '',
                     arquivoBase64,
                 };
 

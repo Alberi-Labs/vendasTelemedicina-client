@@ -25,9 +25,9 @@ export default function Sidebar() {
     try {
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        if (parsedUser?.nome && parsedUser?.role) {
+        if (parsedUser?.nome && parsedUser?.perfil) {
           setUserName(parsedUser.nome);
-          setUserRole(parsedUser.role);
+          setUserRole(parsedUser.perfil);
         } else {
           console.error("Formato inválido para usuário:", parsedUser);
         }

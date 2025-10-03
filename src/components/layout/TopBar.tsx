@@ -20,13 +20,13 @@ export default function TopBar() {
       try {
         const parsed = JSON.parse(storedUser);
         setUserName(parsed?.nome || 'Usuário');
-        setUserRole(parsed?.role || '');
+        setUserRole(parsed?.perfil || '');
       } catch (e) {
         console.error('Erro parse user localStorage', e);
       }
     } else if (user) {
       setUserName(user?.nome || 'Usuário');
-      setUserRole(user?.role || '');
+      setUserRole(user?.perfil || '');
     }
   }, [user]);
 

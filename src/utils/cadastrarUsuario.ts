@@ -5,7 +5,6 @@ export const cadastrarOuAtualizarUsuario = async ({
   email,
   senha,
   telefone,
-  creditos,
 }: {
   nome: string;
   cpf: string;
@@ -13,7 +12,6 @@ export const cadastrarOuAtualizarUsuario = async ({
   senha: string;
   email: string;
   telefone: string;
-  creditos: number;
 }) => {
   try {
     const response = await fetch("/api/usuario/cadastrarClienteUsuario", {
@@ -26,7 +24,6 @@ export const cadastrarOuAtualizarUsuario = async ({
         email,
         senha,
         telefone,
-        creditos,
       }),
     });
 

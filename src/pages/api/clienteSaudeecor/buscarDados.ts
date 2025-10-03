@@ -135,10 +135,10 @@ async function verificarOuCriarCliente(clienteData: any) {
       await pool.execute(
         `INSERT INTO tb_clientes (
           nome, telefone, email, cpf, data_nascimento, 
-          idClienteDependente, data_vinculo, creditos, senha, perfil, 
+          idClienteDependente, data_vinculo, , senha, perfil, 
           id_instituicao, cep, registro_geral, primeiro_acesso, contrato_assinado,
           cadastroSulamerica
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           clienteData.nom_cliente,
           clienteData.num_celular,
@@ -147,7 +147,6 @@ async function verificarOuCriarCliente(clienteData: any) {
           dataNascimento,
           null, // idClienteDependente
           new Date(), // data_vinculo - data atual
-          0, // creditos
           null, // senha
           'cliente', // perfil
           idInstituicao, // ID da instituição encontrada ou null

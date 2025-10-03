@@ -18,10 +18,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          u.idUsuario AS id, 
          u.nome, 
          u.senha, 
-         u.perfil AS role, 
+         u.perfil AS perfil, 
          u.id_instituicao, 
-         u.login_sistema,
-         u.senha_sistema,
          e.nomeInstituicao, 
          e.imagem_perfil 
        FROM tb_usuarios u
@@ -43,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const token = jwt.sign(
-      { id: user.id, nome: user.nome, role: user.role, id_instituicao: user.id_instituicao },
+      { id: user.id, nome: user.nome, perfil: user.perfil, id_instituicao: user.id_instituicao },
       process.env.JWT_SECRET as string,
       { expiresIn: "1d" }
     );
@@ -54,14 +52,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       usuario: {
         id: user.id,
         nome: user.nome,
-        role: user.role,
+        perfil: user.perfil,
         id_instituicao: user.id_instituicao,
         instituicao: {
           nomeInstituicao: user.nomeInstituicao,
           imagem_perfil: user.imagem_perfil,
         },
-        login_sistema: user.login_sistema || null,
-        senha_sistema: user.senha_sistema || null,
       },
     });
   } catch (error) {

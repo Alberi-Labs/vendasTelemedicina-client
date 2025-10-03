@@ -5,6 +5,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import BadgeIcon from '@mui/icons-material/Badge';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import CancelIcon from '@mui/icons-material/Cancel';
 import Stack from '@mui/material/Stack';
 
 export interface ActionButtonsProps {
@@ -12,10 +13,11 @@ export interface ActionButtonsProps {
   onEdit: () => void;
   onCharges: () => void;
   onCarteirinha: () => void;
+  onCancel?: () => void;
   size?: 'small' | 'medium';
 }
 
-export const ActionButtons: React.FC<ActionButtonsProps> = ({ onView, onEdit, onCharges, onCarteirinha, size='small' }) => {
+export const ActionButtons: React.FC<ActionButtonsProps> = ({ onView, onEdit, onCharges, onCarteirinha, onCancel, size='small' }) => {
   return (
     <Stack direction="row" spacing={1} alignItems="center">
       <Tooltip title="Editar">
@@ -33,6 +35,13 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ onView, onEdit, on
           <BadgeIcon fontSize="inherit" />
         </IconButton>
       </Tooltip>
+      {onCancel && (
+        <Tooltip title="Cancelar Assinatura">
+          <IconButton size={size} color="error" onClick={onCancel}>
+            <CancelIcon fontSize="inherit" />
+          </IconButton>
+        </Tooltip>
+      )}
     </Stack>
   );
 };

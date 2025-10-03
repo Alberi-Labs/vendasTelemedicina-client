@@ -19,8 +19,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         uf,
         cidade,
         instituicao,
-        login_sistema,
-        senha_sistema,
     } = req.body;
 
     const produto = "Plano Telemedicina Básico";
@@ -53,9 +51,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         console.log("Realizando login...");
-         const senhaDescriptografada = decrypt(senha_sistema) ?? "";
-        await page.type('input[name="usuario"]', login_sistema);
-        await page.type('input[name="senha"]', senhaDescriptografada);
         await Promise.all([
             page.click('button[type="submit"]'),
             page.waitForNavigation({ waitUntil: "networkidle2" }),

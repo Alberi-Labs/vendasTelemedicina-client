@@ -23,7 +23,7 @@ import TelaCarregamento from "@/components/telaCarregamento/TelaCarregamento";
 import PaymentLinkPopup from "@/components/paymentLinkPopup/PaymentLinkPopup";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 import { useAuth } from "@/app/context/AuthContext";
-import { vendaPlanoPf, vendaTelemedicinaApiCompat, instituicoesApi } from "@/lib/api-client";
+import { vendaPlanoPf, vendaTelemedicinaApiCompat, instituicoesApi, clientesApi } from "@/lib/api-client";
 import type { SelectChangeEvent } from '@mui/material/Select';
 
 export default function CadastroPf() {
@@ -41,13 +41,14 @@ export default function CadastroPf() {
         sexo: "",
         uf: "",
         cidade: "",
+        id_cidade: "", // ID da cidade do IBGE
         formaPagamento: "",
         instituicao: "", // nome da instituição
         id_instituicao: "", // id se admin selecionar
     });
     const [erros, setErros] = useState<{ [key: string]: string }>({});
     const [estados, setEstados] = useState<{ sigla: string; nome: string }[]>([]);
-    const [cidades, setCidades] = useState<string[]>([]);
+    const [cidades, setCidades] = useState<{ nome: string; id: string }[]>([]);
     const [loading, setLoading] = useState(false);
     const [showPopup, setShowPopup] = useState(false);
     const [paymentLink, setPaymentLink] = useState("");
@@ -68,7 +69,7 @@ export default function CadastroPf() {
 
     // Carrega instituições se usuário for admin
     useEffect(() => {
-        const isAdmin = user?.role?.toLowerCase() === 'admin';
+        const isAdmin = user?.perfil?.toLowerCase() === 'admin';
         if (isAdmin) {
             instituicoesApi.listar()
                 .then((data: any) => {
@@ -90,7 +91,10 @@ export default function CadastroPf() {
         if (formData.uf) {
             fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${formData.uf}/municipios`)
                 .then((res) => res.json())
-                .then((data) => setCidades(data.map((cidade: any) => cidade.nome)));
+                .then((data) => setCidades(data.map((cidade: any) => ({ 
+                    nome: cidade.nome, 
+                    id: cidade.id 
+                }))));
         }
     }, [formData.uf]);
 
@@ -208,53 +212,52 @@ export default function CadastroPf() {
             try {
                 const sexoFormatado = formData.sexo.toLowerCase() === 'feminino' ? 'F' : 'M';
                 const nascimentoDb = toDbDate(formData.nascimento);
-                const dadosCompletos: any = {
-                    nomeCliente: formData.nome,
+                
+                console.log('Dados do formulário antes da venda:', formData);
+                const dadosCliente = {
+                    nome: formData.nome,
                     email: formData.email,
                     cpf: formData.cpf.replace(/\D/g, ''),
-                    celular: formData.celular,
-                    dataNascimento: nascimentoDb,
+                    telefone: formData.celular,
+                    data_nascimento: nascimentoDb,
                     cep: formData.cep,
                     endereco: formData.endereco,
-                    casa: formData.casa,
+                    numero: formData.casa,
+                    bairro: formData.bairro,
                     sexo: sexoFormatado,
                     uf: formData.uf,
                     cidade: formData.cidade,
-                    formaDePagamento: formData.formaPagamento,
-                    instituicao: formData.instituicao || user?.dsc_instituicao,
+                    id_cidade: formData.id_cidade, // ID da cidade conforme IBGE
                     id_instituicao: formData.id_instituicao || user?.id_instituicao,
-                    login_sistema: user?.login_sistema,
-                    senha_sistema: user?.senha_sistema,
+                };
+                
+                console.log('🔸 1º Passo: Cadastrando cliente no banco:', dadosCliente);
+                const respostaCliente = await clientesApi.cadastrarTelemedicina(dadosCliente);
+                
+                if (!respostaCliente.success || !respostaCliente.clienteId) {
+                    throw new Error(respostaCliente.error || 'Erro ao cadastrar cliente');
+                }
+                
+                console.log('✅ Cliente cadastrado com sucesso, ID:', respostaCliente.clienteId);
+                
+                // 2. SEGUNDO: Criar assinatura usando o ID do cliente
+                const dadosAssinatura = {
+                    clienteId: respostaCliente.clienteId,
+                    valorPlano: 29.9,
+                    formaDePagamento: formData.formaPagamento,
                     idUsuario: user?.id,
                 };
-                console.log('🔸 Dados completos para venda:', dadosCompletos);
-
-                const respostaTele = await vendaTelemedicinaApiCompat.criarPf(dadosCompletos);
-                if (respostaTele?.paymentLink) {
-                    setPaymentLink(respostaTele.paymentLink);
-                    setShowPopup(true);
-                } else {
-                    const dataDB = await vendaPlanoPf.cadastroClientePfDB(dadosCompletos);
-                    const dataCobranca = await vendaPlanoPf.gerarCobrancaPf({
-                        clienteId: dataDB.clienteId,
-                        nomeCliente: formData.nome,
-                        email: formData.email,
-                        cpf: formData.cpf,
-                        formaDePagamento: formData.formaPagamento,
-                        idUsuario: user?.id,
-                        cep: formData.cep,
-                        endereco: formData.endereco,
-                        numero: formData.casa,
-                        bairro: formData.bairro,
-                        telefone: formData.celular,
-                    });
-                    if (dataCobranca?.paymentLink) {
-                        setPaymentLink(dataCobranca.paymentLink);
-                        setShowPopup(true);
-                    } else {
-                        setMensagemDeErro('Erro: o link de pagamento não foi retornado.');
-                    }
+                
+                console.log('🔸 2º Passo: Criando assinatura:', dadosAssinatura);
+                const respostaAssinatura = await vendaTelemedicinaApiCompat.criarAssinatura(dadosAssinatura);
+                
+                if (!respostaAssinatura.success || !respostaAssinatura.paymentLink) {
+                    throw new Error(respostaAssinatura.error || 'Erro ao criar assinatura');
                 }
+                
+                console.log('✅ Assinatura criada com sucesso');
+                setPaymentLink(respostaAssinatura.paymentLink);
+                setShowPopup(true);
             } catch (error: any) {
                 console.error('Erro no processamento da venda:', error);
                 setMensagemDeErro(error.message || 'Erro inesperado.');
@@ -273,7 +276,7 @@ export default function CadastroPf() {
 
     const steps = ["Dados Pessoais", "Endereço", "Pagamento"];
 
-    const isAdmin = user?.role?.toLowerCase() === 'admin';
+    const isAdmin = user?.perfil?.toLowerCase() === 'admin';
 
     return (
         <Container maxWidth="md">
@@ -489,10 +492,18 @@ export default function CadastroPf() {
                                             label="Cidade"
                                             name="cidade"
                                             value={formData.cidade}
-                                            onChange={handleChangeFormat}
+                                            onChange={(e) => {
+                                                const cidadeSelecionada = cidades.find(c => c.nome === e.target.value);
+                                                console.log('Cidade selecionada:', cidadeSelecionada);
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    cidade: e.target.value as string,
+                                                    id_cidade: cidadeSelecionada?.id || ""
+                                                }));
+                                            }}
                                         >
                                             {cidades.map((cidade, index) => (
-                                                <MenuItem key={index} value={cidade}>{cidade}</MenuItem>
+                                                <MenuItem key={index} value={cidade.nome}>{cidade.nome}</MenuItem>
                                             ))}
                                         </Select>
                                     </FormControl>

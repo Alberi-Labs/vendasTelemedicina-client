@@ -62,6 +62,10 @@ export const clientesApi = {
   cadastrar: (clienteData: any) =>
     apiClient.post('/clientes/cadastrar', clienteData),
 
+  // Novo método para cadastro completo de telemedicina
+  cadastrarTelemedicina: (clienteData: any) =>
+    apiClient.post('/clientes/cadastrar-telemedicina', clienteData),
+
   consultar: (filtros?: { cpf?: string; id_instituicao?: number }) => {
     console.log('Consultando clientes com filtros:', filtros);
     if (filtros && (filtros.cpf || filtros.id_instituicao)) {
@@ -156,12 +160,10 @@ export const usuarioApi = {
     email?: string;
     senha?: string;
     telefone?: string;
-    role?: string;
+    perfil?: string;
     cpf: string;
     data_nascimento?: string;
     id_instituicao?: number;
-    login_sistema?: string;
-    senha_sistema?: string;
   }) =>
     apiClient.post('/usuario/cadastrarClienteUsuario', dadosUsuario),
 
@@ -180,8 +182,6 @@ export const usuarioApi = {
     cpf?: string;
     data_nascimento?: string;
     id_instituicao?: number;
-    login_sistema?: string;
-    senha_sistema?: string;
   }) =>
     apiClient.put('/usuario/editarUsuario', dadosUsuario),
 };
@@ -694,8 +694,6 @@ export const vendaPlanoPj = {
   // Envia CSV (em base64) para upload de vidas no Saúde e Cor
   subirVidaSaudeECor: (dados: {
     instituicao: string;
-    login_sistema: string;
-    senha_sistema: string; // esperado criptografado conforme backend
     arquivoBase64: string; // data URL ou base64 puro do CSV
   }) => apiClient.post('/vendaPlanoPj/subirVidaSaudeECor', dados),
 
@@ -728,31 +726,47 @@ export const vendaPlanoPj = {
 
 // Alias compatível com as rotas camelCase do backend de venda telemedicina
 export const vendaTelemedicinaApiCompat = {
-  criarVenda: (vendaData: any) =>
-    apiClient.post('/vendaTelemedicina/criarVenda', vendaData),
+  // Novos métodos para lógica separada (USAR ESTES)
+  criarAssinatura: (assinaturaData: any) =>
+    apiClient.post('/vendaTelemedicina/criarAssinatura', assinaturaData),
 
-  criarPf: (vendaData: any) =>
-    apiClient.post('/vendaTelemedicina/criarPf', vendaData),
-
+  // Métodos de consulta
   consultarVenda: (id_usuario?: number, filtros?: { id_instituicao?: number }) => {
     const params = new URLSearchParams();
     if (id_usuario !== undefined) params.append('id_usuario', id_usuario.toString());
     if (filtros?.id_instituicao) params.append('id_instituicao', filtros.id_instituicao.toString());
     const qs = params.toString();
     const endpoint = qs
-      ? `/vendaTelemedicina/consultarVenda?${qs}`
-      : '/vendaTelemedicina/consultarVenda';
+      ? `/vendaTelemedicina/consultar?${qs}`
+      : '/vendaTelemedicina/consultar';
     return apiClient.get(endpoint);
   },
 
+  // Vida Sulamerica
+  criarVidaSulamerica: (vidaData: any) =>
+    apiClient.post('/vendaTelemedicina/vida-sulamerica', vidaData),
+
+  cancelarVidaSulamerica: (cancelarData: any) =>
+    apiClient.post('/vendaTelemedicina/cancelar-vida-sulamerica', cancelarData),
+
+  // Cancelamento de assinatura Asaas
+  cancelarAssinatura: (cancelarData: { idVenda: number; motivo?: string }) =>
+    apiClient.post('/vendaTelemedicina/cancelar-assinatura', cancelarData),
+
+  // Métodos de delete
   deletarVenda: (idVenda: number) => {
-    const params = new URLSearchParams({ idVenda: idVenda.toString() });
-    return apiClient.delete(`/vendaTelemedicina/deletarVenda?${params.toString()}`);
+    return apiClient.delete(`/vendaTelemedicina/deletar/${idVenda}`);
   },
 
+  // ===== MÉTODOS LEGADOS (MANTER POR COMPATIBILIDADE) =====
+  criarVenda: (vendaData: any) =>
+    apiClient.post('/vendaTelemedicina/criarVenda', vendaData),
+
+  criarPf: (vendaData: any) =>
+    apiClient.post('/vendaTelemedicina/criarPf', vendaData),
+
   deletarPf: (idVenda: number) => {
-    const params = new URLSearchParams({ idVenda: idVenda.toString() });
-    return apiClient.delete(`/vendaTelemedicina/deletarPf?${params.toString()}`);
+    return apiClient.delete(`/vendaTelemedicina/deletar/${idVenda}`);
   },
 };
 

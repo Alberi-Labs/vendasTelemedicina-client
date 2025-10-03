@@ -50,7 +50,7 @@ export default function RelatorioVendas() {
 
   // Carrega instituições (somente admin)
   useEffect(() => {
-    if (user?.role === 'admin') {
+    if (user?.perfil === 'admin') {
       instituicoesApi.listar().then((data: any) => {
         const lista = Array.isArray(data) ? data : data?.items || [];
         const mapped = lista.map((i: any) => ({ id: i.idInstituicao || i.id || i.id_instituicao, nome: i.nomeInstituicao || i.nome })).filter((i: any) => i.id && i.nome);
@@ -63,14 +63,14 @@ export default function RelatorioVendas() {
     setLoading(true);
     setErroMsg(null);
     try {
-      const role = user?.role || '';
+      const perfil = user?.perfil || '';
       const filtros: any = {};
-      if (role === 'vendedor') filtros.id_usuario = user?.id;
-      if (role === 'admin') {
+      if (perfil === 'vendedor') filtros.id_usuario = user?.id;
+      if (perfil === 'admin') {
         if (instituicaoFiltro) filtros.id_instituicao = Number(instituicaoFiltro);
         if (vendedorFiltro) filtros.id_usuario = Number(vendedorFiltro);
       }
-      if (role === 'gestor') { // gestor: usa sua instituicao e pode filtrar vendedor
+      if (perfil === 'gestor') { // gestor: usa sua instituicao e pode filtrar vendedor
         if (user?.id_instituicao) filtros.id_instituicao = user.id_instituicao;
         if (vendedorFiltro) filtros.id_usuario = Number(vendedorFiltro);
       }
@@ -116,14 +116,14 @@ export default function RelatorioVendas() {
 
   // Carregar vendedores quando admin seleciona instituição ou quando gestor carrega página
   useEffect(() => {
-    const role = user?.role || '';
-    if (role === 'admin' && instituicaoFiltro) {
+    const perfil = user?.perfil || '';
+    if (perfil === 'admin' && instituicaoFiltro) {
       usuariosApi.buscar().then((data: any) => {
         const lista = Array.isArray(data) ? data : data?.data || data?.usuarios || [];
         const filtrados = lista.filter((u: any) => u.id_instituicao === Number(instituicaoFiltro));
         setVendedores(filtrados.map((u: any) => ({ id: u.idUsuario || u.id, nome: u.nome })));
       }).catch(err => console.error('Erro ao buscar usuários', err));
-    } else if (role === 'gestor' && user?.id_instituicao) {
+    } else if (perfil === 'gestor' && user?.id_instituicao) {
       usuariosApi.buscar().then((data: any) => {
         const lista = Array.isArray(data) ? data : data?.data || data?.usuarios || [];
         const filtrados = lista.filter((u: any) => u.id_instituicao === user.id_instituicao);
@@ -218,7 +218,7 @@ export default function RelatorioVendas() {
 
           <div className="rv-filters-bar mb-4">
             <Row className="g-3">
-              {user?.role === 'admin' && (
+              {user?.perfil === 'admin' && (
                 <Col md={3} sm={6} xs={12}>
                   <Form.Label className="small text-uppercase fw-semibold">Instituição</Form.Label>
                   <Form.Select size="sm" value={instituicaoFiltro} onChange={(e) => setInstituicaoFiltro(e.target.value)}>
@@ -227,7 +227,7 @@ export default function RelatorioVendas() {
                   </Form.Select>
                 </Col>
               )}
-              {(user?.role === 'admin' || user?.role === 'gestor') && (
+              {(user?.perfil === 'admin' || user?.perfil === 'gestor') && (
                 <Col md={3} sm={6} xs={12}>
                   <Form.Label className="small text-uppercase fw-semibold">Vendedor</Form.Label>
                   <Form.Select size="sm" value={vendedorFiltro} onChange={(e) => setVendedorFiltro(e.target.value)}>
@@ -302,7 +302,7 @@ export default function RelatorioVendas() {
                 <tr>
                   <th>Data</th>
                   <th>Cliente</th>
-                  {(user?.role === 'admin' || user?.role === 'gestor') && <th>Vendedor</th>}
+                  {(user?.perfil === 'admin' || user?.perfil === 'gestor') && <th>Vendedor</th>}
                   <th>Forma</th>
                   <th>Valor</th>
                   <th>Status</th>
@@ -313,7 +313,7 @@ export default function RelatorioVendas() {
                   <tr key={venda.idVenda}>
                     <td>{venda.data}</td>
                     <td>{venda.nome_cliente}</td>
-                    {(user?.role === 'admin' || user?.role === 'gestor') && <td>{(venda as any).nome_usuario || '-'}</td>}
+                    {(user?.perfil === 'admin' || user?.perfil === 'gestor') && <td>{(venda as any).nome_usuario || '-'}</td>}
                     <td>{venda.forma_pagamento}</td>
                     <td>R$ {parseFloat(venda.valor).toFixed(2)}</td>
                     <td><span className={`rv-status-badge rv-status-${venda.status_pagamento?.toLowerCase() || 'pendente'}`}>{venda.status_pagamento}</span></td>

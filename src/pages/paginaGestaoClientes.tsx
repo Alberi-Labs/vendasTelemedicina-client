@@ -22,7 +22,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Grid from '@mui/material/Grid';
 import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
-import { clientesApi, instituicoesEmpresaApi } from '../lib/api-client';
+import { clientesApi, instituicoesEmpresaApi, vendaTelemedicinaApiCompat } from '../lib/api-client';
 import { ActionButtons } from '@/components/gestao-clientes/ActionButtons';
 import { ChargesModal } from '@/components/gestao-clientes/ChargesModal';
 import { GenerateCarteirinhaModal } from '@/components/gestao-clientes/GenerateCarteirinhaModal';
@@ -39,7 +39,6 @@ interface Cliente {
   data_nascimento: string | null;
   idClienteDependente: number | null;
   data_vinculo: string | null;
-  creditos: number | null;
 }
 
 
@@ -63,6 +62,8 @@ export default function PaginaGestaoClientes() {
   const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
   const [chargesOpen, setChargesOpen] = useState(false);
   const [carteirinhaOpen, setCarteirinhaOpen] = useState(false);
+  const [cancelarModalOpen, setCancelarModalOpen] = useState(false);
+  const [loadingCancelamento, setLoadingCancelamento] = useState(false);
   const [instituicoes, setInstituicoes] = useState<InstituicaoOption[]>([]);
   const [instituicaoFiltro, setInstituicaoFiltro] = useState<string>('');
   const [busca, setBusca] = useState('');
@@ -71,7 +72,7 @@ export default function PaginaGestaoClientes() {
   console.log("cliente selecionado", selectedCliente);
   useEffect(() => {
     // Carregar instituições só para admin (para filtro)
-    if (user?.role === 'admin') {
+    if (user?.perfil === 'admin') {
       instituicoesEmpresaApi.buscarEmpresa().then(data => {
         if (data.success) setInstituicoes(data.instituicoes || []);
       }).catch(() => {});
@@ -82,7 +83,7 @@ export default function PaginaGestaoClientes() {
     setLoading(true);
     try {
       const filtros: any = {};
-      if (user?.role === 'admin' && instituicaoFiltro) filtros.id_instituicao = parseInt(instituicaoFiltro);
+      if (user?.perfil === 'admin' && instituicaoFiltro) filtros.id_instituicao = parseInt(instituicaoFiltro);
       // (backend ainda ignora id_instituicao; fallback filtra no front)
       console.log('Carregando clientes com filtros:', filtros);
       const data = await clientesApi.consultar(filtros);
@@ -153,7 +154,6 @@ export default function PaginaGestaoClientes() {
           telefone: clienteEditando.telefone,
           cpf: clienteEditando.cpf.replace(/\D/g, ""),
           data_nascimento: clienteEditando.data_nascimento,
-          creditos: clienteEditando.creditos,
         }),
       });
 
@@ -194,13 +194,50 @@ export default function PaginaGestaoClientes() {
     }
   };
 
+  const handleCancelarAssinatura = async (cliente: Cliente) => {
+    if (!window.confirm(`Tem certeza que deseja cancelar a assinatura de ${cliente.nome}?`)) return;
+
+    setLoadingCancelamento(true);
+    try {
+      // Primeiro, buscar as vendas do cliente para encontrar a assinatura ativa
+      const response = await fetch(`/api/venda/consultar?id_cliente=${cliente.idCliente}`);
+      const data = await response.json();
+      
+      if (!data.vendas || data.vendas.length === 0) {
+        alert("Nenhuma assinatura encontrada para este cliente.");
+        return;
+      }
+
+      // Pegar a venda mais recente (assumindo que é a assinatura ativa)
+      const vendaAtiva = data.vendas[0];
+      
+      const result = await vendaTelemedicinaApiCompat.cancelarAssinatura({
+        idVenda: vendaAtiva.idVenda,
+        motivo: "Cancelamento solicitado via gestão de clientes"
+      });
+
+      if (result.success) {
+        alert("Assinatura cancelada com sucesso!");
+        // Recarregar a lista de clientes
+        carregarClientes();
+      } else {
+        alert(`Erro ao cancelar assinatura: ${result.error || "Erro desconhecido"}`);
+      }
+    } catch (error) {
+      console.error("Erro ao cancelar assinatura:", error);
+      alert("Erro ao cancelar assinatura. Tente novamente.");
+    } finally {
+      setLoadingCancelamento(false);
+    }
+  };
+
   // Filtro derivado (caso backend não filtre por instituicao)
   const clientesFiltrados = useMemo(() => {
     let base = clientes;
-    if (user?.role !== 'admin' && user?.id_instituicao) {
+    if (user?.perfil !== 'admin' && user?.id_instituicao) {
       // TODO: Quando backend relacionar clientes a instituicoes dinamicamente, aplicar aqui
       // Sem origem no payload atual, mantemos todos (placeholder)
-    } else if (user?.role === 'admin' && instituicaoFiltro) {
+    } else if (user?.perfil === 'admin' && instituicaoFiltro) {
       // Se tivéssemos id_instituicao no cliente, filtraria aqui
     }
     if (busca) {
@@ -221,7 +258,7 @@ export default function PaginaGestaoClientes() {
             <Grid item xs={12} md={4}>
               <TextField label="Pesquisar" size="small" fullWidth placeholder="Nome, email ou CPF" value={busca} onChange={e => setBusca(e.target.value)} />
             </Grid>
-            {user?.role === 'admin' && (
+            {user?.perfil === 'admin' && (
               <Grid item xs={12} md={4}>
                 <TextField label="Instituição" size="small" select fullWidth value={instituicaoFiltro} onChange={e => setInstituicaoFiltro(e.target.value)}>
                   <MenuItem value="">Todas</MenuItem>
@@ -233,7 +270,7 @@ export default function PaginaGestaoClientes() {
             )}
             <Grid item xs={12} md={4} textAlign={{ xs: 'left', md: 'right' }}>
               <Chip label={`Total: ${clientesFiltrados.length}`} color="primary" variant="outlined" />
-              {(busca || (user?.role==='admin' && instituicaoFiltro)) && (
+              {(busca || (user?.perfil==='admin' && instituicaoFiltro)) && (
                 <Button size="small" sx={{ ml: 1 }} onClick={() => { setBusca(''); setInstituicaoFiltro(''); }}>Limpar</Button>
               )}
             </Grid>
@@ -266,6 +303,7 @@ export default function PaginaGestaoClientes() {
                             onEdit={() => handleEditarClick(cliente)}
                             onCharges={() => { setSelectedCliente(cliente); setChargesOpen(true); }}
                             onCarteirinha={() => { setSelectedCliente(cliente); setCarteirinhaOpen(true); }}
+                            onCancel={() => handleCancelarAssinatura(cliente)}
                           />
                         </div>
                       </TableCell>
@@ -286,7 +324,6 @@ export default function PaginaGestaoClientes() {
               <Typography><strong>Nome:</strong> {selectedCliente.nome}</Typography>
               <Typography><strong>CPF:</strong> {selectedCliente.cpf}</Typography>
               <Typography><strong>Email:</strong> {selectedCliente.email}</Typography>
-              <Typography><strong>Créditos:</strong> {selectedCliente.creditos}</Typography>
               <Typography variant="h6" sx={{ mt: 2 }}>Últimas 5 Vendas</Typography>
               {loadingVendas ? (
                 <CircularProgress size={24} />

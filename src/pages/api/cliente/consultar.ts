@@ -11,7 +11,6 @@ interface Cliente {
     data_nascimento: string | null;
     idClienteDependente: number | null;
     data_vinculo: string | null;
-    creditos: number | null;
 }
 
 const formatarDataParaBrasileiro = (data: string | null) => {
@@ -51,7 +50,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             data_vinculo: cliente.data_vinculo && !isNaN(new Date(cliente.data_vinculo).getTime()) 
                 ? new Date(cliente.data_vinculo).toISOString().split("T")[0] 
                 : null,
-            creditos: cliente.creditos,
         }));
         return res.status(200).json({ success: true, clientes: clientesFormatados });
     } catch (error) {

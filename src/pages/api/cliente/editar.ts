@@ -8,7 +8,6 @@ interface Cliente {
   email: string;
   cpf: string;
   data_nascimento?: string | null;
-  creditos?: number | null;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -17,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { id } = req.query;
-  const { nome, telefone, email, cpf, data_nascimento, creditos }: Cliente = req.body;
+  const { nome, telefone, email, cpf, data_nascimento }: Cliente = req.body;
 
   if (!id) {
     return res.status(400).json({ error: "ID do cliente é obrigatório." });
@@ -26,9 +25,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const [result]: any = await pool.query(
       `UPDATE tb_clientes 
-       SET nome = ?, telefone = ?, email = ?, cpf = ?, data_nascimento = ?, creditos = ?
+       SET nome = ?, telefone = ?, email = ?, cpf = ?, data_nascimento = ?
        WHERE idCliente = ?`,
-      [nome, telefone, email, cpf.replace(/\D/g, ""), data_nascimento, creditos, id]
+      [nome, telefone, email, cpf.replace(/\D/g, ""), data_nascimento, id]
     );
 
     if (result.affectedRows === 0) {
