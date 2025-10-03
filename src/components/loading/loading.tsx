@@ -18,7 +18,7 @@ const Loading: React.FC = () => {
         zIndex: 10,
       }}
     >
-      <div className="spinner-border text-primary" perfil="status">
+      <div className="spinner-border text-primary" role="status">
         <span className="visually-hidden"></span>
       </div>
     </div>
