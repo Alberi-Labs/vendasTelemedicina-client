@@ -21,30 +21,43 @@
 // import { cadastrarOuAtualizarUsuario } from "../utils/cadastrarUsuario";
 // import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
 
-// // 🔹 Interface para Cliente
-// interface Cliente {
-//   idCliente?: number;
-//   nome: string;
-//   email: string;
-//   cpf: string;
-//   telefone: string;
-//   data_de_nascimento?: string;
-//   data_vinculo?: string; // Added data_vinculo to the interface
-//   idClienteDependente?: number | null; // Added idClienteDependente to the interface
-// }
+import React from 'react';
 
-// // 🔹 Interface para Venda
-// interface Venda {
-//   idVenda: number;
-//   data: string;
-//   valor: number;
-// }
+// 🔹 Interface para Cliente
+interface Cliente {
+  idCliente?: number;
+  nome: string;
+  email: string;
+  cpf: string;
+  telefone: string;
+  data_de_nascimento?: string;
+  data_vinculo?: string; // Added data_vinculo to the interface
+  idClienteDependente?: number | null; // Added idClienteDependente to the interface
+}
 
-// // 🔹 Interface para Pagamento
-// interface Pagamento {
-//   forma_pagamento: string;
-//   tipo_pagamento_loja?: string;
-// }
+// 🔹 Interface para Venda
+interface Venda {
+  idVenda: number;
+  data: string;
+  valor: number;
+}
+
+// 🔹 Interface para Pagamento
+interface Pagamento {
+  forma_pagamento: string;
+  tipo_pagamento_loja?: string;
+}
+
+// Componente temporário para resolver erro de build
+export default function PaginaCadastroPf() {
+  return (
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <h1>Página de Cadastro PF</h1>
+      <p>Esta página está temporariamente desabilitada.</p>
+      <p>Funcionalidade em desenvolvimento.</p>
+    </div>
+  );
+}
 
 // export default function PaginaCadastroPf() {
 //   const [currentStep, setCurrentStep] = useState(0);
@@ -730,3 +743,5 @@
 
 //   );
 // }
+
+// Final do arquivo comentado - funcionalidade em desenvolvimento
