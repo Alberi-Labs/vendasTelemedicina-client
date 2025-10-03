@@ -9,6 +9,7 @@ import AvisoManutencao from "../avisoManutencao/AvisoManutencao";
 import { AtendimentoProvider } from "@/app/context/AtendimentoContex";
 import { useAuth } from "@/app/context/AuthContext";
 import TopBar from './TopBar';
+import Breadcrumbs from '@/components/navigation/Breadcrumbs';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -50,7 +51,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {!isLoginPage && <Sidebar />}
       <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <div style={{ backgroundColor: "#f1f5f9", flex: 1, display: "flex", flexDirection: "column" }}>
-          {children}
+          <main style={{ flex: 1 }}>
+            <Breadcrumbs />
+            {children}
+          </main>
         </div>
 
         {!isLoginPage && <FooterBar />}
