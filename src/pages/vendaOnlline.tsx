@@ -128,7 +128,7 @@ export default function CadastroPf() {
                     body: JSON.stringify({
                         nomeCliente: formData.nome,
                         email: formData.email,
-                        cpf: formData.cpf,
+                        cpf: formData.cpf.replace(/\D/g, ''), // CPF limpo sem pontos e traços
                         celular: formData.celular,
                         dataNascimento: formData.nascimento,
                         cep: formData.cep,

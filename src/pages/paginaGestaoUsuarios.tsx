@@ -113,7 +113,7 @@ export default function PaginaGestaoUsuario() {
       senha: formData.cpf.replace(/[.\-]/g, ''), // senha padrão é o CPF sem pontos e traços
       telefone: "",
       imagem: null,
-      cpf: formData.cpf,
+      cpf: formData.cpf.replace(/[.\-]/g, ''), // CPF limpo sem pontos e traços
       data_nascimento: null,
       id_instituicao: user?.perfil === 'gestor'
         ? (user.id_instituicao ?? null)

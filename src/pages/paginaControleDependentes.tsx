@@ -82,7 +82,7 @@ const buscarDependentesDoServidor = async () => {
     try {
       const cadastro = await dependenteApi.cadastrar({
         nomeDependente: formData.nome,
-        cpfDependente: formData.cpf,
+        cpfDependente: formData.cpf.replace(/\D/g, ''), // CPF limpo sem pontos e traços
         cpfTitular: user?.cpf || '',
         parentesco: 'dependente'
       });

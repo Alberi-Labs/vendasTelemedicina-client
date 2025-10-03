@@ -227,7 +227,7 @@ export default function CadastroPf() {
                     sexo: sexoFormatado,
                     uf: formData.uf,
                     cidade: formData.cidade,
-                    id_cidade: formData.id_cidade, // ID da cidade conforme IBGE
+                    id_cidade: formData.id_cidade && formData.id_cidade !== "" ? parseInt(formData.id_cidade, 10) : null, // Converte para número ou null
                     id_instituicao: formData.id_instituicao || user?.id_instituicao,
                 };
                 

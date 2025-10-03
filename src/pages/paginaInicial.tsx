@@ -46,21 +46,21 @@ export default function PaginaInicial() {
       path: "/paginaVendaPf",
       icon: "bi-cash-coin",
       text: "Venda Plano Telemedicina",
-      allowedRoles: ["admin", "vendedor", "gerente"],
+      allowedRoles: ["admin", "vendedor", "gerente", "gestor"],
       description: "Venda planos mensais com acesso à telemedicina."
     },
     {
       path: "/paginaRelatorioVendas",
       icon: "bi-file-earmark-bar-graph",
       text: "Relatório de Vendas",
-      allowedRoles: ["admin", "gerente"],
+      allowedRoles: ["admin", "gerente", "gestor", "vendedor"],
       description: "Acompanhe os resultados das vendas por período e vendedor."
     },
     {
       path: "/paginaGestaoClientes",
       icon: "bi-people",
       text: "Gestão de Clientes",
-      allowedRoles: ["admin", "vendedor", "gerente"],
+      allowedRoles: ["admin", "vendedor", "gerente", "gestor"],
       description: "Visualize, edite ou remova dados de clientes cadastrados."
     },
     {
@@ -109,7 +109,7 @@ export default function PaginaInicial() {
       path: "/paginaGestaoUsuarios",
       icon: "bi-person-gear",
       text: "Gestão de Usuários",
-      allowedRoles: ["admin"],
+      allowedRoles: ["admin", "gestor"],
       description: "Gerencie permissões e dados dos usuários do sistema."
     },
     {
@@ -144,7 +144,7 @@ export default function PaginaInicial() {
       href: "https://wa.me/5561996363963",
       icon: "bi-question-circle",
       text: "Suporte e Ajuda",
-      allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente"],
+      allowedRoles: ["admin", "cliente", "clientePJ", "vendedor", "gerente", "gestor", "vendedorFarmacia"],
       description: "Fale com nosso suporte via WhatsApp para tirar dúvidas."
     }
   ];
