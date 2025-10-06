@@ -153,20 +153,6 @@ body.dashboard-relatorio {
   border-bottom: 1px solid var(--rv-border) !important;
 }
 
-.rv-status-badge { 
-  display:inline-block; 
-  padding:2px 8px; 
-  border-radius:12px; 
-  font-size:11px; 
-  font-weight:600; 
-  background:#ececec; 
-  color:#333; 
-  text-transform:uppercase; 
-  letter-spacing:.5px; 
-}
-.rv-status-received, .rv-status-confirmed, .rv-status-received_in_cash { background:#d1f5e0; color:#0d6832; }
-.rv-status-pending, .rv-status-pendente, .rv-status-awaiting_payment { background:#fff4d6; color:#8a5b00; }
-.rv-status-cancelled, .rv-status-canceled, .rv-status-refunded { background:#f9d7d7; color:#8b0000; }
 
 /* Scroll refinado */
 .rv-table-wrapper tbody {
@@ -181,6 +167,64 @@ body.dashboard-relatorio {
 .rv-flex { display:flex; gap:14px; flex-wrap:wrap; }
 .rv-grow { flex:1; }
 .rv-badge-list { display:flex; flex-wrap:wrap; gap:6px; }
+
+/* Badge de status de pagamento */
+.rv-status-badge {
+  display: inline-block;
+  min-width: 90px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  text-transform: capitalize;
+  letter-spacing: .2px;
+  box-shadow: var(--rv-shadow-sm);
+  border: 1px solid var(--rv-border);
+  background: #f7f8fa;
+  color: var(--rv-text);
+}
+
+.rv-status-pendente {
+  background: var(--rv-warning);
+  color: #fff;
+}
+.rv-status-pago {
+  background: var(--rv-success);
+  color: #fff;
+}
+.rv-status-cancelado {
+  background: var(--rv-danger);
+  color: #fff;
+}
+.rv-status-aguardando {
+  background: #ffe082;
+  color: #7a5c00;
+}
+.rv-status-ativo {
+  background: #1976d2;
+  color: #fff;
+}
+.rv-status-confirmado {
+  background: #43a047;
+  color: #fff;
+}
+.rv-status-recebido {
+  background: #00bcd4;
+  color: #fff;
+}
+.rv-status-falha {
+  background: #b71c1c;
+  color: #fff;
+}
+.rv-status-cancelada {
+  background: var(--rv-danger);
+  color: #fff;
+}
+.rv-status-aguardando_pagamento {
+  background: #ff9800;
+  color: #fff;
+}
 
 /* Responsivo */
 @media (max-width: 768px) {

@@ -45,7 +45,7 @@ export default function RelatorioVendas() {
   const [statusDistribuicao, setStatusDistribuicao] = useState<Record<string, number>>({});
   const [semDados, setSemDados] = useState(false);
   const [erroMsg, setErroMsg] = useState<string | null>(null);
-  const [statusView, setStatusView] = useState<'todos'|'aprovados'|'nao-aprovados'>('todos');
+  const [statusView, setStatusView] = useState<'todos'|'aprovados'|'nao-aprovados'|'pago'|'cancelada'|'aguardando_pagamento'>('todos');
 
   const relatorioRef = useRef<HTMLDivElement>(null);
   const gerarPDF = useReactToPrint({
@@ -161,10 +161,33 @@ export default function RelatorioVendas() {
       if (filtro === 'quinzenal' && (mesVenda !== mesSelecionado || (diaVenda <= 15 ? '1':'2') !== quinzenaSelecionada)) return false;
       return true;
     });
+    
+    // Debug: mostrar todos os status únicos
+    const statusUnicos = [...new Set(base.map(v => v.status_pagamento))];
+    console.log('🔍 Status únicos encontrados:', statusUnicos);
+    
     const aprovadosSet = new Set(['RECEIVED','CONFIRMED','RECEIVED_IN_CASH']);
     let filtradoStatus = base;
     if (statusView === 'aprovados') filtradoStatus = base.filter(v => aprovadosSet.has(v.status_pagamento));
     if (statusView === 'nao-aprovados') filtradoStatus = base.filter(v => !aprovadosSet.has(v.status_pagamento));
+    if (statusView === 'pago') {
+      filtradoStatus = base.filter(v => {
+        const status = v.status_pagamento?.toLowerCase() || '';
+        const isPago = aprovadosSet.has(v.status_pagamento) || 
+               status.includes('pago') || 
+               status.includes('paid') || 
+               status.includes('received') ||
+               status.includes('confirmed');
+        return isPago;
+      });
+      console.log('🔍 Filtro PAGO aplicado:', {
+        totalBase: base.length,
+        filtradoPago: filtradoStatus.length,
+        statusFiltrados: filtradoStatus.map(v => v.status_pagamento)
+      });
+    }
+    if (statusView === 'cancelada') filtradoStatus = base.filter(v => v.status_pagamento?.toLowerCase().includes('cancel'));
+    if (statusView === 'aguardando_pagamento') filtradoStatus = base.filter(v => v.status_pagamento?.toLowerCase().includes('pending') || v.status_pagamento?.toLowerCase().includes('aguardando'));
     return filtradoStatus;
   }, [vendas, filtro, mesSelecionado, quinzenaSelecionada, statusView]);
 
@@ -458,8 +481,9 @@ export default function RelatorioVendas() {
                 <Form.Label className="small text-uppercase fw-semibold">Status</Form.Label>
                 <Form.Select size="sm" value={statusView} onChange={e=>setStatusView(e.target.value as any)}>
                   <option value="todos">Todos</option>
-                  <option value="aprovados">Aprovados</option>
-                  <option value="nao-aprovados">Não Aprovados</option>
+                  <option value="pago">Pago</option>
+                  <option value="cancelada">Cancelada</option>
+                  <option value="aguardando_pagamento">Aguardando Pagamento</option>
                 </Form.Select>
               </Col>
             </Row>
@@ -498,7 +522,7 @@ export default function RelatorioVendas() {
                       {(user?.perfil === 'admin' || user?.perfil === 'gestor') && <td>{(venda as any).nome_usuario || '-'}</td>}
                       <td>{venda.forma_pagamento}</td>
                       <td>R$ {parseFloat(venda.valor).toFixed(2)}</td>
-                      <td><span className={`rv-status-badge rv-status-${venda.status_pagamento?.toLowerCase() || 'pendente'}`}>{venda.status_pagamento}</span></td>
+                      <td><span className={`rv-status-badge rv-status-${venda.status_pagamento?.toLowerCase().replace(/\s+/g, '_') || 'pendente'}`}>{venda.status_pagamento}</span></td>
                       <td>{venda.link_pagamento ? <div className="d-flex gap-1">
                         <Button size="sm" variant="outline-primary" onClick={() => copiarLink(venda.link_pagamento!)}>Copiar</Button>
                         <Button size="sm" variant="outline-secondary" onClick={() => window.open(venda.link_pagamento, '_blank','noopener,noreferrer')}>Abrir</Button>

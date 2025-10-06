@@ -1,35 +1,78 @@
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import { Button, Modal, Form, Table, Badge, OverlayTrigger, Tooltip, InputGroup } from "react-bootstrap";
-import '../styles/gestaoUsuarios.css';
+import "../styles/gestaoUsuarios.css";
 import { motion } from "framer-motion";
 import { Usuario } from "./api/usuario/buscarUsuario";
 import { useAuth } from "@/app/context/AuthContext";
-import { decrypt } from "@/lib/cryptoHelper";
-import { usuariosApi, instituicoesApi } from "@/lib/api-client";
+import { usuariosApi, instituicoesApi, usuarioApi } from "@/lib/api-client";
 
-type Instituicao = {
-  idInstituicao: number;
-  nomeInstituicao: string;
+// =====================
+// Helpers de UI + dados
+// =====================
+const normalizaPerfil = (p?: string | null) => (p || "").toLowerCase();
+const normalizaStatus = (s?: string | null) => {
+  const v = (s || "").toString().trim().toLowerCase();
+  if (["a", "ativo", "active", "1", "true"].includes(v)) return "ativo";
+  if (["i", "inativo", "inactive", "0", "false"].includes(v)) return "inativo";
+  return "ativo"; // default seguro
 };
 
+const perfilToVariant: Record<string, string> = {
+  admin: "danger",
+  gestor: "warning",
+  vendedor: "info",
+  cliente: "secondary",
+};
+
+const PerfilBadge = ({ perfil }: { perfil: string | null }) => {
+  if (!perfil) return <Badge bg="secondary" className="text-uppercase small fw-semibold">N/A</Badge>;
+  const key = normalizaPerfil(perfil);
+  const variant = perfilToVariant[key] || "secondary";
+  return <Badge bg={variant} className="text-uppercase small fw-semibold">{key}</Badge>;
+};
+
+// =====================
+// Tipos locais
+// =====================
+type Instituicao = { idInstituicao: number; nomeInstituicao: string };
+
+type UsuarioAdaptado = {
+  id: number;
+  nome: string;
+  email: string;
+  cpf: string;
+  perfil: string | null;
+  id_instituicao: number | null;
+  status: "ativo" | "inativo";
+};
+
+// =====================
+// Componente
+// =====================
 export default function PaginaGestaoUsuario() {
   const { user } = useAuth();
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioAdaptado[]>([]);
   const [instituicoes, setInstituicoes] = useState<Instituicao[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<Usuario | null>(null);
+  const [editing, setEditing] = useState<UsuarioAdaptado | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
     cpf: "",
     perfil: "",
     id_instituicao: "",
+    status: "ativo",
   });
-  const [filtroInstituicao, setFiltroInstituicao] = useState<string>('');
-  const [filtroRole, setFiltroRole] = useState<string>('');
-  const [busca, setBusca] = useState<string>('');
+  const [filtroInstituicao, setFiltroInstituicao] = useState<string>("");
+  const [filtroRole, setFiltroRole] = useState<string>("");
+  const [filtroStatus, setFiltroStatus] = useState<string>("");
+  const [busca, setBusca] = useState<string>("");
 
-
+  // =====================
+  // Carregamento inicial
+  // =====================
   useEffect(() => {
     fetchUsuarios();
     fetchInstituicoes();
@@ -37,110 +80,102 @@ export default function PaginaGestaoUsuario() {
 
   const fetchUsuarios = async () => {
     try {
-      const response = await usuariosApi.buscar();
-      if (response.success) {
-        const adaptado = response.usuarios.map((u: any) => ({
+      const response = await usuarioApi.buscarUsuario();
+      if (response?.success) {
+        const adaptado: UsuarioAdaptado[] = response.usuarios.map((u: any) => ({
           id: u.id,
           nome: u.nome,
           email: u.email,
           cpf: u.cpf,
-          perfil: u.perfil,
-          id_instituicao: u.id_instituicao,
+          perfil: u.perfil ?? null,
+          id_instituicao: u.id_instituicao ?? null,
+          status: normalizaStatus(u.status) as "ativo" | "inativo",
         }));
         setUsuarios(adaptado);
       }
     } catch (error) {
-      console.error('Erro ao buscar usuários:', error);
+      console.error("Erro ao buscar usuários:", error);
     }
   };
 
   const fetchInstituicoes = async () => {
     try {
       const response = await instituicoesApi.listar();
-      if (response.success) {
-        setInstituicoes(response.instituicoes);
-      }
+      if (response?.success) setInstituicoes(response.instituicoes);
     } catch (error) {
-      console.error('Erro ao buscar instituições:', error);
+      console.error("Erro ao buscar instituições:", error);
     }
   };
 
+  // =====================
+  // Modal helpers
+  // =====================
   const handleClose = () => {
     setShowModal(false);
     setEditing(null);
-    setFormData({ nome: "", email: "", cpf: "", perfil: "", id_instituicao: "" });
+    setFormData({ nome: "", email: "", cpf: "", perfil: user?.perfil === "gestor" ? "vendedor" : "", id_instituicao: "", status: "ativo" });
   };
 
-  const handleShow = (usuario?: Usuario) => {
+  const handleShow = (usuario?: UsuarioAdaptado) => {
     if (usuario) {
       setEditing(usuario);
       setFormData({
         nome: usuario.nome,
-        email: usuario.email,
-        cpf: usuario.cpf,
-        perfil: usuario.perfil?.toLowerCase() ?? '',
-        id_instituicao: usuario.id_instituicao?.toString() ?? "",
+        email: usuario.email || "",
+        cpf: formatarCPF(usuario.cpf || ""),
+        perfil: normalizaPerfil(usuario.perfil || ""),
+        id_instituicao: usuario.id_instituicao?.toString() || "",
+        status: normalizaStatus(usuario.status) as "ativo" | "inativo",
       });
-
     } else {
-      // Se gestor criando, força vendedor e instituição dele
-      if (user?.perfil === 'gestor') {
-        setFormData({ nome: "", email: "", cpf: "", perfil: "vendedor", id_instituicao: user.id_instituicao?.toString() || "" });
+      // Gestor força vendedor + sua instituição
+      if (normalizaPerfil(user?.perfil) === "gestor") {
+        setFormData({ nome: "", email: "", cpf: "", perfil: "vendedor", id_instituicao: user?.id_instituicao?.toString() || "", status: "ativo" });
       } else {
-        setFormData({ nome: "", email: "", cpf: "", perfil: "", id_instituicao: "" });
+        setFormData({ nome: "", email: "", cpf: "", perfil: "", id_instituicao: "", status: "ativo" });
       }
     }
     setShowModal(true);
   };
 
-  // Garantir gestor único por instituição (frontend) - troca antigos gestores para vendedor
+  // Garantir gestor único por instituição (frontend): rebaixa outros gestores da mesma instituição
   const garantirGestorUnico = async (idInstituicao: number, novoGestorId?: number) => {
-    const gestoresMesma = usuarios.filter(u => u.id_instituicao === idInstituicao && u.perfil?.toLowerCase() === 'gestor' && u.id !== novoGestorId);
+    const gestoresMesma = usuarios.filter(u => u.id_instituicao === idInstituicao && normalizaPerfil(u.perfil) === "gestor" && u.id !== (novoGestorId ?? 0));
     for (const g of gestoresMesma) {
-      try {
-        await usuariosApi.editar(g.id, { perfil: 'vendedor' });
-      } catch (e) {
-        console.warn('Falha ao rebaixar gestor antigo', g.id);
-      }
+      try { await usuariosApi.editar(g.id, { perfil: "vendedor" }); } catch { /* noop */ }
     }
   };
 
   const handleSave = async () => {
-    const payload = {
+    const cpfLimpo = formData.cpf.replace(/\D/g, "");
+    const payload: any = {
       nome: formData.nome,
       email: formData.email || "",
-      perfil: user?.perfil === 'gestor' ? 'vendedor' : formData.perfil, // gestor só cria/edita vendedores
-      senha: formData.cpf.replace(/[.\-]/g, ''), // senha padrão é o CPF sem pontos e traços
+      perfil: normalizaPerfil(user?.perfil) === "gestor" ? "vendedor" : formData.perfil,
+      senha: cpfLimpo,
       telefone: "",
       imagem: null,
-      cpf: formData.cpf.replace(/[.\-]/g, ''), // CPF limpo sem pontos e traços
+      cpf: cpfLimpo,
       data_nascimento: null,
-      id_instituicao: user?.perfil === 'gestor'
-        ? (user.id_instituicao ?? null)
+      id_instituicao: normalizaPerfil(user?.perfil) === "gestor"
+        ? (user?.id_instituicao ?? null)
         : (formData.id_instituicao ? parseInt(formData.id_instituicao) : null),
     };
 
-
     const isEditando = !!editing;
-
     try {
-      let response;
-      if (isEditando) {
-        response = await usuariosApi.editar(editing.id, payload);
-      } else {
-        response = await usuariosApi.cadastrar(payload);
-      }
+      const response = isEditando
+        ? await usuariosApi.editar(editing!.id, payload)
+        : await usuariosApi.cadastrar(payload);
 
-      if (response.success) {
-        // Se admin está promovendo a gestor, garantir unicidade por instituição
-        if (user?.perfil === 'admin' && payload.perfil === 'gestor' && payload.id_instituicao) {
+      if (response?.success) {
+        if (normalizaPerfil(user?.perfil) === "admin" && payload.perfil === "gestor" && payload.id_instituicao) {
           await garantirGestorUnico(payload.id_instituicao, editing?.id);
         }
         await fetchUsuarios();
         handleClose();
       } else {
-        console.error("Erro ao salvar usuário:", response.error);
-        alert(`Erro ao salvar usuário: ${response.error || "Erro desconhecido"}`);
+        alert(`Erro ao salvar usuário: ${response?.error || "Erro desconhecido"}`);
       }
     } catch (error) {
       console.error("Erro ao salvar usuário:", error);
@@ -148,118 +183,113 @@ export default function PaginaGestaoUsuario() {
     }
   };
 
-
+  // =====================
+  // Ações por linha
+  // =====================
   const handleDelete = async (id: number) => {
-    console.log('🗑️ Tentando excluir usuário com ID:', id);
     if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
-
     try {
-      console.log('📡 Chamando API para excluir usuário...');
       const response = await usuariosApi.deletar(id);
-      console.log('📡 Resposta da API:', response);
-      
-      if (response.success) {
-        console.log('✅ Usuário excluído com sucesso');
-        await fetchUsuarios();
-      } else {
-        console.error('❌ Erro da API:', response.error);
-        alert(`Erro ao excluir usuário: ${response.error || "Erro desconhecido"}`);
-      }
-    } catch (error) {
-      console.error("❌ Erro ao excluir usuário:", error);
-      alert("Erro ao excluir usuário");
-    }
+      if (response?.success) await fetchUsuarios(); else alert(`Erro ao excluir usuário: ${response?.error || "Erro desconhecido"}`);
+    } catch (error) { alert("Erro ao excluir usuário"); }
   };
 
+  const handleToggleStatus = async (id: number, currentStatus: "ativo" | "inativo") => {
+    const isActive = currentStatus === "ativo";
+    const action = isActive ? "inativar" : "reativar";
+    if (!confirm(`Tem certeza que deseja ${action} este usuário?`)) return;
+
+    try {
+      const response = isActive ? await usuariosApi.deletar(id) : await usuariosApi.reativar(id);
+      if (response?.success) await fetchUsuarios(); else alert(`Erro ao ${action} usuário: ${response?.error || "Erro desconhecido"}`);
+    } catch (error) { alert(`Erro ao ${action} usuário`); }
+  };
+
+  // =====================
+  // Utils
+  // =====================
   function formatarCPF(cpf: string) {
     const apenasNumeros = cpf.replace(/\D/g, "").slice(0, 11);
-    return apenasNumeros.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, (match, p1, p2, p3, p4) => {
-      return `${p1}.${p2}.${p3}${p4 ? `-${p4}` : ""}`;
-    });
+    return apenasNumeros.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, (_m, p1, p2, p3, p4) => `${p1}.${p2}.${p3}${p4 ? `-${p4}` : ""}`);
   }
 
-  // Filtragem de visibilidade: gestor só vê seus vendedores / admin vê tudo
+  // =====================
+  // Filtragem + visibilidade
+  // =====================
   const usuariosVisiveis = useMemo(() => {
-    let base: Usuario[];
-    if (user?.perfil === 'admin') base = usuarios;
-    else if (user?.perfil === 'gestor') {
-      base = usuarios.filter(u => u.id_instituicao === user.id_instituicao && u.perfil?.toLowerCase() === 'vendedor');
-    } else base = usuarios;
+    let base: UsuarioAdaptado[] = usuarios;
+    const perfilUser = normalizaPerfil(user?.perfil);
 
-    // Filtros adicionais
+    if (perfilUser === "gestor") {
+      base = usuarios.filter(u => u.id_instituicao === (user?.id_instituicao ?? -1) && normalizaPerfil(u.perfil) === "vendedor");
+    }
+
     return base.filter(u => {
-      if (filtroInstituicao) {
-        if (!u.id_instituicao || u.id_instituicao.toString() !== filtroInstituicao) return false;
-      }
-      if (filtroRole) {
-        if (u.perfil?.toLowerCase() !== filtroRole) return false;
-      }
+      const st = normalizaStatus(u.status);
+      if (filtroInstituicao && (u.id_instituicao?.toString() !== filtroInstituicao)) return false;
+      if (filtroRole && normalizaPerfil(u.perfil) !== filtroRole) return false;
+      if (filtroStatus && st !== filtroStatus) return false;
       if (busca) {
         const b = busca.toLowerCase();
-        const alvo = `${u.nome} ${u.email || ''} ${u.cpf}`.toLowerCase();
+        const alvo = `${u.nome} ${u.email || ""} ${u.cpf}`.toLowerCase();
         if (!alvo.includes(b)) return false;
       }
       return true;
     });
-  }, [usuarios, user, filtroInstituicao, filtroRole, busca]);
+  }, [usuarios, user, filtroInstituicao, filtroRole, filtroStatus, busca]);
 
-  // Checa se linha pode ser editada pelo usuário logado
-  const podeEditar = (u: Usuario) => {
-    const canEdit = (() => {
-      if (user?.perfil === 'admin') return true;
-      if (user?.perfil === 'gestor') {
-        return u.id_instituicao === user.id_instituicao && u.perfil?.toLowerCase() === 'vendedor';
-      }
-      return false;
-    })();
-    
-    console.log('🔐 Verificando permissão de edição:', {
-      user: user?.perfil,
-      userInst: user?.id_instituicao,
-      targetUser: u.nome,
-      targetInst: u.id_instituicao,
-      targetPerfil: u.perfil,
-      canEdit
-    });
-    
-    return canEdit;
+  const podeEditar = (u: UsuarioAdaptado) => {
+    const perfilUser = normalizaPerfil(user?.perfil);
+    if (perfilUser === "admin") return true;
+    if (perfilUser === "gestor") return u.id_instituicao === (user?.id_instituicao ?? -1) && normalizaPerfil(u.perfil) === "vendedor";
+    return false;
   };
 
-
-
-  const badgeForPerfil = (perfil: string | null) => {
-    if (!perfil) {
-      return <Badge bg="secondary" className="text-uppercase small fw-semibold">N/A</Badge>;
-    }
-    const p = perfil.toLowerCase();
-    const map: Record<string, string> = { admin: 'danger', gestor: 'warning', vendedor: 'info', cliente: 'secondary' };
-    const variant = map[p] || 'secondary';
-    return <Badge bg={variant} className="text-uppercase small fw-semibold">{perfil}</Badge>;
-  };
-
+  // =====================
+  // UI
+  // =====================
+  const isValidCPF = formData.cpf.replace(/\D/g, "").length === 11;
+  const canSave = !!formData.nome && !!formData.perfil && isValidCPF && (normalizaPerfil(user?.perfil) === "gestor" ? true : !!formData.id_instituicao);
 
   return (
     <div className="container py-5">
-      <motion.h2 className="text-center mb-5 fw-bold">Gestão de Usuários</motion.h2>
-      <div className="d-flex flex-column flex-lg-row gap-3 mb-4 align-items-lg-end justify-content-between">
-        <div className="flex-grow-1 d-flex flex-column flex-md-row gap-3">
-          <div style={{ minWidth: 240 }}>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+        <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
+          <div>
+            <h2 className="mb-1 fw-bold" style={{ color: "#2f3b52" }}>Gestão de Usuários</h2>
+            <div className="small text-muted">Controle centralizado de contas, perfis e status</div>
+          </div>
+          <div className="d-flex gap-2">
+            {(filtroInstituicao || filtroRole || filtroStatus || busca) && (
+              <Button variant="outline-secondary" onClick={() => { setFiltroInstituicao(""); setFiltroRole(""); setFiltroStatus(""); setBusca(""); }}>
+                <i className="bi bi-x-circle me-1"/> Limpar filtros
+              </Button>
+            )}
+            <Button variant="success" onClick={() => handleShow()}>
+              <i className="bi bi-person-plus me-2"/> Novo Usuário
+            </Button>
+          </div>
+        </div>
+
+        {/* Filtros */}
+        <div className="d-flex flex-column flex-lg-row gap-3 mb-3 align-items-lg-end">
+          <div style={{ minWidth: 260 }}>
             <Form.Label className="small text-uppercase fw-semibold text-muted mb-1">Pesquisar</Form.Label>
             <InputGroup>
               <InputGroup.Text className="bg-white"><i className="bi bi-search" /></InputGroup.Text>
               <Form.Control placeholder="Nome, email ou CPF" value={busca} onChange={e => setBusca(e.target.value)} />
             </InputGroup>
           </div>
-          <div style={{ minWidth: 200 }}>
+          <div style={{ minWidth: 220 }}>
             <Form.Label className="small text-uppercase fw-semibold text-muted mb-1">Instituição</Form.Label>
-            <Form.Select value={filtroInstituicao} onChange={e => setFiltroInstituicao(e.target.value)} disabled={user?.perfil === 'gestor'}>
+            <Form.Select value={filtroInstituicao} onChange={e => setFiltroInstituicao(e.target.value)} disabled={normalizaPerfil(user?.perfil) === "gestor"}>
               <option value="">Todas</option>
               {instituicoes.map(i => (
                 <option key={i.idInstituicao} value={i.idInstituicao}>{i.nomeInstituicao}</option>
               ))}
             </Form.Select>
           </div>
-          <div style={{ minWidth: 180 }}>
+          <div style={{ minWidth: 200 }}>
             <Form.Label className="small text-uppercase fw-semibold text-muted mb-1">Função</Form.Label>
             <Form.Select value={filtroRole} onChange={e => setFiltroRole(e.target.value)}>
               <option value="">Todas</option>
@@ -269,179 +299,143 @@ export default function PaginaGestaoUsuario() {
               <option value="cliente">Cliente</option>
             </Form.Select>
           </div>
+          <div style={{ minWidth: 180 }}>
+            <Form.Label className="small text-uppercase fw-semibold text-muted mb-1">Status</Form.Label>
+            <Form.Select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="ativo">Ativo</option>
+              <option value="inativo">Inativo</option>
+            </Form.Select>
+          </div>
         </div>
-        <div className="d-flex gap-2">
-          {(filtroInstituicao || filtroRole || busca) && (
-            <Button variant="outline-secondary" onClick={() => { setFiltroInstituicao(''); setFiltroRole(''); setBusca(''); }}>Limpar</Button>
-          )}
-          <Button variant="success" onClick={() => handleShow()}>
-            <i className="bi bi-person-plus me-2"></i>Novo Usuário
-          </Button>
+
+        <div className="d-flex justify-content-between align-items-center mb-2 small text-muted">
+          <span>Total: {usuariosVisiveis.length}</span>
+          {(filtroInstituicao || filtroRole || filtroStatus || busca) && <span>Filtros ativos</span>}
         </div>
-      </div>
 
-      <div className="d-flex justify-content-between align-items-center mb-2 small text-muted">
-        <span>Total: {usuariosVisiveis.length}</span>
-        {(filtroInstituicao || filtroRole || busca) && <span>Filtros ativos</span>}
-      </div>
-      <Table striped bordered hover responsive className="align-middle">
-        <thead className="table-dark">
-          <tr>
-            <th>Nome</th>
-            <th>Email</th>
-            <th>Cpf</th>
-            <th>Função</th>
-            <th>Instituicao</th> {/* NOVO */}
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {usuariosVisiveis.map((userRow) => {
-            const empresaDoUsuario = instituicoes.find((e) => e.idInstituicao === userRow.id_instituicao);
-            const disabled = !podeEditar(userRow);
-
-            return (
-              <tr key={userRow.id} className={userRow.perfil?.toLowerCase()==='gestor' ? 'table-warning' : ''}>
-                <td className="fw-semibold">{userRow.nome}</td>
-                <td>{userRow.email}</td>
-                <td>{userRow.cpf}</td>
-                <td>{badgeForPerfil(userRow.perfil)}</td>
-                <td>{empresaDoUsuario?.nomeInstituicao || "Não vinculada"}</td>
-                <td>
-                  <div className="d-flex gap-2">
-                    <OverlayTrigger overlay={<Tooltip>Editar</Tooltip>}>
-                      <span className="d-inline-block">
-                        <Button size="sm" variant="outline-primary" disabled={disabled} onClick={() => !disabled && handleShow(userRow)}>
-                          <i className="bi bi-pencil" />
-                        </Button>
-                      </span>
-                    </OverlayTrigger>
-                    <OverlayTrigger overlay={<Tooltip>Excluir</Tooltip>}>
-                      <span className="d-inline-block">
-                        <Button 
-                          size="sm" 
-                          variant="outline-danger" 
-                          disabled={disabled} 
-                          onClick={() => {
-                            console.log('🖱️ Clique no botão excluir. Disabled:', disabled, 'UserRow:', userRow);
-                            if (!disabled) handleDelete(userRow.id);
-                          }}
-                        >
-                          <i className="bi bi-trash" />
-                        </Button>
-                      </span>
-                    </OverlayTrigger>
-                  </div>
-                </td>
+        <div className="table-responsive">
+          <Table striped bordered hover className="align-middle table-sticky">
+            <thead className="table-dark">
+              <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>CPF</th>
+                <th>Função</th>
+                <th>Instituição</th>
+                <th>Status</th>
+                <th style={{ width: 140 }}>Ações</th>
               </tr>
-            );
-          })}
-        </tbody>
-      </Table>
+            </thead>
+            <tbody>
+              {usuariosVisiveis.map((u) => {
+                const empresaDoUsuario = instituicoes.find(e => e.idInstituicao === u.id_instituicao);
+                const disabled = !podeEditar(u);
+                const st = normalizaStatus(u.status);
+                const isGestor = normalizaPerfil(u.perfil) === "gestor";
+                return (
+                  <tr key={u.id} className={`${isGestor ? "table-warning" : ""} ${st === "inativo" ? "table-secondary text-muted" : ""}`}>
+                    <td className="fw-semibold">{u.nome}</td>
+                    <td>{u.email || "—"}</td>
+                    <td>{u.cpf}</td>
+                    <td><PerfilBadge perfil={u.perfil} /></td>
+                    <td>{empresaDoUsuario?.nomeInstituicao || "Não vinculada"}</td>
+                    <td>
+                      <Badge bg={st === "ativo" ? "success" : "secondary"} className="text-uppercase small fw-semibold">
+                        {st === "ativo" ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </td>
+                    <td>
+                      <div className="d-flex gap-2">
+                        <OverlayTrigger overlay={<Tooltip>Editar</Tooltip>}>
+                          <span className="d-inline-block">
+                            <Button size="sm" variant="outline-primary" disabled={disabled} onClick={() => !disabled && handleShow(u)}>
+                              <i className="bi bi-pencil-square" />
+                            </Button>
+                          </span>
+                        </OverlayTrigger>
+                        <OverlayTrigger overlay={<Tooltip>{st === "ativo" ? "Inativar" : "Reativar"}</Tooltip>}>
+                          <span className="d-inline-block">
+                            <Button size="sm" variant={st === "ativo" ? "outline-warning" : "outline-success"} disabled={disabled} onClick={() => !disabled && handleToggleStatus(u.id, st)}>
+                              <i className={`bi ${st === "ativo" ? "bi-slash-circle" : "bi-check-circle"}`} />
+                            </Button>
+                          </span>
+                        </OverlayTrigger>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        </div>
 
-
-      <Modal show={showModal} onHide={handleClose} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>{editing ? "Editar Usuário" : "Novo Usuário"}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group className="mb-3">
-              <Form.Label>Nome</Form.Label>
-              <Form.Control
-                type="text"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Email</Form.Label>
-              <Form.Control
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>CPF</Form.Label>
-              <Form.Control
-                type="text"
-                value={formData.cpf}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    cpf: formatarCPF(e.target.value),
-                  })
-                }
-              />
-            </Form.Group>
-
-
-            {user?.perfil === 'gestor' ? (
+        {/* Modal */}
+        <Modal show={showModal} onHide={handleClose} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>{editing ? "Editar Usuário" : "Novo Usuário"}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form>
               <Form.Group className="mb-3">
-                <Form.Label>Função</Form.Label>
-                <Form.Control value="vendedor" disabled readOnly />
-                <Form.Text className="text-muted">Gestores só podem criar/editar vendedores.</Form.Text>
+                <Form.Label>Nome</Form.Label>
+                <Form.Control type="text" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} />
               </Form.Group>
-            ) : (
+
               <Form.Group className="mb-3">
-                <Form.Label>Função</Form.Label>
-                <Form.Select
-                  value={formData.perfil}
-                  onChange={(e) => setFormData({ ...formData, perfil: e.target.value })}
-                >
-                  <option value="">Selecione um perfil</option>
-                  <option value="cliente">Cliente</option>
-                  <option value="admin">Admin</option>
-                  <option value="gestor">Gestor</option>
-                  <option value="vendedor">Vendedor</option>
-                </Form.Select>
+                <Form.Label>Email</Form.Label>
+                <Form.Control type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
               </Form.Group>
-            )}
 
-            {user?.perfil === 'gestor' ? (
               <Form.Group className="mb-3">
-                <Form.Label>Instituição</Form.Label>
-                <Form.Control value={instituicoes.find(i => i.idInstituicao === user.id_instituicao)?.nomeInstituicao || ''} disabled />
+                <Form.Label>CPF</Form.Label>
+                <Form.Control type="text" value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: formatarCPF(e.target.value) })} isInvalid={!!formData.cpf && !isValidCPF} />
+                <Form.Control.Feedback type="invalid">CPF precisa ter 11 dígitos.</Form.Control.Feedback>
               </Form.Group>
-            ) : (
-              <Form.Group className="mb-3">
-                <Form.Label>Instituicao</Form.Label>
-                <Form.Select
-                  value={formData.id_instituicao}
-                  onChange={(e) => setFormData({ ...formData, id_instituicao: e.target.value })}
-                >
-                  <option value="">Selecione a instituicao</option>
-                  {instituicoes.map((instituicao) => (
-                    <option key={instituicao.idInstituicao} value={instituicao.idInstituicao}>
-                      {instituicao.nomeInstituicao}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            )}
 
+              {normalizaPerfil(user?.perfil) === "gestor" ? (
+                <Form.Group className="mb-3">
+                  <Form.Label>Função</Form.Label>
+                  <Form.Control value="vendedor" disabled readOnly />
+                  <Form.Text className="text-muted">Gestores só podem criar/editar vendedores.</Form.Text>
+                </Form.Group>
+              ) : (
+                <Form.Group className="mb-3">
+                  <Form.Label>Função</Form.Label>
+                  <Form.Select value={formData.perfil} onChange={(e) => setFormData({ ...formData, perfil: e.target.value })}>
+                    <option value="">Selecione um perfil</option>
+                    <option value="cliente">Cliente</option>
+                    <option value="admin">Admin</option>
+                    <option value="gestor">Gestor</option>
+                    <option value="vendedor">Vendedor</option>
+                  </Form.Select>
+                </Form.Group>
+              )}
 
-
-          </Form>
-
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose}>
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            disabled={!formData.nome || !formData.cpf || !formData.perfil}
-          >
-            Salvar
-          </Button>
-
-        </Modal.Footer>
-      </Modal>
+              {normalizaPerfil(user?.perfil) === "gestor" ? (
+                <Form.Group className="mb-3">
+                  <Form.Label>Instituição</Form.Label>
+                  <Form.Control value={instituicoes.find(i => i.idInstituicao === (user?.id_instituicao ?? -1))?.nomeInstituicao || ""} disabled />
+                </Form.Group>
+              ) : (
+                <Form.Group className="mb-3">
+                  <Form.Label>Instituição</Form.Label>
+                  <Form.Select value={formData.id_instituicao} onChange={(e) => setFormData({ ...formData, id_instituicao: e.target.value })}>
+                    <option value="">Selecione a instituição</option>
+                    {instituicoes.map((i) => (
+                      <option key={i.idInstituicao} value={i.idInstituicao}>{i.nomeInstituicao}</option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              )}
+            </Form>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleClose}>Cancelar</Button>
+            <Button variant="primary" onClick={handleSave} disabled={!canSave}><i className="bi bi-save2 me-2"/>Salvar</Button>
+          </Modal.Footer>
+        </Modal>
+      </motion.div>
     </div>
   );
 }

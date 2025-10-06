@@ -91,7 +91,7 @@ export const clientesApi = {
 export const vendaTelemedicinaApi = {
   criar: (vendaData: any) =>
     apiClient.post('/venda-telemedicina/criar', vendaData),
-  
+
   consultar: (id?: number, filtros?: { id_usuario?: number; id_instituicao?: number }) => {
     if (id) return apiClient.get(`/venda-telemedicina/consultar/${id}`);
     if (filtros && (filtros.id_usuario || filtros.id_instituicao)) {
@@ -102,7 +102,7 @@ export const vendaTelemedicinaApi = {
     }
     return apiClient.get('/venda-telemedicina/consultar');
   },
-  
+
   deletar: (id: number) =>
     apiClient.delete(`/venda-telemedicina/deletar/${id}`),
 };
@@ -142,6 +142,9 @@ export const usuariosApi = {
 
   deletar: (id: number) =>
     apiClient.delete(`/usuarios/deletar/${id}`),
+
+  reativar: (id: number) =>
+    apiClient.put(`/usuarios/reativar/${id}`, {}),
 };
 
 export const usuarioApi = {
@@ -515,8 +518,8 @@ export const dependenteApi = {
 
   sincronizar: (dados: { cpfTitular: string; nascimentoTitular?: string } | string) => {
     // Compatibilidade: aceita string (apenas cpfTitular) ou objeto completo
-    const payload = typeof dados === 'string' 
-      ? { cpfTitular: dados } 
+    const payload = typeof dados === 'string'
+      ? { cpfTitular: dados }
       : dados;
     return apiClient.post('/dependente/sincronizar', payload);
   },
@@ -933,4 +936,68 @@ export const asaasApiClient = {
 
   listarNotificacoes: (customerId: string) =>
     apiClient.get(`/asaas-api/clientes/${customerId}/notificacoes`),
+  // dentro de `export const asaasApiClient = { ... }` adicione:
+  buscarCobrancasVencimentoMensal: (filtros: {
+    mes?: number | string;
+    ano?: number | string;
+    offsetMeses?: number | string;
+    order?: 'asc' | 'desc';
+    customer?: string;
+    status?: string;
+    billingType?: string;
+    user?: string;
+    subscription?: string;
+    installment?: string;
+    offset?: number;
+    limit?: number;
+  } = {}) => {
+    const params = new URLSearchParams();
+
+    if (filtros.mes != null) params.append('mes', String(filtros.mes));
+    if (filtros.ano != null) params.append('ano', String(filtros.ano));
+    if (filtros.offsetMeses != null) params.append('offsetMeses', String(filtros.offsetMeses));
+    if (filtros.order) params.append('order', filtros.order);
+
+    if (filtros.customer) params.append('customer', filtros.customer);
+    if (filtros.status) params.append('status', filtros.status);
+    if (filtros.billingType) params.append('billingType', filtros.billingType);
+    if (filtros.user) params.append('user', filtros.user);
+    if (filtros.subscription) params.append('subscription', filtros.subscription);
+    if (filtros.installment) params.append('installment', filtros.installment);
+    if (filtros.offset != null) params.append('offset', String(filtros.offset));
+    if (filtros.limit != null) params.append('limit', String(filtros.limit));
+
+    const qs = params.toString();
+    const endpoint = qs
+      ? `/asaas-api/cobrancas/vencimento-mensal?${qs}`
+      : `/asaas-api/cobrancas/vencimento-mensal`;
+
+    return apiClient.get(endpoint);
+  },
+
+  // Busca cobranças do mês para uma instituição específica
+  buscarCobrancasMesInstituicao: (filtros: {
+    id_instituicao?: number;
+    mes?: number | string;
+    ano?: number | string;
+    order?: 'asc' | 'desc';
+  } = {}) => {
+    const params = new URLSearchParams();
+
+    if (filtros.id_instituicao != null) params.append('id_instituicao', String(filtros.id_instituicao));
+    if (filtros.mes != null) params.append('mes', String(filtros.mes));
+    if (filtros.ano != null) params.append('ano', String(filtros.ano));
+    if (filtros.order) params.append('order', filtros.order);
+
+    const qs = params.toString();
+    const endpoint = qs
+      ? `/asaas-api/cobrancas/mes-instituicao?${qs}`
+      : `/asaas-api/cobrancas/mes-instituicao`;
+
+    return apiClient.get(endpoint);
+  },
+
+
 };
+
+

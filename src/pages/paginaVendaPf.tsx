@@ -158,6 +158,15 @@ export default function CadastroPf() {
         if (erros[name]) setErros(prev => ({ ...prev, [name]: "" }));
     };
 
+    const handleNumeroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        // Remove todos os caracteres que não são números
+        const numeroValue = value.replace(/\D/g, '');
+        
+        setFormData((prev) => ({ ...prev, [name]: numeroValue }));
+        if (erros[name]) setErros(prev => ({ ...prev, [name]: "" }));
+    };
+
     const handleUfChange = (e: SelectChangeEvent<string>) => {
         const value = e.target.value as string;
         setFormData(prev => ({ ...prev, uf: value, cidade: "" }));
@@ -454,8 +463,13 @@ export default function CadastroPf() {
                                         name="casa"
                                         fullWidth
                                         value={formData.casa}
-                                        onChange={handleChangeFormat}
+                                        onChange={handleNumeroChange}
                                         error={!!erros.casa}
+                                        inputProps={{
+                                            inputMode: 'numeric',
+                                            pattern: '[0-9]*'
+                                        }}
+                                        placeholder="Ex: 123"
                                     />
                                 </Grid>
                                 <Grid item xs={12} sm={8} md={2}>

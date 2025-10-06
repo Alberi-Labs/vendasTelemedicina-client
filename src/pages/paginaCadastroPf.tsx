@@ -84,7 +84,7 @@ export default function PaginaCadastroPf() {
 //   const [pagamentoConfirmado, setPagamentoConfirmado] = useState(false);
 //   const [aviso, setAviso] = useState("");
 //   const [bloquearCadastro, setBloquearCadastro] = useState(false);
-//   const [cadastroSulamerica, setCadastroSulamerica] = useState(false);
+//   const [status_sulamerica, setCadastroSulamerica] = useState(false);
 
 //   const calcularIdade = (data: string) => {
 //     const hoje = new Date();
@@ -654,7 +654,7 @@ export default function PaginaCadastroPf() {
 //                               onClick={() => window.location.href = "/telemedicina"}
 //                               sx={{ mt: 2 }}
 //                             >
-//                               {cadastroSulamerica
+//                               {status_sulamerica
 //                                 ? "✅ Cadastro realizado com sucesso! Acesse o Telemedicina"
 //                                 : "✅ Pagamento confirmado! Processando cadastro..."}
 //                             </Button>

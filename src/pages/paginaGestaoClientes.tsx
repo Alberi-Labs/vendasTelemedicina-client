@@ -107,9 +107,17 @@ export default function PaginaGestaoClientes() {
     setModalOpen(true);
     setLoadingVendas(true);
     try {
-      const response = await fetch(`/api/venda/consultar?id_cliente=${cliente.idCliente}`);
-      const data = await response.json();
-      setVendas(data.vendas?.slice(0, 5) || []);
+      // Chamar backend real via api-client
+      const res = await vendaTelemedicinaApiCompat.consultarVenda(undefined, {});
+      const vendasApi = (res.data?.data?.vendas || res.data?.vendas || []);
+      const vendasCliente = vendasApi.filter((v: any) => v.id_cliente === cliente.idCliente)
+        .slice(0, 5)
+        .map((v: any) => ({
+          idVenda: v.idVenda,
+            data: v.criado_em || v.data || new Date().toISOString(),
+            valor: Number(v.valor_venda || v.valor || 0)
+        }));
+      setVendas(vendasCliente);
     } catch (error) {
       console.error("Erro ao buscar vendas:", error);
     } finally {
@@ -199,25 +207,53 @@ export default function PaginaGestaoClientes() {
 
     setLoadingCancelamento(true);
     try {
-      // Primeiro, buscar as vendas do cliente para encontrar a assinatura ativa
-      const response = await fetch(`/api/venda/consultar?id_cliente=${cliente.idCliente}`);
-      const data = await response.json();
+      // Buscar vendas do cliente via backend real
+      const res = await vendaTelemedicinaApiCompat.consultarVenda(undefined, {});
+      const vendasApi = (res.data?.data?.vendas || res.data?.vendas || []);
+      const vendasCliente = vendasApi.filter((v: any) => v.id_cliente === cliente.idCliente);
       
-      if (!data.vendas || data.vendas.length === 0) {
+      if (!vendasCliente || vendasCliente.length === 0) {
         alert("Nenhuma assinatura encontrada para este cliente.");
         return;
       }
 
       // Pegar a venda mais recente (assumindo que é a assinatura ativa)
-      const vendaAtiva = data.vendas[0];
+      const vendaAtiva = vendasCliente[0];
       
       const result = await vendaTelemedicinaApiCompat.cancelarAssinatura({
         idVenda: vendaAtiva.idVenda,
         motivo: "Cancelamento solicitado via gestão de clientes"
       });
 
+      let mensagemFinal = "";
+      
       if (result.success) {
-        alert("Assinatura cancelada com sucesso!");
+        mensagemFinal = "Assinatura Asaas cancelada com sucesso!";
+        
+        // Verificar se cliente tem seq_venda para cancelar na Sulamérica também
+        const clienteCompleto = await clientesApi.consultar({ cpf: cliente.cpf });
+        const clienteData = clienteCompleto.clientes?.[0] || clienteCompleto.data?.clientes?.[0];
+        
+        if (clienteData?.seq_venda) {
+          try {
+            const resultSulamerica = await vendaTelemedicinaApiCompat.cancelarVidaSulamerica({
+              seq_venda: clienteData.seq_venda
+            });
+            
+            if (resultSulamerica.codigo === 0 || resultSulamerica.codigo === '0' || resultSulamerica.codigo === 200 || resultSulamerica.codigo === '200') {
+              mensagemFinal += "\n✅ Vida Sulamérica também cancelada com sucesso!";
+            } else {
+              mensagemFinal += `\n⚠️ Erro ao cancelar na Sulamérica: ${resultSulamerica.msg_retorno || 'Erro desconhecido'}`;
+            }
+          } catch (sulamericaError) {
+            console.error("Erro ao cancelar Sulamérica:", sulamericaError);
+            mensagemFinal += "\n⚠️ Erro ao cancelar na Sulamérica (falha de comunicação)";
+          }
+        } else {
+          mensagemFinal += "\n(Cliente não possui cadastro na Sulamérica)";
+        }
+        
+        alert(mensagemFinal);
         // Recarregar a lista de clientes
         carregarClientes();
       } else {
