@@ -30,6 +30,16 @@ export default function PaginaControlePagamento() {
   const [mesSelecionado, setMesSelecionado] = useState<number>(new Date().getMonth() + 1);
   const [anoSelecionado, setAnoSelecionado] = useState<number>(new Date().getFullYear());
 
+  // 👇 NOVO: filtro por status
+  const [statusFiltroMensais, setStatusFiltroMensais] =
+    useState<'todos' | 'Pago' | 'Pendente' | 'Atrasado'>('todos');
+
+  // Paginação cobranças mensais (admin/gestor/vendedor)
+  const [pageMensal, setPageMensal] = useState<number>(1);
+  const [pageSizeMensal, setPageSizeMensal] = useState<number>(10);
+  const [metaMensal, setMetaMensal] = useState<any | null>(null);
+
+
   const [loading, setLoading] = useState(false);
   const [loadingMensais, setLoadingMensais] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,71 +64,111 @@ export default function PaginaControlePagamento() {
     }
   }, [isAdmin]);
 
-  const carregarCobrancasMensais = async (idInstituicao?: number, mes?: number, ano?: number) => {
+  const carregarCobrancasMensais = async (idInstituicao?: number, mes?: number, ano?: number, page?: number) => {
     // Se não for admin nem gestor nem vendedor, não carregar
     if (!isAdmin && user?.perfil !== 'gestor' && user?.perfil !== 'vendedor') return;
 
     setLoadingMensais(true);
+    setError(null);
+    setCobrancasMensais([]);
+    setMetaMensal(null);
+
+    const efetuarFallback = async () => {
+      try {
+        const response = await asaasApiClient.buscarCobrancasMesInstituicao({
+          id_instituicao: idInstituicao,
+          mes: mes || mesSelecionado,
+          ano: ano || anoSelecionado,
+          order: 'desc',
+          page: page || pageMensal,
+          pageSize: pageSizeMensal,
+        });
+        if (response?.success && response?.data) {
+          setMetaMensal(response.meta || null);
+          await mapearEInserir(response.data, true);
+        }
+      } catch (err) {
+        setError('Falha no fallback de cobranças.');
+      } finally {
+        setLoadingMensais(false);
+      }
+    };
+
+    // Preparar mapa de clientes (evitar refazer a cada batch)
+    let mapClientesAsaas = new Map<string, string>();
+    const prepararMapaClientes = async () => {
+      if (mapClientesAsaas.size === 0) {
+        try {
+          const clientesResponse = await clientesApi.consultar();
+            (clientesResponse?.clientes || []).forEach((cliente: any) => {
+              if (cliente.id_asaas) mapClientesAsaas.set(cliente.id_asaas, cliente.nome);
+            });
+        } catch (e) {
+          console.warn('Não foi possível carregar clientes para mapear nomes.', e);
+        }
+      }
+    };
+
+    const mapearEInserir = async (lista: any[], final: boolean = false) => {
+      await prepararMapaClientes();
+      const novos = lista.map((cobranca: any): Pagamento => {
+        let customerId = '';
+        if (cobranca.originalObject?.customer) {
+          customerId = typeof cobranca.originalObject.customer === 'string'
+            ? cobranca.originalObject.customer
+            : cobranca.originalObject.customer.id || cobranca.originalObject.customer;
+        } else if (cobranca.customer) {
+          customerId = typeof cobranca.customer === 'string'
+            ? cobranca.customer
+            : cobranca.customer.id || cobranca.customer;
+        }
+        const nomeCliente = mapClientesAsaas.get(customerId) || `Cliente ID: ${customerId}`;
+        return {
+          id: cobranca.id,
+          data: cobranca.dueDate ? new Date(cobranca.dueDate).toLocaleDateString('pt-BR') : '',
+          valor: `R$ ${parseFloat(cobranca.valor).toFixed(2).replace('.', ',')}`,
+          situacao: cobranca.situacao,
+          link: cobranca.invoiceUrl || null,
+          descricao: cobranca.description || 'Cobrança',
+          cliente: nomeCliente,
+        };
+      });
+      setCobrancasMensais(prev => {
+        // Evitar duplicados
+        const ids = new Set(prev.map(p => p.id));
+        const merged = [...prev];
+        novos.forEach(n => { if (!ids.has(n.id)) merged.push(n); });
+        return merged;
+      });
+      if (final) setLoadingMensais(false);
+    };
+
     try {
-      const response = await asaasApiClient.buscarCobrancasMesInstituicao({
-        id_instituicao: idInstituicao,
+      const es = asaasApiClient.streamCobrancasMesInstituicao({
+        id_instituicao: idInstituicao!,
         mes: mes || mesSelecionado,
         ano: ano || anoSelecionado,
         order: 'desc'
+      }, {
+        onMetaInicial: (meta) => {
+          setMetaMensal((m: any) => ({ ...(m || {}), ...meta }));
+        },
+        onBatch: (batch) => {
+          mapearEInserir(batch.items || []);
+        },
+        onDone: (done) => {
+          setMetaMensal((m: any) => ({ ...(m || {}), total: done.total, done: true }));
+          setLoadingMensais(false);
+        },
+        onErro: () => {
+          // fallback quando erro
+          es.close();
+          efetuarFallback();
+        }
       });
-
-      if (response?.success && response?.data) {
-        // Buscar todos os clientes do banco para fazer o match
-        const clientesResponse = await clientesApi.consultar();
-        const clientesBanco = clientesResponse?.clientes || [];
-        // Criar um mapa de id_asaas -> nome do cliente
-        const mapClientesAsaas = new Map<string, string>();
-
-        clientesBanco.forEach((cliente: any) => {
-          if (cliente.id_asaas) {
-            mapClientesAsaas.set(cliente.id_asaas, cliente.nome);
-          }
-        });
-
-        const cobrancas = response.data.map((cobranca: any): Pagamento => {
-
-
-          // Extrair o customer ID do Asaas (pode vir em diferentes estruturas)
-          let customerId = '';
-          if (cobranca.originalObject?.customer) {
-            // Se customer é um objeto, pegar o id
-            customerId = typeof cobranca.originalObject.customer === 'string'
-              ? cobranca.originalObject.customer
-              : cobranca.originalObject.customer.id || cobranca.originalObject.customer;
-          } else if (cobranca.customer) {
-            customerId = typeof cobranca.customer === 'string'
-              ? cobranca.customer
-              : cobranca.customer.id || cobranca.customer;
-          }
-
-          // Fazer match do customer (ID Asaas) com o cliente do banco
-          const nomeCliente = mapClientesAsaas.get(customerId) || `Cliente ID: ${customerId}` || "Cliente não encontrado";
-
-          return {
-            id: cobranca.id,
-            data: new Date(cobranca.dueDate).toLocaleDateString("pt-BR"),
-            valor: `R$ ${parseFloat(cobranca.valor).toFixed(2).replace(".", ",")}`,
-            situacao: cobranca.situacao,
-            link: cobranca.invoiceUrl || null,
-            descricao: cobranca.description || "Cobrança",
-            cliente: nomeCliente,
-          };
-        });
-        setCobrancasMensais(cobrancas);
-      } else {
-        setCobrancasMensais([]);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar cobranças mensais:', error);
-      setError('Erro ao carregar cobranças mensais. Verifique se o servidor backend está rodando.');
-      setCobrancasMensais([]);
-    } finally {
-      setLoadingMensais(false);
+    } catch (e) {
+      // fallback total se SSE falhar
+      await efetuarFallback();
     }
   };
 
@@ -139,21 +189,24 @@ export default function PaginaControlePagamento() {
     const value = e.target.value;
     const idInstituicao = value === '' ? undefined : Number(value);
     setInstituicaoSelecionada(value === '' ? '' : Number(value));
-    carregarCobrancasMensais(idInstituicao, mesSelecionado, anoSelecionado);
+    setPageMensal(1);
+    carregarCobrancasMensais(idInstituicao, mesSelecionado, anoSelecionado, 1);
   };
 
   const handleMesChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const novoMes = Number(e.target.value);
     setMesSelecionado(novoMes);
     const idInstituicao = instituicaoSelecionada === '' ? undefined : instituicaoSelecionada;
-    carregarCobrancasMensais(idInstituicao, novoMes, anoSelecionado);
+    setPageMensal(1);
+    carregarCobrancasMensais(idInstituicao, novoMes, anoSelecionado, 1);
   };
 
   const handleAnoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const novoAno = Number(e.target.value);
     setAnoSelecionado(novoAno);
     const idInstituicao = instituicaoSelecionada === '' ? undefined : instituicaoSelecionada;
-    carregarCobrancasMensais(idInstituicao, mesSelecionado, novoAno);
+    setPageMensal(1);
+    carregarCobrancasMensais(idInstituicao, mesSelecionado, novoAno, 1);
   };
 
   useEffect(() => {
@@ -463,6 +516,19 @@ export default function PaginaControlePagamento() {
                         ))}
                       </Form.Select>
                     )}
+
+                    <Form.Select
+                      value={statusFiltroMensais}
+                      onChange={(e) => setStatusFiltroMensais(e.target.value as 'todos' | 'Pago' | 'Pendente' | 'Atrasado')}
+                      style={{ width: '160px' }}
+                      disabled={loadingMensais}
+                      title="Filtrar por status"
+                    >
+                      <option value="todos">Todos os status</option>
+                      <option value="Pago">Pago</option>
+                      <option value="Pendente">Pendente</option>
+                      <option value="Atrasado">Atrasado</option>
+                    </Form.Select>
                   </div>
                 </div>
 
@@ -472,6 +538,7 @@ export default function PaginaControlePagamento() {
                     <span className="ms-2">Carregando cobranças...</span>
                   </div>
                 ) : (
+                  <>
                   <Table responsive bordered hover>
                     <thead>
                       <tr>
@@ -485,7 +552,14 @@ export default function PaginaControlePagamento() {
                     </thead>
                     <tbody>
                       {cobrancasMensais.length > 0 ? (
-                        cobrancasMensais.map((p: Pagamento) => (
+                        (() => {
+                          const total = cobrancasMensais.length;
+                          const totalPagesLocal = Math.max(Math.ceil(total / pageSizeMensal), 1);
+                          const current = Math.min(pageMensal, totalPagesLocal);
+                          const start = (current - 1) * pageSizeMensal;
+                          const end = start + pageSizeMensal;
+                          const pageSlice = cobrancasMensais.slice(start, end);
+                          return pageSlice.map((p: Pagamento) => (
                           <tr key={p.id}>
                             <td>{p.data}</td>
                             <td>{p.cliente}</td>
@@ -506,7 +580,8 @@ export default function PaginaControlePagamento() {
                               )}
                             </td>
                           </tr>
-                        ))
+                          ));
+                        })()
                       ) : (
                         <tr>
                           <td colSpan={6} className="text-center text-muted py-4">
@@ -521,6 +596,54 @@ export default function PaginaControlePagamento() {
                       )}
                     </tbody>
                   </Table>
+                  {(() => {
+                    const total = cobrancasMensais.length;
+                    const totalPagesLocal = Math.max(Math.ceil(total / pageSizeMensal), 1);
+                    return totalPagesLocal > 1;
+                  })() && (
+                    <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+                      <div className="small text-muted">
+                        Página {pageMensal} de {Math.max(Math.ceil(cobrancasMensais.length / pageSizeMensal),1)} • {cobrancasMensais.length} registros {(!metaMensal?.done && loadingMensais) && ' (carregando...)'}
+                      </div>
+                      <div className="d-flex align-items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline-secondary"
+                          disabled={loadingMensais || pageMensal <= 1}
+                          onClick={() => {
+                            const nova = pageMensal - 1;
+                            setPageMensal(nova);
+                          }}
+                        >Anterior</Button>
+                        <Button
+                          size="sm"
+                          variant="outline-secondary"
+                          disabled={loadingMensais || pageMensal >= Math.max(Math.ceil(cobrancasMensais.length / pageSizeMensal),1)}
+                          onClick={() => {
+                            const nova = pageMensal + 1;
+                            setPageMensal(nova);
+                          }}
+                        >Próxima</Button>
+                        <Form.Select
+                          size="sm"
+                          style={{ width: 90 }}
+                          value={pageSizeMensal}
+                          onChange={(e) => {
+                            const novoSize = Number(e.target.value);
+                            setPageSizeMensal(novoSize);
+                            setPageMensal(1);
+                          }}
+                          disabled={loadingMensais}
+                        >
+                          <option value={10}>10</option>
+                          <option value={20}>20</option>
+                          <option value={30}>30</option>
+                          <option value={50}>50</option>
+                        </Form.Select>
+                      </div>
+                    </div>
+                  )}
+                  </>
                 )}
               </motion.div>
             </div>

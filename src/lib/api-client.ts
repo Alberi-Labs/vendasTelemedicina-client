@@ -981,6 +981,9 @@ export const asaasApiClient = {
     mes?: number | string;
     ano?: number | string;
     order?: 'asc' | 'desc';
+    page?: number;
+    pageSize?: number;
+    streaming?: boolean;
   } = {}) => {
     const params = new URLSearchParams();
 
@@ -988,6 +991,9 @@ export const asaasApiClient = {
     if (filtros.mes != null) params.append('mes', String(filtros.mes));
     if (filtros.ano != null) params.append('ano', String(filtros.ano));
     if (filtros.order) params.append('order', filtros.order);
+    if (filtros.page != null) params.append('page', String(filtros.page));
+    if (filtros.pageSize != null) params.append('pageSize', String(filtros.pageSize));
+    if (filtros.streaming) params.append('streaming', 'true');
 
     const qs = params.toString();
     const endpoint = qs
@@ -995,6 +1001,55 @@ export const asaasApiClient = {
       : `/asaas-api/cobrancas/mes-instituicao`;
 
     return apiClient.get(endpoint);
+  },
+
+  // Stream (SSE) de cobranças mensais por instituição
+  streamCobrancasMesInstituicao: (params: {
+    id_instituicao: number;
+    mes?: number | string;
+    ano?: number | string;
+    order?: 'asc' | 'desc';
+  }, handlers: {
+    onMetaInicial?: (data: any) => void;
+    onBatch?: (data: any) => void;
+    onDone?: (data: any) => void;
+    onErro?: (data: any) => void;
+    onRawEvent?: (evt: MessageEvent) => void;
+  }) => {
+    const qs = new URLSearchParams();
+    qs.append('id_instituicao', String(params.id_instituicao));
+    if (params.mes != null) qs.append('mes', String(params.mes));
+    if (params.ano != null) qs.append('ano', String(params.ano));
+    if (params.order) qs.append('order', params.order);
+    const url = `/asaas-api/cobrancas/mes-instituicao/stream?${qs.toString()}`;
+    const es = new EventSource(url);
+    es.onmessage = (evt) => {
+      // eventos sem nome vêm como 'message'
+      handlers.onRawEvent?.(evt);
+      try {
+        const data = JSON.parse(evt.data);
+        // Sem event name, tratar generico
+        if (data?.batch != null) handlers.onBatch?.(data);
+      } catch { /* ignore */ }
+    };
+    es.addEventListener('metaInicial', (evt: MessageEvent) => {
+      handlers.onRawEvent?.(evt);
+      try { handlers.onMetaInicial?.(JSON.parse(evt.data)); } catch { }
+    });
+    es.addEventListener('batch', (evt: MessageEvent) => {
+      handlers.onRawEvent?.(evt);
+      try { handlers.onBatch?.(JSON.parse(evt.data)); } catch { }
+    });
+    es.addEventListener('done', (evt: MessageEvent) => {
+      handlers.onRawEvent?.(evt);
+      try { handlers.onDone?.(JSON.parse(evt.data)); } catch { }
+      es.close();
+    });
+    es.addEventListener('erro', (evt: MessageEvent) => {
+      handlers.onRawEvent?.(evt);
+      try { handlers.onErro?.(JSON.parse(evt.data)); } catch { }
+    });
+    return es; // retornar para permitir fechamento manual
   },
 
 

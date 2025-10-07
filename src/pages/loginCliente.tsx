@@ -46,9 +46,9 @@ export default function LoginCliente() {
     const numeros = data.replace(/\D/g, "");
 
     const dataFormatada = numeros
-      .slice(0, 8) 
+      .slice(0, 8)
       .replace(/(\d{2})(\d)/, "$1/$2")
-      .replace(/(\d{2})(\d{1,2})$/, "$1/$2"); 
+      .replace(/(\d{2})(\d{1,2})$/, "$1/$2");
 
     return dataFormatada;
   };
@@ -69,7 +69,7 @@ export default function LoginCliente() {
 
     const cpfFormatado = formatarCpf(cpf);
     const senhaFormatada = formatarData(dataNascimento); // apenas visual
-  const payload = { cpf: cpfFormatado, dataNascimento };
+    const payload = { cpf: cpfFormatado, dataNascimento };
 
     try {
   // Nova API do backend
