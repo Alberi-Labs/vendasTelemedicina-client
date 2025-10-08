@@ -59,8 +59,21 @@ export default function RelatorioVendas() {
   useEffect(() => {
     if (user?.perfil === 'admin') {
       instituicoesApi.listar().then((data: any) => {
-        const lista = Array.isArray(data) ? data : data?.items || [];
-        const mapped = lista.map((i: any) => ({ id: i.idInstituicao || i.id || i.id_instituicao, nome: i.nomeInstituicao || i.nome })).filter((i: any) => i.id && i.nome);
+        const lista = Array.isArray(data) ? data : data?.items || data?.instituicoes || [];
+        // Debug: log bruto recebido
+        console.log('📌 Instituições (bruto):', lista);
+        const mapped = lista
+          .map((i: any) => ({
+            id: i.idInstituicao ?? i.id ?? i.id_instituicao,
+            nome: i.nomeInstituicao ?? i.nome,
+          }))
+          .filter((i: any) => i.id && i.nome)
+          .reduce((acc: {id:number; nome:string}[], cur: {id:number; nome:string}) => {
+            if (!acc.find(a => a.id === cur.id)) acc.push(cur);
+            return acc;
+          }, [])
+          .sort((a: {id:number; nome:string}, b: {id:number; nome:string}) => a.nome.localeCompare(b.nome));
+        console.log('✅ Instituições (mapeadas):', mapped);
         setInstituicoes(mapped);
       }).catch(err => console.error('Erro ao listar instituições', err));
     }
@@ -105,7 +118,17 @@ export default function RelatorioVendas() {
         setVendas(vendasFormatadas);
         setSemDados(vendasFormatadas.length === 0);
         const vendedoresApi = response.data?.vendedores || [];
-        setVendedores(vendedoresApi.map((v: any) => ({ id: v.id, nome: v.nome })));
+        if (vendedoresApi.length) {
+          // Mantém lista completa de vendedores mesmo após aplicar filtro por um vendedor específico
+          const novos = vendedoresApi.map((v: any) => ({ id: v.id, nome: v.nome }));
+          setVendedores(prev => {
+            // Cria um mapa para evitar duplicados e preservar/atualizar nomes
+            const mapa = new Map<number, { id:number; nome:string }>();
+            prev.forEach((v: {id:number; nome:string}) => mapa.set(v.id, v));
+            novos.forEach((v: {id:number; nome:string}) => mapa.set(v.id, v));
+            return Array.from(mapa.values()).sort((a,b)=> a.nome.localeCompare(b.nome));
+          });
+        }
         setStatusDistribuicao(response.data?.statusDistribuicao || {});
       } else {
         console.log('❌ Sem dados ou erro na resposta:', response);
@@ -453,7 +476,7 @@ export default function RelatorioVendas() {
                 </Col>
               )}
               <Col md={2} sm={6} xs={12}>
-                <Form.Label className="small text-uppercase fw-semibold">Filtro</Form.Label>
+                <Form.Label className="small text-uppercase fw-semibold">Periodicidade</Form.Label>
                 <Form.Select size="sm" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
                   <option value="mes">Mês</option>
                   <option value="quinzenal">Quinzenal</option>

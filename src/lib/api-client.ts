@@ -577,32 +577,35 @@ export const instituicoesApi = {
 // Wrapper específico para as rotas de empresa (empresa = instituicao) usadas na página de gestão
 // Mantém compatibilidade com endpoints já existentes no front original (buscarEmpresa, criarEmpresa, editarEmpresa, deletarEmpresa)
 export const instituicoesEmpresaApi = {
-  buscarEmpresa: () => apiClient.get('/instituicoes/buscar'),
+  buscar: () => apiClient.get('/instituicoes/buscar'),
 
-  criarEmpresa: (dados: FormData | Record<string, any>) => {
+  criar: (dados: FormData | Record<string, any>) => {
     if (dados instanceof FormData) {
-      return apiClient.request('/instituicoes/criarEmpresa', {
+      return apiClient.request('/instituicoes/criar', {
         method: 'POST',
         body: dados,
-        headers: {},
+        headers: {}, // deixa o browser setar boundary do multipart
       });
     }
-    return apiClient.post('/instituicoes/criarEmpresa', dados);
+    return apiClient.post('/instituicoes/criar', dados);
   },
 
-  editarEmpresa: (dados: FormData | (Record<string, any> & { idInstituicao: number })) => {
+  // ⬇️ agora exige o id na URL (PUT /instituicoes/editar/:id)
+  editar: (idInstituicao: number, dados: FormData | Record<string, any>) => {
     if (dados instanceof FormData) {
-      return apiClient.request('/instituicoes/editarEmpresa', {
+      return apiClient.request(`/instituicoes/editar/${idInstituicao}`, {
         method: 'PUT',
         body: dados,
         headers: {},
       });
     }
-    return apiClient.put('/instituicoes/editarEmpresa', dados);
+    return apiClient.put(`/instituicoes/editar/${idInstituicao}`, dados);
   },
 
-  deletarEmpresa: (id: number) => apiClient.delete(`/instituicao/deletarEmpresa?id=${id}`),
+  // ⬇️ rota correta (DELETE /instituicoes/deletar/:id)
+  deletar: (id: number) => apiClient.delete(`/instituicoes/deletar/${id}`),
 };
+
 
 export const clienteSaudeeCorApi = {
   consultar: (cpf: string) => {

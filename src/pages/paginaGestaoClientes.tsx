@@ -1,3 +1,4 @@
+// pages/gestao-clientes.tsx
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import Container from "@mui/material/Container";
@@ -21,7 +22,6 @@ import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import Grid from '@mui/material/Grid';
 import Chip from '@mui/material/Chip';
-import Tooltip from '@mui/material/Tooltip';
 import { clientesApi, instituicoesEmpresaApi, vendaTelemedicinaApiCompat } from '../lib/api-client';
 import { ActionButtons } from '@/components/gestao-clientes/ActionButtons';
 import { ChargesModal } from '@/components/gestao-clientes/ChargesModal';
@@ -40,7 +40,6 @@ interface Cliente {
   idClienteDependente: number | null;
   data_vinculo: string | null;
 }
-
 
 interface Venda {
   idVenda: number;
@@ -62,20 +61,17 @@ export default function PaginaGestaoClientes() {
   const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
   const [chargesOpen, setChargesOpen] = useState(false);
   const [carteirinhaOpen, setCarteirinhaOpen] = useState(false);
-  const [cancelarModalOpen, setCancelarModalOpen] = useState(false);
   const [loadingCancelamento, setLoadingCancelamento] = useState(false);
   const [instituicoes, setInstituicoes] = useState<InstituicaoOption[]>([]);
   const [instituicaoFiltro, setInstituicaoFiltro] = useState<string>('');
   const [busca, setBusca] = useState('');
   const { user } = useAuth();
 
-  console.log("cliente selecionado", selectedCliente);
   useEffect(() => {
-    // Carregar instituições só para admin (para filtro)
     if (user?.perfil === 'admin') {
-      instituicoesEmpresaApi.buscarEmpresa().then(data => {
-        if (data.success) setInstituicoes(data.instituicoes || []);
-      }).catch(() => {});
+      instituicoesEmpresaApi.buscar()
+        .then(data => { if (data.success) setInstituicoes(data.instituicoes || []); })
+        .catch(() => {});
     }
   }, [user]);
 
@@ -83,11 +79,10 @@ export default function PaginaGestaoClientes() {
     setLoading(true);
     try {
       const filtros: any = {};
-      if (user?.perfil === 'admin' && instituicaoFiltro) filtros.id_instituicao = parseInt(instituicaoFiltro);
-      // (backend ainda ignora id_instituicao; fallback filtra no front)
-      console.log('Carregando clientes com filtros:', filtros);
+      if (user?.perfil === 'admin' && instituicaoFiltro) {
+        filtros.id_instituicao = parseInt(instituicaoFiltro, 10);
+      }
       const data = await clientesApi.consultar(filtros);
-      console.log('Dados de clientes recebidos:', data);
       const lista = data.clientes || data.data?.clientes || [];
       setClientes(lista);
     } catch (e) {
@@ -107,15 +102,25 @@ export default function PaginaGestaoClientes() {
     setModalOpen(true);
     setLoadingVendas(true);
     try {
-      // Chamar backend real via api-client
-      const res = await vendaTelemedicinaApiCompat.consultarVenda(undefined, {});
+      // usa filtros do backend quando possível
+      const idUsuario = user?.id;
+      const inst = user?.perfil === 'admin' && instituicaoFiltro
+        ? Number(instituicaoFiltro)
+        : undefined;
+
+      const res = await vendaTelemedicinaApiCompat.consultarVenda(
+        idUsuario, // opcional
+        inst ? { id_instituicao: inst } : undefined
+      );
+
       const vendasApi = (res.data?.data?.vendas || res.data?.vendas || []);
-      const vendasCliente = vendasApi.filter((v: any) => v.id_cliente === cliente.idCliente)
+      const vendasCliente = vendasApi
+        .filter((v: any) => v.id_cliente === cliente.idCliente)
         .slice(0, 5)
         .map((v: any) => ({
           idVenda: v.idVenda,
-            data: v.criado_em || v.data || new Date().toISOString(),
-            valor: Number(v.valor_venda || v.valor || 0)
+          data: v.criado_em || v.data || new Date().toISOString(),
+          valor: Number(v.valor_venda || v.valor || 0),
         }));
       setVendas(vendasCliente);
     } catch (error) {
@@ -127,15 +132,14 @@ export default function PaginaGestaoClientes() {
 
   const handleEditarClick = async (cliente: Cliente) => {
     try {
-      const response = await fetch(`/api/cliente/consultar?cpf=${cliente.cpf}`);
-      const data = await response.json();
+      const data = await clientesApi.consultar({ cpf: cliente.cpf });
+      const clienteCompleto = data.clientes?.[0] || data.data?.clientes?.[0];
 
-      if (data.success && data.clientes.length > 0) {
-        const clienteCompleto = data.clientes[0];
+      if (clienteCompleto) {
         setClienteEditando({
           ...clienteCompleto,
           data_nascimento: clienteCompleto.data_nascimento
-            ? clienteCompleto.data_nascimento.split("/").reverse().join("-") // de DD/MM/AAAA → YYYY-MM-DD
+            ? clienteCompleto.data_nascimento.split("/").reverse().join("-")
             : "",
         });
         setModalEditarOpen(true);
@@ -148,37 +152,25 @@ export default function PaginaGestaoClientes() {
     }
   };
 
-
   const handleSalvarEdicao = async () => {
     if (!clienteEditando) return;
 
     try {
-      const response = await fetch(`/api/cliente/editar?id=${clienteEditando.idCliente}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nome: clienteEditando.nome,
-          email: clienteEditando.email,
-          telefone: clienteEditando.telefone,
-          cpf: clienteEditando.cpf.replace(/\D/g, ""),
-          data_nascimento: clienteEditando.data_nascimento,
-        }),
+      await clientesApi.editar(clienteEditando.idCliente, {
+        nome: clienteEditando.nome,
+        email: clienteEditando.email,
+        telefone: clienteEditando.telefone,
+        cpf: clienteEditando.cpf.replace(/\D/g, ""),
+        data_nascimento: clienteEditando.data_nascimento,
       });
 
-
-      if (response.ok) {
-        alert("Cliente atualizado com sucesso!");
-        setModalEditarOpen(false);
-        // Atualizar lista de clientes
-        const updatedClientes = clientes.map((c) =>
-          c.idCliente === clienteEditando.idCliente ? clienteEditando : c
-        );
-        setClientes(updatedClientes);
-      } else {
-        alert("Erro ao atualizar cliente.");
-      }
+      alert("Cliente atualizado com sucesso!");
+      setModalEditarOpen(false);
+      setClientes(prev =>
+        prev.map(c => (c.idCliente === clienteEditando.idCliente ? clienteEditando : c))
+      );
     } catch (error) {
-      console.error("Erro:", error);
+      console.error("Erro ao atualizar cliente:", error);
       alert("Erro ao atualizar cliente.");
     }
   };
@@ -187,18 +179,12 @@ export default function PaginaGestaoClientes() {
     if (!window.confirm(`Deseja realmente deletar ${cliente.nome}?`)) return;
 
     try {
-      const response = await fetch(`/api/cliente/deletar?id=${cliente.idCliente}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        alert("Cliente deletado!");
-        setClientes(clientes.filter((c) => c.idCliente !== cliente.idCliente));
-      } else {
-        alert("Erro ao deletar cliente.");
-      }
+      await clientesApi.deletar(cliente.idCliente);
+      alert("Cliente deletado!");
+      setClientes(prev => prev.filter(c => c.idCliente !== cliente.idCliente));
     } catch (error) {
-      console.error("Erro:", error);
+      console.error("Erro ao deletar cliente:", error);
+      alert("Erro ao deletar cliente.");
     }
   };
 
@@ -207,54 +193,58 @@ export default function PaginaGestaoClientes() {
 
     setLoadingCancelamento(true);
     try {
-      // Buscar vendas do cliente via backend real
-      const res = await vendaTelemedicinaApiCompat.consultarVenda(undefined, {});
+      // buscar vendas com filtro do usuário/instituição
+      const idUsuario = user?.id;
+      const inst = user?.perfil === 'admin' && instituicaoFiltro
+        ? Number(instituicaoFiltro)
+        : undefined;
+
+      const res = await vendaTelemedicinaApiCompat.consultarVenda(
+        idUsuario,
+        inst ? { id_instituicao: inst } : undefined
+      );
       const vendasApi = (res.data?.data?.vendas || res.data?.vendas || []);
       const vendasCliente = vendasApi.filter((v: any) => v.id_cliente === cliente.idCliente);
-      
+
       if (!vendasCliente || vendasCliente.length === 0) {
         alert("Nenhuma assinatura encontrada para este cliente.");
         return;
       }
 
-      // Pegar a venda mais recente (assumindo que é a assinatura ativa)
       const vendaAtiva = vendasCliente[0];
-      
+
       const result = await vendaTelemedicinaApiCompat.cancelarAssinatura({
         idVenda: vendaAtiva.idVenda,
-        motivo: "Cancelamento solicitado via gestão de clientes"
+        motivo: "Cancelamento solicitado via gestão de clientes",
       });
 
       let mensagemFinal = "";
-      
       if (result.success) {
         mensagemFinal = "Assinatura Asaas cancelada com sucesso!";
-        
-        // Verificar se cliente tem seq_venda para cancelar na Sulamérica também
+
+        // tentar cancelar na Sulamérica se existir seq_venda
         const clienteCompleto = await clientesApi.consultar({ cpf: cliente.cpf });
         const clienteData = clienteCompleto.clientes?.[0] || clienteCompleto.data?.clientes?.[0];
-        
+
         if (clienteData?.seq_venda) {
           try {
-            const resultSulamerica = await vendaTelemedicinaApiCompat.cancelarVidaSulamerica({
-              seq_venda: clienteData.seq_venda
+            const r2 = await vendaTelemedicinaApiCompat.cancelarVidaSulamerica({
+              seq_venda: clienteData.seq_venda,
             });
-            
-            if (resultSulamerica.codigo === 0 || resultSulamerica.codigo === '0' || resultSulamerica.codigo === 200 || resultSulamerica.codigo === '200') {
-              mensagemFinal += "\n✅ Vida Sulamérica também cancelada com sucesso!";
+            if (r2.codigo === 0 || r2.codigo === '0' || r2.codigo === 200 || r2.codigo === '200' || r2.codigo === 21 || r2.codigo === '21') {
+              mensagemFinal += "\n✅ Vida Sulamérica também cancelada/confirmada como cancelada!";
             } else {
-              mensagemFinal += `\n⚠️ Erro ao cancelar na Sulamérica: ${resultSulamerica.msg_retorno || 'Erro desconhecido'}`;
+              mensagemFinal += `\n⚠️ Erro ao cancelar na Sulamérica: ${r2.msg_retorno || 'Erro desconhecido'}`;
             }
-          } catch (sulamericaError) {
-            console.error("Erro ao cancelar Sulamérica:", sulamericaError);
+          } catch (e) {
+            console.error("Erro ao cancelar Sulamérica:", e);
             mensagemFinal += "\n⚠️ Erro ao cancelar na Sulamérica (falha de comunicação)";
           }
         } else {
           mensagemFinal += "\n(Cliente não possui cadastro na Sulamérica)";
         }
-        
+
         alert(mensagemFinal);
-        // Recarregar a lista de clientes
         carregarClientes();
       } else {
         alert(`Erro ao cancelar assinatura: ${result.error || "Erro desconhecido"}`);
@@ -267,21 +257,15 @@ export default function PaginaGestaoClientes() {
     }
   };
 
-  // Filtro derivado (caso backend não filtre por instituicao)
+  // Filtro derivado (placeholder atual)
   const clientesFiltrados = useMemo(() => {
     let base = clientes;
-    if (user?.perfil !== 'admin' && user?.id_instituicao) {
-      // TODO: Quando backend relacionar clientes a instituicoes dinamicamente, aplicar aqui
-      // Sem origem no payload atual, mantemos todos (placeholder)
-    } else if (user?.perfil === 'admin' && instituicaoFiltro) {
-      // Se tivéssemos id_instituicao no cliente, filtraria aqui
-    }
     if (busca) {
       const b = busca.toLowerCase();
       base = base.filter(c => `${c.nome} ${c.email} ${c.cpf}`.toLowerCase().includes(b));
     }
     return base;
-  }, [clientes, busca, user, instituicaoFiltro]);
+  }, [clientes, busca]);
 
   return (
     <Container maxWidth="lg">
@@ -292,14 +276,30 @@ export default function PaginaGestaoClientes() {
           </Typography>
           <Grid container spacing={2} mt={1} alignItems="flex-end">
             <Grid item xs={12} md={4}>
-              <TextField label="Pesquisar" size="small" fullWidth placeholder="Nome, email ou CPF" value={busca} onChange={e => setBusca(e.target.value)} />
+              <TextField
+                label="Pesquisar"
+                size="small"
+                fullWidth
+                placeholder="Nome, email ou CPF"
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+              />
             </Grid>
             {user?.perfil === 'admin' && (
               <Grid item xs={12} md={4}>
-                <TextField label="Instituição" size="small" select fullWidth value={instituicaoFiltro} onChange={e => setInstituicaoFiltro(e.target.value)}>
+                <TextField
+                  label="Instituição"
+                  size="small"
+                  select
+                  fullWidth
+                  value={instituicaoFiltro}
+                  onChange={e => setInstituicaoFiltro(e.target.value)}
+                >
                   <MenuItem value="">Todas</MenuItem>
                   {instituicoes.map(inst => (
-                    <MenuItem key={inst.idInstituicao} value={inst.idInstituicao}>{inst.nomeInstituicao}</MenuItem>
+                    <MenuItem key={inst.idInstituicao} value={inst.idInstituicao}>
+                      {inst.nomeInstituicao}
+                    </MenuItem>
                   ))}
                 </TextField>
               </Grid>
@@ -307,14 +307,15 @@ export default function PaginaGestaoClientes() {
             <Grid item xs={12} md={4} textAlign={{ xs: 'left', md: 'right' }}>
               <Chip label={`Total: ${clientesFiltrados.length}`} color="primary" variant="outlined" />
               {(busca || (user?.perfil==='admin' && instituicaoFiltro)) && (
-                <Button size="small" sx={{ ml: 1 }} onClick={() => { setBusca(''); setInstituicaoFiltro(''); }}>Limpar</Button>
+                <Button size="small" sx={{ ml: 1 }} onClick={() => { setBusca(''); setInstituicaoFiltro(''); }}>
+                  Limpar
+                </Button>
               )}
             </Grid>
           </Grid>
+
           {loading ? (
-            <Box display="flex" justifyContent="center">
-              <CircularProgress />
-            </Box>
+            <Box display="flex" justifyContent="center"><CircularProgress /></Box>
           ) : (
             <TableContainer component={Paper} sx={{ mt: 3 }}>
               <Table>
@@ -343,7 +344,6 @@ export default function PaginaGestaoClientes() {
                           />
                         </div>
                       </TableCell>
-
                     </TableRow>
                   ))}
                 </TableBody>
@@ -352,6 +352,7 @@ export default function PaginaGestaoClientes() {
           )}
         </Paper>
       </motion.div>
+
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Detalhes do Cliente</DialogTitle>
         <DialogContent>
@@ -393,14 +394,17 @@ export default function PaginaGestaoClientes() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setModalOpen(false)} color="secondary">
-            Fechar
-          </Button>
-          <Button variant="contained" color="primary" onClick={() => router.push(`/novaVenda?cliente=${selectedCliente?.idCliente}`)}>
+          <Button onClick={() => setModalOpen(false)} color="secondary">Fechar</Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => router.push(`/novaVenda?cliente=${selectedCliente?.idCliente}`)}
+          >
             Nova Venda
           </Button>
         </DialogActions>
       </Dialog>
+
       <EditClienteDialog
         open={modalEditarOpen}
         onClose={() => setModalEditarOpen(false)}
@@ -415,6 +419,7 @@ export default function PaginaGestaoClientes() {
         cpf={selectedCliente?.cpf}
         email={selectedCliente?.email}
       />
+
       <GenerateCarteirinhaModal
         open={carteirinhaOpen}
         onClose={() => setCarteirinhaOpen(false)}
@@ -427,7 +432,6 @@ export default function PaginaGestaoClientes() {
         contratoAssinado={(selectedCliente as any)?.contrato_assinado || false}
         nomeInstituicao={(selectedCliente as any)?.nomeInstituicao || (selectedCliente as any)?.dsc_instituicao || null}
       />
-
     </Container>
   );
 }

@@ -3,7 +3,6 @@ import { Button, Modal, Form, Table, Spinner, Badge } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { instituicoesEmpresaApi } from "../lib/api-client";
 
-// Tipo alinhado ao backend existente (buscarEmpresa / criarEmpresa / editarEmpresa / deletarEmpresa)
 export type Instituicao = {
   idInstituicao: number;
   nomeInstituicao: string;
@@ -16,16 +15,14 @@ export type Instituicao = {
   uf: string;
   cidade: string;
   createdAt?: string;
-  ativo: boolean | null;
+  status: 'A' | 'I' | null;        // ⬅️ status string
   valor_plano: number | null;
+  valor_comissao?: number | null;
   imagem_perfil?: string | null;
 };
 
-// Validação simples de e‑mail
 const emailValido = (email: string) => /.+@.+\..+/.test(email.trim());
-// Validação simplificada de CNPJ (apenas checa 14 dígitos) – pode ser trocada por validação completa se necessário
 const cnpjValido = (cnpj: string) => cnpj.replace(/\D/g, "").length === 14;
-
 const currencyFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function PaginaGestaoInstituicoes() {
@@ -51,9 +48,10 @@ export default function PaginaGestaoInstituicoes() {
     endereco: string;
     uf: string;
     cidade: string;
-    ativo: boolean;
-    valor_plano: number; // armazenado em número (ex: 49.9)
+    status: 'A' | 'I';
+    valor_plano: number;
     imagem_perfil: File | null;
+    valor_comissao: number | null;
   }>({
     nomeInstituicao: "",
     nomeFantasia: "",
@@ -64,29 +62,25 @@ export default function PaginaGestaoInstituicoes() {
     endereco: "",
     uf: "",
     cidade: "",
-    ativo: true,
+    status: 'A',
     valor_plano: 0,
     imagem_perfil: null,
+    valor_comissao: null,
   });
-  // Estado separado para máscara de moeda
   const [valorPlanoMasked, setValorPlanoMasked] = useState("R$ 0,00");
+  const [valorComissaoMasked, setValorComissaoMasked] = useState("R$ 0,00");
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    fetchInstituicoes();
-  }, []);
+  useEffect(() => { fetchInstituicoes(); }, []);
 
   const fetchInstituicoes = async () => {
     setLoading(true);
     setErro(null);
     try {
-      const data = await instituicoesEmpresaApi.buscarEmpresa();
-      if (data.success) {
-        setInstituicoes(data.instituicoes);
-      } else {
-        setErro(data.error || "Falha ao carregar instituições");
-      }
+      const data = await instituicoesEmpresaApi.buscar();
+      if (data.success) setInstituicoes(data.instituicoes);
+      else setErro(data.error || "Falha ao carregar instituições");
     } catch (e: any) {
       setErro(e.message || "Erro inesperado");
     } finally {
@@ -107,11 +101,14 @@ export default function PaginaGestaoInstituicoes() {
       endereco: "",
       uf: "",
       cidade: "",
-      ativo: true,
+      status: 'A',
       valor_plano: 0,
       imagem_perfil: null,
+      valor_comissao: null,
     });
     setValorPlanoMasked("R$ 0,00");
+    setValorComissaoMasked("R$ 0,00");
+
     setValidationErrors({});
   };
 
@@ -119,20 +116,23 @@ export default function PaginaGestaoInstituicoes() {
     if (instituicao) {
       setEditing(instituicao);
       setFormData({
-        nomeInstituicao: instituicao.nomeInstituicao,
-        nomeFantasia: instituicao.nomeFantasia,
-        email: instituicao.email,
-        cnpj: instituicao.cnpj,
-        celular: instituicao.celular,
-        cep: instituicao.cep,
-        endereco: instituicao.endereco,
-        uf: instituicao.uf,
-        cidade: instituicao.cidade,
-        ativo: instituicao.ativo ?? false,
+        nomeInstituicao: instituicao.nomeInstituicao || "",
+        nomeFantasia: instituicao.nomeFantasia || "",
+        email: instituicao.email || "",
+        cnpj: instituicao.cnpj || "",
+        celular: instituicao.celular || "",
+        cep: instituicao.cep || "",
+        endereco: instituicao.endereco || "",
+        uf: instituicao.uf || "",
+        cidade: instituicao.cidade || "",
+        status: (instituicao.status ?? 'A') as 'A' | 'I',
         valor_plano: instituicao.valor_plano ?? 0,
         imagem_perfil: null,
+        valor_comissao: instituicao.valor_comissao ?? null,
       });
       setValorPlanoMasked(currencyFormatter.format(instituicao.valor_plano ?? 0));
+      setValorComissaoMasked(currencyFormatter.format(instituicao.valor_comissao ?? 0));
+
       setPreviewImagem(instituicao.imagem_perfil ?? null);
     } else {
       resetForm();
@@ -151,12 +151,16 @@ export default function PaginaGestaoInstituicoes() {
     if (!emailValido(formData.email)) errors.email = "Email inválido";
     if (!cnpjValido(formData.cnpj)) errors.cnpj = "CNPJ inválido";
     if (formData.valor_plano < 0) errors.valor_plano = "Valor inválido";
+    if (formData.valor_comissao !== null && formData.valor_comissao < 0) {
+      errors.valor_comissao = "Valor de comissão inválido";
+    }
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSave = async () => {
     if (!validate()) return;
+
     const form = new FormData();
     if (editing) form.append("idInstituicao", String(editing.idInstituicao));
     Object.entries(formData).forEach(([k, v]) => {
@@ -166,12 +170,13 @@ export default function PaginaGestaoInstituicoes() {
         form.append(k, String(v));
       }
     });
+
     try {
-      if (editing) await instituicoesEmpresaApi.editarEmpresa(form);
-      else await instituicoesEmpresaApi.criarEmpresa(form);
+      if (editing) await instituicoesEmpresaApi.editar(editing.idInstituicao, form);
+      else await instituicoesEmpresaApi.criar(form);
       fetchInstituicoes();
       handleClose();
-    } catch (e) {
+    } catch {
       alert("Erro inesperado ao salvar");
     }
   };
@@ -179,40 +184,47 @@ export default function PaginaGestaoInstituicoes() {
   const handleDelete = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir esta instituição?")) return;
     try {
-      await instituicoesEmpresaApi.deletarEmpresa(id);
+      await instituicoesEmpresaApi.deletar(id);
       fetchInstituicoes();
-    } catch (e) {
+    } catch {
       alert("Erro inesperado ao deletar");
     }
   };
 
+  // Alterna status 'A' ↔ 'I' e persiste
   const toggleAtivo = async (inst: Instituicao) => {
+    const nextStatus: 'A' | 'I' = inst.status === 'A' ? 'I' : 'A';
     try {
       const form = new FormData();
       form.append("idInstituicao", String(inst.idInstituicao));
-      form.append("nomeInstituicao", inst.nomeInstituicao);
-      form.append("nomeFantasia", inst.nomeFantasia);
-      form.append("email", inst.email);
-      form.append("cnpj", inst.cnpj);
-      form.append("celular", inst.celular);
-      form.append("cep", inst.cep);
-      form.append("endereco", inst.endereco);
-      form.append("uf", inst.uf);
-      form.append("cidade", inst.cidade);
-      form.append("ativo", String(!inst.ativo));
+      form.append("nomeInstituicao", inst.nomeInstituicao || "");
+      form.append("nomeFantasia", inst.nomeFantasia || "");
+      form.append("email", inst.email || "");
+      form.append("cnpj", inst.cnpj || "");
+      form.append("celular", inst.celular || "");
+      form.append("cep", inst.cep || "");
+      form.append("endereco", inst.endereco || "");
+      form.append("uf", inst.uf || "");
+      form.append("cidade", inst.cidade || "");
+      form.append("status", nextStatus);                                   // ⬅️ agora mandamos status
       form.append("valor_plano", String(inst.valor_plano ?? 0));
-      await instituicoesEmpresaApi.editarEmpresa(form);
-      setInstituicoes(prev => prev.map(i => i.idInstituicao === inst.idInstituicao ? { ...i, ativo: !inst.ativo } : i));
+      form.append("valor_comissao", String(inst.valor_comissao ?? ""));
+      await instituicoesEmpresaApi.editar(inst.idInstituicao, form);
+
+      setInstituicoes(prev =>
+        prev.map(i => i.idInstituicao === inst.idInstituicao ? { ...i, status: nextStatus } : i)
+      );
     } catch (e) {
       console.error(e);
     }
   };
 
-  // Filtro & paginação memoizados
   const filtered = useMemo(() => {
     const s = search.toLowerCase().trim();
     if (!s) return instituicoes;
-    return instituicoes.filter(i => [i.nomeInstituicao, i.email, i.cnpj].some(f => f?.toLowerCase().includes(s)));
+    return instituicoes.filter(i =>
+      [i.nomeInstituicao, i.email, i.cnpj].some(f => f?.toLowerCase().includes(s))
+    );
   }, [instituicoes, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -221,7 +233,6 @@ export default function PaginaGestaoInstituicoes() {
   useEffect(() => { setPage(1); }, [search]);
 
   const onChangeValorPlano = (raw: string) => {
-    // Mantém apenas dígitos
     const digits = raw.replace(/\D/g, "");
     const cents = parseInt(digits || "0", 10);
     const value = cents / 100;
@@ -229,11 +240,26 @@ export default function PaginaGestaoInstituicoes() {
     setValorPlanoMasked(currencyFormatter.format(value));
   };
 
-  const disableSave = Object.keys(validationErrors).length > 0 || !formData.nomeInstituicao || !formData.email;
+
+  const onChangeValorComissao = (raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    const cents = parseInt(digits || "0", 10);
+    const value = cents / 100;
+    setFormData(f => ({ ...f, valor_plano: value }));
+    setValorPlanoMasked(currencyFormatter.format(value));
+  };
+
+  const disableSave =
+    Object.keys(validationErrors).length > 0 ||
+    !formData.nomeInstituicao ||
+    !formData.email;
+
 
   return (
     <div className="container py-5">
-      <motion.h2 className="text-center mb-4 fw-bold" initial={{ opacity: 0, y: -15 }} animate={{ opacity: 1, y: 0 }}>Gestão de Instituições</motion.h2>
+      <motion.h2 className="text-center mb-4 fw-bold" initial={{ opacity: 0, y: -15 }} animate={{ opacity: 1, y: 0 }}>
+        Gestão de Instituições
+      </motion.h2>
 
       <div className="d-flex flex-column flex-md-row gap-3 align-items-md-center mb-3">
         <div className="flex-grow-1">
@@ -245,7 +271,8 @@ export default function PaginaGestaoInstituicoes() {
         </div>
         <div className="text-md-end">
           <Button variant="success" onClick={() => handleShow()}>
-            <i className="bi bi-building-add me-2"/>Nova Instituição
+            <i className="bi bi-building-add me-2" />
+            Nova Instituição
           </Button>
         </div>
       </div>
@@ -263,15 +290,7 @@ export default function PaginaGestaoInstituicoes() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <Table hover responsive bordered size="sm" className="shadow-sm align-middle">
             <thead className="table-dark">
-              <tr>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>CNPJ</th>
-                <th>Valor Plano</th>
-                <th>Ativo</th>
-                <th>Imagem</th>
-                <th style={{ width: 150 }}>Ações</th>
-              </tr>
+              <tr><th>Nome</th><th>Email</th><th>CNPJ</th><th>Valor Plano</th><th>Valor Comissao</th><th>Status</th><th>Imagem</th><th style={{ width: 150 }}>Ações</th></tr>
             </thead>
             <tbody>
               {paginated.length === 0 && (
@@ -285,13 +304,21 @@ export default function PaginaGestaoInstituicoes() {
                   <td>{inst.email}</td>
                   <td>{inst.cnpj}</td>
                   <td>{currencyFormatter.format(inst.valor_plano ?? 0)}</td>
+                  <td>{currencyFormatter.format(inst.valor_comissao ?? 0)}</td>
                   <td>
-                    <Badge bg={inst.ativo ? "success" : "secondary"} style={{ cursor: 'pointer' }} onClick={() => toggleAtivo(inst)}>
-                      {inst.ativo ? 'Ativa' : 'Inativa'}
+                    <Badge
+                      bg={inst.status === 'A' ? "success" : "secondary"}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => toggleAtivo(inst)}
+                      title="Alternar status"
+                    >
+                      {inst.status === 'A' ? 'Ativa' : 'Inativa'}
                     </Badge>
                   </td>
                   <td>
-                    {inst.imagem_perfil ? <img src={inst.imagem_perfil} alt="Logo" width={36} height={36} style={{ objectFit: 'cover', borderRadius: 4 }} /> : <span className="text-muted small">—</span>}
+                    {inst.imagem_perfil
+                      ? <img src={inst.imagem_perfil} alt="Logo" width={36} height={36} style={{ objectFit: 'cover', borderRadius: 4 }} />
+                      : <span className="text-muted small">—</span>}
                   </td>
                   <td>
                     <div className="d-flex gap-2">
@@ -308,7 +335,6 @@ export default function PaginaGestaoInstituicoes() {
             </tbody>
           </Table>
 
-          {/* Paginação */}
           {filtered.length > pageSize && (
             <div className="d-flex justify-content-between align-items-center mt-2">
               <div className="small text-muted">Página {page} de {totalPages}</div>
@@ -408,12 +434,21 @@ export default function PaginaGestaoInstituicoes() {
                 />
                 <Form.Control.Feedback type="invalid">{validationErrors.valor_plano}</Form.Control.Feedback>
               </div>
+              <div className="col-md-4">
+                <Form.Label className="fw-semibold">Valor da Comissão</Form.Label>
+                <Form.Control
+                  value={valorComissaoMasked}
+                  onChange={e => onChangeValorComissao(e.target.value)}
+                  isInvalid={!!validationErrors.valor_comissao}
+                />
+                <Form.Control.Feedback type="invalid">{validationErrors.valor_comissao}</Form.Control.Feedback>
+              </div>
               <div className="col-md-4 d-flex align-items-end">
                 <Form.Check
                   type="switch"
-                  label="Ativa"
-                  checked={formData.ativo}
-                  onChange={e => setFormData(f => ({ ...f, ativo: e.target.checked }))}
+                  label={formData.status === 'A' ? "Ativa" : "Inativa"}
+                  checked={formData.status === 'A'}
+                  onChange={e => setFormData(f => ({ ...f, status: e.target.checked ? 'A' : 'I' }))}  // ⬅️ troca status
                 />
               </div>
               <div className="col-md-8">
@@ -437,7 +472,11 @@ export default function PaginaGestaoInstituicoes() {
               </div>
               <div className="col-md-4 d-flex align-items-center justify-content-center">
                 {previewImagem && (
-                  <img src={previewImagem} alt="preview" style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 6, objectFit: 'cover', boxShadow: '0 0 0 1px #ddd' }} />
+                  <img
+                    src={previewImagem}
+                    alt="preview"
+                    style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 6, objectFit: 'cover', boxShadow: '0 0 0 1px #ddd' }}
+                  />
                 )}
               </div>
             </div>
