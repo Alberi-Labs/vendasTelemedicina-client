@@ -39,6 +39,7 @@ interface Cliente {
   data_nascimento: string | null;
   idClienteDependente: number | null;
   data_vinculo: string | null;
+  status_cliente?: string | null;
 }
 
 interface Venda {
@@ -65,7 +66,10 @@ export default function PaginaGestaoClientes() {
   const [instituicoes, setInstituicoes] = useState<InstituicaoOption[]>([]);
   const [instituicaoFiltro, setInstituicaoFiltro] = useState<string>('');
   const [busca, setBusca] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState<string>('');
   const { user } = useAuth();
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+  const [clienteParaCancelar, setClienteParaCancelar] = useState<Cliente | null>(null);
 
   useEffect(() => {
     if (user?.perfil === 'admin') {
@@ -189,7 +193,6 @@ export default function PaginaGestaoClientes() {
   };
 
   const handleCancelarAssinatura = async (cliente: Cliente) => {
-    if (!window.confirm(`Tem certeza que deseja cancelar a assinatura de ${cliente.nome}?`)) return;
 
     setLoadingCancelamento(true);
     try {
@@ -257,6 +260,18 @@ export default function PaginaGestaoClientes() {
     }
   };
 
+  const abrirConfirmacaoCancelamento = (cliente: Cliente) => {
+    setClienteParaCancelar(cliente);
+    setConfirmCancelOpen(true);
+  };
+
+  const confirmarCancelamento = async () => {
+    if (!clienteParaCancelar) return;
+    setConfirmCancelOpen(false);
+    await handleCancelarAssinatura(clienteParaCancelar);
+    setClienteParaCancelar(null);
+  };
+
   // Filtro derivado (placeholder atual)
   const clientesFiltrados = useMemo(() => {
     let base = clientes;
@@ -264,8 +279,11 @@ export default function PaginaGestaoClientes() {
       const b = busca.toLowerCase();
       base = base.filter(c => `${c.nome} ${c.email} ${c.cpf}`.toLowerCase().includes(b));
     }
+    if (statusFiltro) {
+      base = base.filter(c => (c.status_cliente || '').toLowerCase() === statusFiltro.toLowerCase());
+    }
     return base;
-  }, [clientes, busca]);
+  }, [clientes, busca, statusFiltro]);
 
   return (
     <Container maxWidth="lg">
@@ -304,6 +322,22 @@ export default function PaginaGestaoClientes() {
                 </TextField>
               </Grid>
             )}
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Status"
+                size="small"
+                select
+                fullWidth
+                value={statusFiltro}
+                onChange={e => setStatusFiltro(e.target.value)}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                <MenuItem value="Aguardando Pagamento">Aguardando Pagamento</MenuItem>
+                <MenuItem value="Aguardando contrato">Aguardando contrato</MenuItem>
+                <MenuItem value="Contrato Aprovado">Contrato Aprovado</MenuItem>
+                <MenuItem value="Cancelado">Cancelado</MenuItem>
+              </TextField>
+            </Grid>
             <Grid item xs={12} md={4} textAlign={{ xs: 'left', md: 'right' }}>
               <Chip label={`Total: ${clientesFiltrados.length}`} color="primary" variant="outlined" />
               {(busca || (user?.perfil==='admin' && instituicaoFiltro)) && (
@@ -324,6 +358,7 @@ export default function PaginaGestaoClientes() {
                     <TableCell><strong>Nome</strong></TableCell>
                     <TableCell><strong>CPF</strong></TableCell>
                     <TableCell><strong>Email</strong></TableCell>
+                    <TableCell><strong>Status</strong></TableCell>
                     <TableCell><strong>Ações</strong></TableCell>
                   </TableRow>
                 </TableHead>
@@ -333,6 +368,7 @@ export default function PaginaGestaoClientes() {
                       <TableCell>{cliente.nome}</TableCell>
                       <TableCell>{cliente.cpf}</TableCell>
                       <TableCell>{cliente.email}</TableCell>
+                      <TableCell>{cliente.status_cliente || '-'}</TableCell>
                       <TableCell>
                         <div className="d-flex gap-2">
                           <ActionButtons
@@ -340,7 +376,7 @@ export default function PaginaGestaoClientes() {
                             onEdit={() => handleEditarClick(cliente)}
                             onCharges={() => { setSelectedCliente(cliente); setChargesOpen(true); }}
                             onCarteirinha={() => { setSelectedCliente(cliente); setCarteirinhaOpen(true); }}
-                            onCancel={() => handleCancelarAssinatura(cliente)}
+                            onCancel={() => abrirConfirmacaoCancelamento(cliente)}
                           />
                         </div>
                       </TableCell>
@@ -432,6 +468,31 @@ export default function PaginaGestaoClientes() {
         contratoAssinado={(selectedCliente as any)?.contrato_assinado || false}
         nomeInstituicao={(selectedCliente as any)?.nomeInstituicao || (selectedCliente as any)?.dsc_instituicao || null}
       />
+
+      {/* Confirmação de cancelamento */}
+      <Dialog open={confirmCancelOpen} onClose={() => setConfirmCancelOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Confirmar cancelamento</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Tem certeza que deseja cancelar a assinatura de <strong>{clienteParaCancelar?.nome}</strong>?
+          </Typography>
+          <Box sx={{ p: 2, borderRadius: 2, bgcolor: '#fff3e0', border: '1px solid #ffe0b2' }}>
+            <Typography variant="body2" color="error" sx={{ fontWeight: 600, mb: 1 }}>
+              Atenção: esta ação é permanente e não pode ser desfeita.
+            </Typography>
+            <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
+              <li>Todas as cobranças do cliente serão canceladas, vencidas ou não.</li>
+              <li>O cliente e seus dependentes serão desvinculados do plano de telemedicina da SulAmérica.</li>
+            </ul>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmCancelOpen(false)} color="inherit">Voltar</Button>
+          <Button onClick={confirmarCancelamento} color="error" variant="contained" disabled={loadingCancelamento}>
+            {loadingCancelamento ? 'Cancelando...' : 'Confirmar cancelamento'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

@@ -22,6 +22,7 @@ import {
     Alert,
     Snackbar
 } from "@mui/material";
+import { apiClient } from '../lib/api-client';
 import { useAuth } from "@/app/context/AuthContext";
 
 // Interface para contatos
@@ -109,11 +110,9 @@ export default function CrmVendas() {
 
     const carregarVendedores = async () => {
         try {
-            const response = await fetch('/api/crmVendas/listarVendedores');
-            if (response.ok) {
-                const data = await response.json();
-                setVendedores(data.vendedores || []);
-            }
+            // Novo backend: GET /crm-vendas/listar-vendedores
+            const data = await apiClient.get('/crm-vendas/listar-vendedores');
+            setVendedores(data.vendedores || []);
         } catch (error) {
             console.error('Erro ao carregar vendedores:', error);
         }
@@ -128,28 +127,19 @@ export default function CrmVendas() {
                 return;
             }
 
-            // Construir a URL com os parâmetros necessários
             const params = new URLSearchParams({
-                id_usuario: user.id.toString(),
-                perfil_usuario: user.perfil || 'vendedor'
+                id_usuario: String(user.id),
+                perfil_usuario: user.perfil || 'vendedor',
             });
-
-            // Adicionar filtro por vendedor se não for "todos" e o usuário não for vendedor
             if (user.perfil !== 'vendedor' && filtros.vendedor !== 'todos') {
-                params.append('vendedor_filtro', filtros.vendedor);
+                params.append('vendedor_filtro', String(filtros.vendedor));
             }
 
-            const response = await fetch(`/api/crmVendas/consultar?${params.toString()}`);
-            if (response.ok) {
-                const data = await response.json();
-                setVendas(data.vendas || []);
-            } else {
-                const errorData = await response.json();
-                showSnackbar(errorData.error || 'Erro ao carregar dados', 'error');
-            }
-        } catch (error) {
+            const data = await apiClient.get(`/crm-vendas/consultar?${params.toString()}`);
+            setVendas(data.vendas || data?.data?.vendas || []);
+        } catch (error: any) {
             console.error('Erro ao carregar vendas:', error);
-            showSnackbar('Erro ao carregar dados', 'error');
+            showSnackbar(error?.message || 'Erro ao carregar dados', 'error');
         } finally {
             setLoading(false);
         }
@@ -160,35 +150,19 @@ export default function CrmVendas() {
         setLoading(true);
 
         try {
-            const url = editingVenda 
-                ? `/api/crmVendas/atualizar?id=${editingVenda.id}`
-                : '/api/crmVendas/criar';
-            
-            const method = editingVenda ? 'PUT' : 'POST';
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
-            });
-
-            if (response.ok) {
-                showSnackbar(
-                    editingVenda ? 'Proposta atualizada com sucesso!' : 'Proposta criada com sucesso!',
-                    'success'
-                );
-                resetForm();
-                setOpenDialog(false);
-                carregarVendas();
+            if (editingVenda && editingVenda.id) {
+                await apiClient.put(`/crm-vendas/atualizar/${editingVenda.id}`, formData);
+                showSnackbar('Proposta atualizada com sucesso!', 'success');
             } else {
-                const errorData = await response.json();
-                showSnackbar(errorData.error || 'Erro ao salvar proposta', 'error');
+                await apiClient.post('/crm-vendas/criar', formData);
+                showSnackbar('Proposta criada com sucesso!', 'success');
             }
-        } catch (error) {
+            resetForm();
+            setOpenDialog(false);
+            carregarVendas();
+        } catch (error: any) {
             console.error('Erro ao salvar proposta:', error);
-            showSnackbar('Erro ao salvar proposta', 'error');
+            showSnackbar(error?.message || 'Erro ao salvar proposta', 'error');
         } finally {
             setLoading(false);
         }
@@ -204,16 +178,9 @@ export default function CrmVendas() {
         if (!confirm('Tem certeza que deseja deletar esta proposta?')) return;
 
         try {
-            const response = await fetch(`/api/crmVendas/deletar?id=${id}`, {
-                method: 'DELETE',
-            });
-
-            if (response.ok) {
-                showSnackbar('Proposta deletada com sucesso!', 'success');
-                carregarVendas();
-            } else {
-                showSnackbar('Erro ao deletar proposta', 'error');
-            }
+            await apiClient.delete(`/crm-vendas/deletar/${id}`);
+            showSnackbar('Proposta deletada com sucesso!', 'success');
+            carregarVendas();
         } catch (error) {
             console.error('Erro ao deletar proposta:', error);
             showSnackbar('Erro ao deletar proposta', 'error');

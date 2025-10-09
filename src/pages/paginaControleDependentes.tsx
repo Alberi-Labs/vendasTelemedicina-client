@@ -3,7 +3,7 @@ import { Button, Modal, Form } from "react-bootstrap";
 import { motion } from "framer-motion";
 import { useAuth } from "@/app/context/AuthContext";
 import AvisoAlerta from "@/components/avisoAlerta/avisoAlerta";
-import { dependenteApi } from '@/lib/api-client';
+import { dependenteApi, carteirinhaApi } from '@/lib/api-client';
 
 interface Dependente {
   id: number;
@@ -23,6 +23,17 @@ export default function PaginaControleDependentes() {
   const [showAviso, setShowAviso] = useState(false);
   const [avisoMensagem, setAvisoMensagem] = useState("");
   const [avisoTipo, setAvisoTipo] = useState<"success" | "warning" | "danger">("warning");
+  // Utilitário igual ao usado na página do titular (Apolice)
+  const formatarDataVigencia = (data: string | undefined): string => {
+    if (!data) return "—";
+    if (data.includes("/")) return data;
+    if (data.includes("-")) {
+      const [ano, mes, dia] = data.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+    return "Formato inválido";
+  };
+
 
 const buscarDependentesDoServidor = async () => {
   if (!user?.cpf) return;
@@ -120,20 +131,21 @@ const buscarDependentesDoServidor = async () => {
       return;
     }
 
+    // Mesma estrutura usada para o titular, apenas trocando nome/cpf pelo do dependente
     const dadosCarteirinha = {
       nome: dependente.nome,
-      cpf: dependente.cpf,
+      cpf: (dependente.cpf ?? '').replace(/[^\d]/g, ''),
+      vigenciaInicio: formatarDataVigencia(user.data_contrato_vigencia_inicio),
+      vigenciaFinal: formatarDataVigencia(user.data_contrato_vigencia_final),
+      apolice: user.num_contrato_retorno_apolice || "—",
+      operacao: user.cod_contrato_retorno_operacao || "—",
+      certificado: user.num_contrato_retorno_certificado || "—",
       empresa: user.dsc_instituicao
-    };
+    } as const;
 
     try {
-      const blobResp = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/carteirinha/gerar-dependente`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dadosCarteirinha)
-      });
-
-      if (!blobResp.ok) {
+      const response = await carteirinhaApi.gerar(dadosCarteirinha);
+      if (!response.ok) {
         console.error('Erro ao gerar carteirinha do dependente');
         setAvisoMensagem('Erro ao gerar carteirinha. Tente novamente mais tarde.');
         setAvisoTipo('danger');
@@ -141,14 +153,11 @@ const buscarDependentesDoServidor = async () => {
         return;
       }
 
-      const blob = await blobResp.blob();
-      
-      // Criar nome do arquivo com primeiro nome + CPF
+      const blob = await response.blob();
       const primeiroNome = dependente.nome.split(' ')[0];
       const cpfLimpo = (dependente.cpf ?? "").replace(/[^\d]/g, '');
       const nomeArquivo = `carteirinha-dependente-${primeiroNome}-${cpfLimpo}.png`;
-      
-      // Forçar download da imagem
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -157,11 +166,10 @@ const buscarDependentesDoServidor = async () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       setAvisoMensagem("Carteirinha do dependente baixada com sucesso!");
       setAvisoTipo("success");
       setShowAviso(true);
-
     } catch (err) {
       console.error("Erro ao gerar carteirinha do dependente:", err);
       setAvisoMensagem("Erro ao processar carteirinha. Tente novamente.");
@@ -225,19 +233,17 @@ const buscarDependentesDoServidor = async () => {
                     <p className="mb-1"><strong>CPF:</strong> {dep.cpf}</p>
                     <p className="mb-3"><strong>Nascimento:</strong> {dep.nascimento}</p>
                     
-                    {user?.dsc_instituicao?.includes("Vita") && (
-                      <div className="d-flex justify-content-center">
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => handleGerarCarteirinha(dep)}
-                          className="d-inline-flex align-items-center gap-2"
-                        >
-                          <i className="bi bi-credit-card"></i>
-                          Gerar Carteirinha
-                        </Button>
-                      </div>
-                    )}
+                    <div className="d-flex justify-content-center">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleGerarCarteirinha(dep)}
+                        className="d-inline-flex align-items-center gap-2"
+                      >
+                        <i className="bi bi-credit-card"></i>
+                        Gerar Carteirinha
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </motion.div>

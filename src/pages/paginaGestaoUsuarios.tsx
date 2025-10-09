@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Button, Modal, Form, Table, Badge, OverlayTrigger, Tooltip, InputGroup } from "react-bootstrap";
 import "../styles/gestaoUsuarios.css";
 import { motion } from "framer-motion";
-import { Usuario } from "./api/usuario/buscarUsuario";
 import { useAuth } from "@/app/context/AuthContext";
 import { usuariosApi, instituicoesApi, usuarioApi } from "@/lib/api-client";
 

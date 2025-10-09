@@ -1007,34 +1007,34 @@ export const asaasApiClient = {
   },
 
   // Stream (SSE) de cobranças mensais por instituição
-  streamCobrancasMesInstituicao: (params: {
-    id_instituicao: number;
-    mes?: number | string;
-    ano?: number | string;
-    order?: 'asc' | 'desc';
-  }, handlers: {
-    onMetaInicial?: (data: any) => void;
-    onBatch?: (data: any) => void;
-    onDone?: (data: any) => void;
-    onErro?: (data: any) => void;
-    onRawEvent?: (evt: MessageEvent) => void;
-  }) => {
+  streamCobrancasMesInstituicao: (
+    params: {
+      id_instituicao: number;
+      mes?: number | string;
+      ano?: number | string;
+      order?: 'asc' | 'desc';
+    },
+    handlers: {
+      onMetaInicial?: (data: any) => void;
+      onBatch?: (data: any) => void;
+      onDone?: (data: any) => void;
+      onErro?: (data: any) => void;
+      onRawEvent?: (evt: MessageEvent) => void;
+    }
+  ) => {
     const qs = new URLSearchParams();
     qs.append('id_instituicao', String(params.id_instituicao));
     if (params.mes != null) qs.append('mes', String(params.mes));
     if (params.ano != null) qs.append('ano', String(params.ano));
     if (params.order) qs.append('order', params.order);
-    const url = `/asaas-api/cobrancas/mes-instituicao/stream?${qs.toString()}`;
-    const es = new EventSource(url);
-    es.onmessage = (evt) => {
-      // eventos sem nome vêm como 'message'
-      handlers.onRawEvent?.(evt);
-      try {
-        const data = JSON.parse(evt.data);
-        // Sem event name, tratar generico
-        if (data?.batch != null) handlers.onBatch?.(data);
-      } catch { /* ignore */ }
-    };
+
+    // ✅ use a base absoluta do backend
+    const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const url = `${BASE}/asaas-api/cobrancas/mes-instituicao/stream?${qs.toString()}`;
+
+    const es = new EventSource(url); // { withCredentials: false } (padrão)
+
+    es.onmessage = (evt) => handlers.onRawEvent?.(evt);
     es.addEventListener('metaInicial', (evt: MessageEvent) => {
       handlers.onRawEvent?.(evt);
       try { handlers.onMetaInicial?.(JSON.parse(evt.data)); } catch { }
@@ -1052,10 +1052,13 @@ export const asaasApiClient = {
       handlers.onRawEvent?.(evt);
       try { handlers.onErro?.(JSON.parse(evt.data)); } catch { }
     });
-    return es; // retornar para permitir fechamento manual
+
+    return es;
   },
 
 
 };
+
+
 
 
