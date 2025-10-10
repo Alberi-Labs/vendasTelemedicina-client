@@ -72,9 +72,9 @@ export default function LoginCliente() {
     const payload = { cpf: cpfFormatado, dataNascimento };
 
     try {
-  // Nova API do backend
-  const resp = await clientesApi.buscarDadosSaudeECor(payload.cpf);
-  const data = resp?.data ?? resp;
+      // Nova API do backend
+      const resp = await clientesApi.buscarDadosSaudeECor(payload.cpf);
+      const data = resp?.data ?? resp;
 
       // Verifica se a resposta é um array (CNPJ) ou objeto (CPF)
       const clienteRaw = Array.isArray(data)

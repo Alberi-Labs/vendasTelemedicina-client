@@ -20,7 +20,8 @@ import {
     DialogContent,
     DialogActions,
     Alert,
-    Snackbar
+    Snackbar,
+    CircularProgress
 } from "@mui/material";
 import { apiClient } from '../lib/api-client';
 import { useAuth } from "@/app/context/AuthContext";
@@ -118,6 +119,30 @@ export default function CrmVendas() {
         }
     };
 
+    // Helpers para normalizar valores de data/hora
+    const toDateInput = (value: string) => {
+        if (!value) return '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+        if (value.includes('T')) return value.split('T')[0];
+        // tenta converter dd/mm/aaaa -> aaaa-mm-dd
+        const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+        // fallback: tenta criar date
+        const d = new Date(value);
+        if (!isNaN(d.getTime())) {
+            const pad = (n: number) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        }
+        return value;
+    };
+
+    const toTimeInput = (value: string) => {
+        if (!value) return '';
+        if (/^\d{2}:\d{2}$/.test(value)) return value;
+        if (/^\d{2}:\d{2}:\d{2}$/.test(value)) return value.substring(0, 5);
+        return value;
+    };
+
     const carregarVendas = async () => {
         setLoading(true);
         try {
@@ -150,11 +175,26 @@ export default function CrmVendas() {
         setLoading(true);
 
         try {
+            // validação básica do primeiro contato
+            const c0 = formData.contatos?.[0];
+            if (!c0 || !c0.nome || !c0.telefone || !c0.cargo) {
+                showSnackbar('Informe nome, telefone e cargo do primeiro contato.', 'error');
+                setLoading(false);
+                return;
+            }
+
+            const payload: CrmVenda = {
+                ...formData,
+                id_usuario: user?.id || formData.id_usuario,
+                data: toDateInput(formData.data),
+                horario: toTimeInput(formData.horario),
+            };
+
             if (editingVenda && editingVenda.id) {
-                await apiClient.put(`/crm-vendas/atualizar/${editingVenda.id}`, formData);
+                await apiClient.put(`/crm-vendas/atualizar/${editingVenda.id}`, payload);
                 showSnackbar('Proposta atualizada com sucesso!', 'success');
             } else {
-                await apiClient.post('/crm-vendas/criar', formData);
+                await apiClient.post('/crm-vendas/criar', payload);
                 showSnackbar('Proposta criada com sucesso!', 'success');
             }
             resetForm();
@@ -170,7 +210,12 @@ export default function CrmVendas() {
 
     const handleEdit = (venda: CrmVenda) => {
         setEditingVenda(venda);
-        setFormData(venda);
+        setFormData({
+            ...venda,
+            data: toDateInput(String(venda.data)),
+            horario: toTimeInput(String(venda.horario)),
+            id_usuario: user?.id || venda.id_usuario,
+        });
         setOpenDialog(true);
     };
 
@@ -348,7 +393,7 @@ export default function CrmVendas() {
 
     return (
         <Container maxWidth="xl" sx={{ py: 9 }}>
-            <Paper elevation={3} sx={{ p: 3 }}>
+            <Paper elevation={3} sx={{ p: 3, position: 'relative' }}>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                     <Box>
                         <Typography variant="h4" component="h1">
@@ -372,6 +417,14 @@ export default function CrmVendas() {
                         + Nova Proposta
                     </Button>
                 </Box>
+
+                {/* Loading indicator */}
+                {loading && (
+                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                        <CircularProgress size={20} />
+                        <Typography variant="body2" color="text.secondary">Carregando CRM...</Typography>
+                    </Box>
+                )}
 
                 {/* Filtros */}
                 <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
@@ -449,6 +502,7 @@ export default function CrmVendas() {
                 </Paper>
 
                 {/* Lista de Vendas */}
+                {!loading && (
                 <Grid container spacing={2}>
                     {vendasFiltradas.map((venda) => {
                         const situacaoConfig = getSituacaoConfig(venda.situacao);
@@ -551,8 +605,9 @@ export default function CrmVendas() {
                         );
                     })}
                 </Grid>
+                )}
 
-                {vendasFiltradas.length === 0 && (
+                {!loading && vendasFiltradas.length === 0 && (
                     <Box textAlign="center" py={4}>
                         <Typography variant="h6" color="text.secondary">
                             Nenhuma proposta encontrada
