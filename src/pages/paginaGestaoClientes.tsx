@@ -351,6 +351,7 @@ export default function PaginaGestaoClientes() {
                 <MenuItem value="Aguardando Pagamento">Aguardando Pagamento</MenuItem>
                 <MenuItem value="Aguardando contrato">Aguardando contrato</MenuItem>
                 <MenuItem value="Contrato Aprovado">Contrato Aprovado</MenuItem>
+                <MenuItem value="Contrato Ativo">Contrato Ativo</MenuItem>
                 <MenuItem value="Cancelado">Cancelado</MenuItem>
               </TextField>
             </Grid>

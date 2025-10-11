@@ -74,12 +74,21 @@ const buscarDependentesDoServidor = async () => {
   };
 
   const handleShow = () => {
+    // Impede abrir modal se já houver 4 dependentes
+    if (Array.isArray(dependentes) && dependentes.length >= 4) {
+      alert('Limite de 4 dependentes atingido.');
+      return;
+    }
     setFormData({ nome: "", cpf: "", nascimento: "" });
     setShowModal(true);
   };
 
   const handleSave = async () => {
     if (!formData.nascimento || !formData.nome || !formData.cpf) return;
+    if (Array.isArray(dependentes) && dependentes.length >= 4) {
+      alert('Limite de 4 dependentes atingido.');
+      return;
+    }
 
     setLoadingSave(true);
 
@@ -250,7 +259,7 @@ const buscarDependentesDoServidor = async () => {
             ))}
           </div>
 
-          {(dependentes === null || dependentes.length < 3) && (
+          {(dependentes === null || dependentes.length < 4) && (
             <motion.div
               className="text-center mt-4"
               initial={{ opacity: 0, y: 20 }}
