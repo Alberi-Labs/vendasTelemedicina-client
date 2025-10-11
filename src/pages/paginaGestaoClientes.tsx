@@ -17,6 +17,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
+import Backdrop from "@mui/material/Backdrop";
 import { motion } from "framer-motion";
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
@@ -193,7 +194,11 @@ export default function PaginaGestaoClientes() {
   };
 
   const handleCancelarAssinatura = async (cliente: Cliente) => {
-
+    console.log("[GestaoClientes] Iniciando cancelamento para cliente:", {
+      idCliente: cliente.idCliente,
+      nome: cliente.nome,
+      cpf: cliente.cpf,
+    });
     setLoadingCancelamento(true);
     try {
       // buscar vendas com filtro do usuário/instituição
@@ -224,6 +229,11 @@ export default function PaginaGestaoClientes() {
       let mensagemFinal = "";
       if (result.success) {
         mensagemFinal = "Assinatura Asaas cancelada com sucesso!";
+        console.log("[GestaoClientes] Assinatura Asaas cancelada com sucesso:", {
+          idVenda: vendaAtiva.idVenda,
+          assinatura: vendaAtiva?.id_assinatura_asaas,
+          details: result?.data?.results || result,
+        });
 
         // tentar cancelar na Sulamérica se existir seq_venda
         const clienteCompleto = await clientesApi.consultar({ cpf: cliente.cpf });
@@ -236,8 +246,10 @@ export default function PaginaGestaoClientes() {
             });
             if (r2.codigo === 0 || r2.codigo === '0' || r2.codigo === 200 || r2.codigo === '200' || r2.codigo === 21 || r2.codigo === '21') {
               mensagemFinal += "\n✅ Vida Sulamérica também cancelada/confirmada como cancelada!";
+              console.log("[GestaoClientes] Cancelamento Sulamérica confirmado:", r2);
             } else {
               mensagemFinal += `\n⚠️ Erro ao cancelar na Sulamérica: ${r2.msg_retorno || 'Erro desconhecido'}`;
+              console.warn("[GestaoClientes] Erro ao cancelar na Sulamérica:", r2);
             }
           } catch (e) {
             console.error("Erro ao cancelar Sulamérica:", e);
@@ -267,8 +279,12 @@ export default function PaginaGestaoClientes() {
 
   const confirmarCancelamento = async () => {
     if (!clienteParaCancelar) return;
-    setConfirmCancelOpen(false);
+    console.log("[GestaoClientes] Confirmação de cancelamento clicada para:", {
+      idCliente: clienteParaCancelar.idCliente,
+      nome: clienteParaCancelar.nome,
+    });
     await handleCancelarAssinatura(clienteParaCancelar);
+    setConfirmCancelOpen(false);
     setClienteParaCancelar(null);
   };
 
@@ -485,6 +501,12 @@ export default function PaginaGestaoClientes() {
               <li>O cliente e seus dependentes serão desvinculados do plano de telemedicina da SulAmérica.</li>
             </ul>
           </Box>
+          {loadingCancelamento && (
+            <Box mt={2} display="flex" alignItems="center" gap={2}>
+              <CircularProgress size={20} />
+              <Typography variant="body2">Cancelando assinatura, aguarde...</Typography>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmCancelOpen(false)} color="inherit">Voltar</Button>
@@ -493,6 +515,14 @@ export default function PaginaGestaoClientes() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Backdrop global enquanto cancela */}
+      <Backdrop open={loadingCancelamento} sx={{ zIndex: (theme) => theme.zIndex.modal + 1, color: '#fff' }}>
+        <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
+          <CircularProgress color="inherit" />
+          <Typography>Cancelando assinatura...</Typography>
+        </Box>
+      </Backdrop>
     </Container>
   );
 }
