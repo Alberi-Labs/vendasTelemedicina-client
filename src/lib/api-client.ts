@@ -229,7 +229,7 @@ export const apolicesApi = {
 export const arquivoApi = {
   downloadArquivo: (dscEmpresa: string) => {
     const params = new URLSearchParams({ dscEmpresa });
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/downloadArquivo?${params.toString()}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/download?${params.toString()}`;
 
     // Retorna a URL para download direto ou para usar com fetch
     return {
@@ -240,7 +240,7 @@ export const arquivoApi = {
 
   download: (dscEmpresa: string) => {
     const params = new URLSearchParams({ dscEmpresa });
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/downloadArquivo?${params.toString()}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/download?${params.toString()}`;
 
     // Retorna a URL para download direto ou para usar com fetch
     return {
