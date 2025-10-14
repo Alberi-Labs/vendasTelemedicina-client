@@ -19,6 +19,7 @@ export type Instituicao = {
   valor_plano: number | null;
   valor_comissao?: number | null;
   imagem_perfil?: string | null;
+  chave_api?: string | null;
 };
 
 const emailValido = (email: string) => /.+@.+\..+/.test(email.trim());
@@ -52,6 +53,7 @@ export default function PaginaGestaoInstituicoes() {
     valor_plano: number;
     imagem_perfil: File | null;
     valor_comissao: number | null;
+    chave_api?: string | null;
   }>({
     nomeInstituicao: "",
     nomeFantasia: "",
@@ -66,6 +68,7 @@ export default function PaginaGestaoInstituicoes() {
     valor_plano: 0,
     imagem_perfil: null,
     valor_comissao: null,
+    chave_api: "",
   });
   const [valorPlanoMasked, setValorPlanoMasked] = useState("R$ 0,00");
   const [valorComissaoMasked, setValorComissaoMasked] = useState("R$ 0,00");
@@ -105,6 +108,7 @@ export default function PaginaGestaoInstituicoes() {
       valor_plano: 0,
       imagem_perfil: null,
       valor_comissao: null,
+      chave_api: "",
     });
     setValorPlanoMasked("R$ 0,00");
     setValorComissaoMasked("R$ 0,00");
@@ -129,6 +133,7 @@ export default function PaginaGestaoInstituicoes() {
         valor_plano: instituicao.valor_plano ?? 0,
         imagem_perfil: null,
         valor_comissao: instituicao.valor_comissao ?? null,
+        chave_api: instituicao.chave_api ?? "",
       });
       setValorPlanoMasked(currencyFormatter.format(instituicao.valor_plano ?? 0));
       setValorComissaoMasked(currencyFormatter.format(instituicao.valor_comissao ?? 0));
@@ -148,8 +153,8 @@ export default function PaginaGestaoInstituicoes() {
   const validate = () => {
     const errors: Record<string, string> = {};
     if (!formData.nomeInstituicao.trim()) errors.nomeInstituicao = "Obrigatório";
-    if (!emailValido(formData.email)) errors.email = "Email inválido";
-    if (!cnpjValido(formData.cnpj)) errors.cnpj = "CNPJ inválido";
+    if (formData.email && !emailValido(formData.email)) errors.email = "Email inválido";
+    if (formData.cnpj && !cnpjValido(formData.cnpj)) errors.cnpj = "CNPJ inválido";
     if (formData.valor_plano < 0) errors.valor_plano = "Valor inválido";
     if (formData.valor_comissao !== null && formData.valor_comissao < 0) {
       errors.valor_comissao = "Valor de comissão inválido";
@@ -161,15 +166,20 @@ export default function PaginaGestaoInstituicoes() {
   const handleSave = async () => {
     if (!validate()) return;
 
+    // Envia apenas os campos aceitos pelo DTO do backend
     const form = new FormData();
-    if (editing) form.append("idInstituicao", String(editing.idInstituicao));
-    Object.entries(formData).forEach(([k, v]) => {
-      if (k === "imagem_perfil") {
-        if (v instanceof File) form.append("imagem_perfil", v);
-      } else {
-        form.append(k, String(v));
-      }
-    });
+    form.append('nomeInstituicao', formData.nomeInstituicao);
+    form.append('status', formData.status);
+    if (formData.imagem_perfil instanceof File) form.append('imagem_perfil', formData.imagem_perfil);
+    if (formData.valor_plano !== null && formData.valor_plano !== undefined) {
+      form.append('valor_plano', String(formData.valor_plano));
+    }
+    if (formData.valor_comissao !== null && formData.valor_comissao !== undefined) {
+      form.append('valor_comissao', String(formData.valor_comissao));
+    }
+    if (formData.chave_api && formData.chave_api.trim() !== '') {
+      form.append('chave_api', formData.chave_api.trim());
+    }
 
     try {
       if (editing) await instituicoesEmpresaApi.editar(editing.idInstituicao, form);
@@ -196,19 +206,15 @@ export default function PaginaGestaoInstituicoes() {
     const nextStatus: 'A' | 'I' = inst.status === 'A' ? 'I' : 'A';
     try {
       const form = new FormData();
-      form.append("idInstituicao", String(inst.idInstituicao));
-      form.append("nomeInstituicao", inst.nomeInstituicao || "");
-      form.append("nomeFantasia", inst.nomeFantasia || "");
-      form.append("email", inst.email || "");
-      form.append("cnpj", inst.cnpj || "");
-      form.append("celular", inst.celular || "");
-      form.append("cep", inst.cep || "");
-      form.append("endereco", inst.endereco || "");
-      form.append("uf", inst.uf || "");
-      form.append("cidade", inst.cidade || "");
-      form.append("status", nextStatus);                                   // ⬅️ agora mandamos status
-      form.append("valor_plano", String(inst.valor_plano ?? 0));
-      form.append("valor_comissao", String(inst.valor_comissao ?? ""));
+      form.append('nomeInstituicao', inst.nomeInstituicao || '');
+      form.append('status', nextStatus);
+      if (inst.valor_plano !== null && inst.valor_plano !== undefined) {
+        form.append('valor_plano', String(inst.valor_plano));
+      }
+      if (inst.valor_comissao !== null && inst.valor_comissao !== undefined) {
+        form.append('valor_comissao', String(inst.valor_comissao));
+      }
+      if (inst.chave_api) form.append('chave_api', String(inst.chave_api));
       await instituicoesEmpresaApi.editar(inst.idInstituicao, form);
 
       setInstituicoes(prev =>
@@ -245,14 +251,13 @@ export default function PaginaGestaoInstituicoes() {
     const digits = raw.replace(/\D/g, "");
     const cents = parseInt(digits || "0", 10);
     const value = cents / 100;
-    setFormData(f => ({ ...f, valor_plano: value }));
-    setValorPlanoMasked(currencyFormatter.format(value));
+    setFormData(f => ({ ...f, valor_comissao: value }));
+    setValorComissaoMasked(currencyFormatter.format(value));
   };
 
   const disableSave =
     Object.keys(validationErrors).length > 0 ||
-    !formData.nomeInstituicao ||
-    !formData.email;
+    !formData.nomeInstituicao;
 
 
   return (
@@ -290,7 +295,7 @@ export default function PaginaGestaoInstituicoes() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <Table hover responsive bordered size="sm" className="shadow-sm align-middle">
             <thead className="table-dark">
-              <tr><th>Nome</th><th>Email</th><th>CNPJ</th><th>Valor Plano</th><th>Valor Comissao</th><th>Status</th><th>Imagem</th><th style={{ width: 150 }}>Ações</th></tr>
+              <tr><th>Nome</th><th>Email</th><th>CNPJ</th><th>Valor Plano</th><th>Valor Comissao</th><th>Chave API Asaas</th><th>Status</th><th>Imagem</th><th style={{ width: 150 }}>Ações</th></tr>
             </thead>
             <tbody>
               {paginated.length === 0 && (
@@ -306,6 +311,11 @@ export default function PaginaGestaoInstituicoes() {
                   <td>{currencyFormatter.format(inst.valor_plano ?? 0)}</td>
                   <td>{currencyFormatter.format(inst.valor_comissao ?? 0)}</td>
                   <td>
+                    {inst.chave_api
+                      ? <span title={inst.chave_api} className="text-monospace">{inst.chave_api.slice(0, 4)}•••{inst.chave_api.slice(-4)}</span>
+                      : <span className="text-muted small">—</span>}
+                  </td>
+                  <td>
                     <Badge
                       bg={inst.status === 'A' ? "success" : "secondary"}
                       style={{ cursor: 'pointer' }}
@@ -318,7 +328,7 @@ export default function PaginaGestaoInstituicoes() {
                   <td>
                     {inst.imagem_perfil
                       ? <img src={inst.imagem_perfil} alt="Logo" width={36} height={36} style={{ objectFit: 'cover', borderRadius: 4 }} />
-                      : <span className="text-muted small">—</span>}
+                      : <span className="text-muted small">sem imagem</span>}
                   </td>
                   <td>
                     <div className="d-flex gap-2">
@@ -348,14 +358,21 @@ export default function PaginaGestaoInstituicoes() {
       )}
 
       {/* Modal */}
-      <Modal show={showModal} onHide={handleClose} centered size="lg">
+      <Modal
+        show={showModal}
+        onHide={handleClose}
+        centered
+        size="lg"
+        scrollable
+        dialogClassName="instituicao-modal"
+      >
         <Modal.Header closeButton>
           <Modal.Title>{editing ? 'Editar Instituição' : 'Nova Instituição'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
-            <div className="row g-3">
-              <div className="col-md-6">
+            <div className="row g-2">
+              <div className="col-12 col-md-6">
                 <Form.Label className="fw-semibold">Nome Instituição *</Form.Label>
                 <Form.Control
                   value={formData.nomeInstituicao}
@@ -364,15 +381,15 @@ export default function PaginaGestaoInstituicoes() {
                 />
                 <Form.Control.Feedback type="invalid">{validationErrors.nomeInstituicao}</Form.Control.Feedback>
               </div>
-              <div className="col-md-6">
+              <div className="col-12 col-md-6">
                 <Form.Label className="fw-semibold">Nome Fantasia</Form.Label>
                 <Form.Control
                   value={formData.nomeFantasia}
                   onChange={e => setFormData(f => ({ ...f, nomeFantasia: e.target.value }))}
                 />
               </div>
-              <div className="col-md-6">
-                <Form.Label className="fw-semibold">Email *</Form.Label>
+              <div className="col-12 col-md-6">
+                <Form.Label className="fw-semibold">Email</Form.Label>
                 <Form.Control
                   type="email"
                   value={formData.email}
@@ -381,8 +398,8 @@ export default function PaginaGestaoInstituicoes() {
                 />
                 <Form.Control.Feedback type="invalid">{validationErrors.email}</Form.Control.Feedback>
               </div>
-              <div className="col-md-6">
-                <Form.Label className="fw-semibold">CNPJ *</Form.Label>
+              <div className="col-12 col-md-6">
+                <Form.Label className="fw-semibold">CNPJ</Form.Label>
                 <Form.Control
                   value={formData.cnpj}
                   onChange={e => setFormData(f => ({ ...f, cnpj: e.target.value }))}
@@ -390,42 +407,42 @@ export default function PaginaGestaoInstituicoes() {
                 />
                 <Form.Control.Feedback type="invalid">{validationErrors.cnpj}</Form.Control.Feedback>
               </div>
-              <div className="col-md-6">
+              <div className="col-12 col-md-6">
                 <Form.Label className="fw-semibold">Celular</Form.Label>
                 <Form.Control
                   value={formData.celular}
                   onChange={e => setFormData(f => ({ ...f, celular: e.target.value }))}
                 />
               </div>
-              <div className="col-md-6">
+              <div className="col-12 col-md-6">
                 <Form.Label className="fw-semibold">CEP</Form.Label>
                 <Form.Control
                   value={formData.cep}
                   onChange={e => setFormData(f => ({ ...f, cep: e.target.value }))}
                 />
               </div>
-              <div className="col-md-6">
+              <div className="col-12 col-md-6">
                 <Form.Label className="fw-semibold">Endereço</Form.Label>
                 <Form.Control
                   value={formData.endereco}
                   onChange={e => setFormData(f => ({ ...f, endereco: e.target.value }))}
                 />
               </div>
-              <div className="col-md-2">
+              <div className="col-6 col-md-2">
                 <Form.Label className="fw-semibold">UF</Form.Label>
                 <Form.Control
                   value={formData.uf}
                   onChange={e => setFormData(f => ({ ...f, uf: e.target.value }))}
                 />
               </div>
-              <div className="col-md-4">
+              <div className="col-6 col-md-4">
                 <Form.Label className="fw-semibold">Cidade</Form.Label>
                 <Form.Control
                   value={formData.cidade}
                   onChange={e => setFormData(f => ({ ...f, cidade: e.target.value }))}
                 />
               </div>
-              <div className="col-md-4">
+              <div className="col-12 col-md-4">
                 <Form.Label className="fw-semibold">Valor do Plano</Form.Label>
                 <Form.Control
                   value={valorPlanoMasked}
@@ -434,7 +451,7 @@ export default function PaginaGestaoInstituicoes() {
                 />
                 <Form.Control.Feedback type="invalid">{validationErrors.valor_plano}</Form.Control.Feedback>
               </div>
-              <div className="col-md-4">
+              <div className="col-12 col-md-4">
                 <Form.Label className="fw-semibold">Valor da Comissão</Form.Label>
                 <Form.Control
                   value={valorComissaoMasked}
@@ -443,15 +460,25 @@ export default function PaginaGestaoInstituicoes() {
                 />
                 <Form.Control.Feedback type="invalid">{validationErrors.valor_comissao}</Form.Control.Feedback>
               </div>
-              <div className="col-md-4 d-flex align-items-end">
+              <div className="col-12">
+                <Form.Label className="fw-semibold">Chave API Asaas da Instituição</Form.Label>
+                <Form.Control
+                  type="text"
+                  placeholder="Ex: $live_xxx... (opcional)"
+                  value={formData.chave_api || ""}
+                  onChange={e => setFormData(f => ({ ...f, chave_api: e.target.value }))}
+                />
+                <div className="form-text">Se preenchida, esta chave será usada nas cobranças/assinaturas desta instituição. Pode começar com "$".</div>
+              </div>
+              <div className="col-12 col-md-4 d-flex align-items-end">
                 <Form.Check
                   type="switch"
                   label={formData.status === 'A' ? "Ativa" : "Inativa"}
                   checked={formData.status === 'A'}
-                  onChange={e => setFormData(f => ({ ...f, status: e.target.checked ? 'A' : 'I' }))}  // ⬅️ troca status
+                  onChange={e => setFormData(f => ({ ...f, status: e.target.checked ? 'A' : 'I' }))}
                 />
               </div>
-              <div className="col-md-8">
+              <div className="col-12 col-md-8">
                 <Form.Label className="fw-semibold">Imagem / Logo</Form.Label>
                 <Form.Control
                   type="file"
@@ -470,13 +497,15 @@ export default function PaginaGestaoInstituicoes() {
                   }}
                 />
               </div>
-              <div className="col-md-4 d-flex align-items-center justify-content-center">
-                {previewImagem && (
+              <div className="col-12 col-md-4 d-flex align-items-center justify-content-center">
+                {previewImagem ? (
                   <img
                     src={previewImagem}
                     alt="preview"
-                    style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 6, objectFit: 'cover', boxShadow: '0 0 0 1px #ddd' }}
+                    style={{ maxWidth: '100%', maxHeight: 110, borderRadius: 6, objectFit: 'cover', boxShadow: '0 0 0 1px #ddd' }}
                   />
+                ) : (
+                  <span className="text-muted small">sem imagem</span>
                 )}
               </div>
             </div>

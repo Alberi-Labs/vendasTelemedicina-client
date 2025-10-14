@@ -13,6 +13,8 @@ import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
+import InputAdornment from "@mui/material/InputAdornment";
+import IconButton from "@mui/material/IconButton";
 import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -50,6 +52,8 @@ export default function CadastroPf() {
     const [estados, setEstados] = useState<{ sigla: string; nome: string }[]>([]);
     const [cidades, setCidades] = useState<{ nome: string; id: string }[]>([]);
     const [loading, setLoading] = useState(false);
+    const [buscandoCep, setBuscandoCep] = useState(false);
+    const [enderecoEditavel, setEnderecoEditavel] = useState(false);
     const [showPopup, setShowPopup] = useState(false);
     const [paymentLink, setPaymentLink] = useState("");
     const [mensagemDeErro, setMensagemDeErro] = useState<string | null>(null);
@@ -98,29 +102,41 @@ export default function CadastroPf() {
         }
     }, [formData.uf]);
 
-    useEffect(() => {
-        if (/^\d{5}-\d{3}$/.test(formData.cep)) {
-            fetch(`https://viacep.com.br/ws/${formData.cep.replace("-", "")}/json/`)
-                .then((res) => res.json())
-                .then((data) => {
-                    if (!data.erro) {
-                        setFormData((prev) => ({
-                            ...prev,
-                            endereco: data.logradouro,
-                            bairro: data.bairro,
-                            uf: data.uf,
-                            cidade: data.localidade,
-                        }));
-                        setErros((prev) => ({ ...prev, cep: "" }));
-                    } else {
-                        setErros((prev) => ({ ...prev, cep: "CEP inválido!" }));
-                    }
-                })
-                .catch(() => setErros((prev) => ({ ...prev, cep: "Erro ao buscar CEP" })));
-        } else {
-            setFormData((prev) => ({ ...prev, endereco: "", bairro: "", uf: "", cidade: "" }));
+    const handleBuscarCep = async () => {
+        const cepLimpo = formData.cep.replace(/\D/g, "");
+        if (cepLimpo.length !== 8) {
+            setErros(prev => ({ ...prev, cep: 'CEP inválido' }));
+            return;
         }
-    }, [formData.cep]);
+        setBuscandoCep(true);
+        try {
+            const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+            const data = await res.json();
+            if (data?.erro) {
+                setErros(prev => ({ ...prev, cep: 'CEP não encontrado' }));
+                return;
+            }
+            setFormData(prev => ({
+                ...prev,
+                endereco: data.logradouro || prev.endereco,
+                bairro: data.bairro || prev.bairro,
+                uf: data.uf || prev.uf,
+                cidade: data.localidade || prev.cidade,
+            }));
+            setErros(prev => ({ ...prev, cep: '' }));
+            if (!data.logradouro) {
+                // CEP "geral" (por cidade/bairro), ViaCEP não traz logradouro
+                setErros(prev => ({ ...prev, endereco: 'CEP geral — informe o logradouro manualmente.' }));
+            } else {
+                setErros(prev => ({ ...prev, endereco: '' }));
+            }
+            setEnderecoEditavel(true); // libera edição após busca
+        } catch (e) {
+            setErros(prev => ({ ...prev, cep: 'Erro ao buscar CEP' }));
+        } finally {
+            setBuscandoCep(false);
+        }
+    };
 
     const formatCpf = (value: string) => {
         return value
@@ -441,6 +457,15 @@ export default function CadastroPf() {
                                             setFormData(prev => ({ ...prev, cep: v }));
                                             if (erros.cep) setErros(prev => ({ ...prev, cep: '' }));
                                         }}
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton onClick={handleBuscarCep} disabled={buscandoCep} edge="end" aria-label="Buscar CEP">
+                                                        <i className="bi bi-search" />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            )
+                                        }}
                                         error={!!erros.cep}
                                         helperText={erros.cep}
                                     />
@@ -452,10 +477,15 @@ export default function CadastroPf() {
                                         fullWidth
                                         value={formData.endereco}
                                         onChange={handleChangeFormat}
-                                        InputProps={{ readOnly: true }}
+                                        InputProps={{ readOnly: !enderecoEditavel }}
                                         error={!!erros.endereco}
                                         helperText={erros.endereco}
                                     />
+                                    {!enderecoEditavel && (
+                                        <Box mt={0.5} sx={{ fontSize: 12, color: '#666' }}>
+                                            Use a lupa para buscar pelo CEP e editar o endereço.
+                                        </Box>
+                                    )}
                                 </Grid>
                                 <Grid item xs={12} sm={4} md={2}>
                                     <TextField

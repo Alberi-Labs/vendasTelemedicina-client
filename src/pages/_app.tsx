@@ -29,6 +29,16 @@ export default function App({ Component, pageProps }: AppProps) {
     }
   }, [router]);
 
+  // Escala global via font-size do documento (sem alterar zoom do navegador)
+  useEffect(() => {
+    const raw = process.env.NEXT_PUBLIC_APP_FONT_SCALE;
+    const scale = raw ? Number(raw) : 0.9; // default 90%
+    const valid = isFinite(scale) && scale > 0 && scale <= 1 ? scale : 0.9;
+    const prev = document.documentElement.style.fontSize;
+    document.documentElement.style.fontSize = `${valid * 100}%`;
+    return () => { document.documentElement.style.fontSize = prev; };
+  }, []);
+
   return (
     <AuthProvider>
       <Head>

@@ -214,37 +214,48 @@ export default function RelatorioVendas() {
     return filtradoStatus;
   }, [vendas, filtro, mesSelecionado, quinzenaSelecionada, statusView]);
 
-  const valorTotalVendas = useMemo(() => {
-    return vendasFiltradas.reduce((acc, venda) => acc + parseFloat(venda.valor), 0);
+  // Excluir cancelados e não pagos de todos os cálculos do dashboard
+  const vendasContabilizaveis = useMemo(() => {
+    const aprovadosSet = new Set(['RECEIVED','CONFIRMED','RECEIVED_IN_CASH']);
+    return vendasFiltradas.filter(v => {
+      const s = (v.status_pagamento || '').toLowerCase();
+      const pago = aprovadosSet.has(v.status_pagamento) || s.includes('pago') || s.includes('paid') || s.includes('received') || s.includes('confirmed');
+      const cancelado = s.includes('cancel');
+      return pago && !cancelado;
+    });
   }, [vendasFiltradas]);
 
-  const totalVendas = vendasFiltradas.length;
+  const valorTotalVendas = useMemo(() => {
+    return vendasContabilizaveis.reduce((acc, venda) => acc + parseFloat(venda.valor), 0);
+  }, [vendasContabilizaveis]);
+
+  const totalVendas = vendasContabilizaveis.length;
 
   const ticketMedio = useMemo(() => {
     return totalVendas > 0 ? valorTotalVendas / totalVendas : 0;
   }, [totalVendas, valorTotalVendas]);
 
   const vendasPorDia = useMemo(() => {
-    return vendasFiltradas.reduce((acc, venda) => {
+    return vendasContabilizaveis.reduce((acc, venda) => {
       acc[venda.data] = (acc[venda.data] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-  }, [vendasFiltradas]);
+  }, [vendasContabilizaveis]);
 
   const vendasPorPagamento = useMemo(() => {
-    return vendasFiltradas.reduce((acc, venda) => {
+    return vendasContabilizaveis.reduce((acc, venda) => {
       acc[venda.forma_pagamento] = (acc[venda.forma_pagamento] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-  }, [vendasFiltradas]);
+  }, [vendasContabilizaveis]);
   
   const vendasPorVendedor = useMemo(() => {
-    return vendasFiltradas.reduce((acc, v: any) => {
+    return vendasContabilizaveis.reduce((acc, v: any) => {
       if (!v.nome_usuario) return acc;
       acc[v.nome_usuario] = (acc[v.nome_usuario] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-  }, [vendasFiltradas]);
+  }, [vendasContabilizaveis]);
 
   const statusLabels = useMemo(() => Object.keys(statusDistribuicao), [statusDistribuicao]);
   const statusValues = useMemo(() => Object.values(statusDistribuicao), [statusDistribuicao]);
@@ -317,12 +328,12 @@ export default function RelatorioVendas() {
 
   // ==== CÁLCULOS AVANÇADOS PARA DASHBOARD ====
   const kpisAvancados = useMemo(() => {
-    if (!vendasFiltradas.length) return null;
+    if (!vendasContabilizaveis.length) return null;
     // Faturamento numérico
     const faturamento = valorTotalVendas;
     // Agrupar por vendedor (valor)
     const porVendedorValor: Record<string,{total:number; valor:number}> = {};
-    vendasFiltradas.forEach(v => {
+    vendasContabilizaveis.forEach(v => {
       const key = v.nome_usuario || 'Sem Vendedor';
       if (!porVendedorValor[key]) porVendedorValor[key] = { total:0, valor:0};
       porVendedorValor[key].total += 1;
@@ -344,12 +355,12 @@ export default function RelatorioVendas() {
     })).sort((a,b)=>b.count-a.count).slice(0,4);
 
     // Média por dia (quantidade e valor)
-    const diasUnicos = new Set(vendasFiltradas.map(v=>v.data));
-    const mediaQtdDia = vendasFiltradas.length / (diasUnicos.size || 1);
+  const diasUnicos = new Set(vendasContabilizaveis.map(v=>v.data));
+  const mediaQtdDia = vendasContabilizaveis.length / (diasUnicos.size || 1);
     const mediaValorDia = faturamento / (diasUnicos.size || 1);
 
     // Formas de pagamento (percentual)
-    const totalFP = Object.values(vendasPorPagamento).reduce((a,b)=>a+b,0)||1;
+  const totalFP = Object.values(vendasPorPagamento).reduce((a,b)=>a+b,0)||1;
     const formasPct = Object.entries(vendasPorPagamento).map(([k,v]) => ({
       forma: k,
       count: v,
@@ -365,7 +376,7 @@ export default function RelatorioVendas() {
       mediaValorDia,
       formasPct,
     };
-  }, [vendasFiltradas, valorTotalVendas, vendasPorDia, statusDistribuicao, vendasPorPagamento]);
+  }, [vendasContabilizaveis, valorTotalVendas, vendasPorDia, statusDistribuicao, vendasPorPagamento]);
 
   const copiarLink = (link: string) => {
     navigator.clipboard.writeText(link);

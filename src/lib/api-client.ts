@@ -4,10 +4,15 @@ export const apiClient = {
   async request(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
 
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+    const baseHeaders: Record<string, string> = isFormData
+      ? {}
+      : { 'Content-Type': 'application/json' };
+
     const config: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
+        ...baseHeaders,
+        ...(options.headers || {}),
       },
       ...options,
     };
@@ -494,6 +499,7 @@ export const dependenteApi = {
   cadastrar: (dados: {
     nomeDependente: string;
     cpfDependente: string;
+    nascimentoDependente?: string;
     emailDependente?: string;
     telefoneDependente?: string;
     parentesco: string;

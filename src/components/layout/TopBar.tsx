@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import Link from 'next/link';
+import { Modal, Button, Form } from 'react-bootstrap';
+import { apiClient } from '@/lib/api-client';
 
 export default function TopBar() {
   const { user } = useAuth();
@@ -102,6 +104,26 @@ export default function TopBar() {
     minWidth: 160,
   };
 
+  const [pwdOpen, setPwdOpen] = useState(false);
+  const [senhaAtual, setSenhaAtual] = useState('');
+  const [novaSenha, setNovaSenha] = useState('');
+  const [savingPwd, setSavingPwd] = useState(false);
+  const [pwdMsg, setPwdMsg] = useState<string | null>(null);
+
+  const handleAlterarSenha = async () => {
+    if (!user?.id) { setPwdMsg('Usuário não identificado.'); return; }
+    if (!senhaAtual || !novaSenha || novaSenha.length < 6) { setPwdMsg('Preencha os campos. A nova senha deve ter ao menos 6 caracteres.'); return; }
+    setSavingPwd(true); setPwdMsg(null);
+    try {
+      const resp = await apiClient.put('/usuario/alterarSenha', { id: user.id, senhaAtual, novaSenha });
+      if (!resp.success) throw new Error(resp.error || 'Falha ao alterar senha');
+      setPwdMsg('Senha alterada com sucesso.');
+      setSenhaAtual(''); setNovaSenha('');
+    } catch (e:any) {
+      setPwdMsg(e.message || 'Erro ao alterar senha');
+    } finally { setSavingPwd(false); }
+  };
+
   return (
     <header style={headerStyle}>
       <div style={leftGroupStyle}>
@@ -151,7 +173,41 @@ export default function TopBar() {
             {userRole.toUpperCase()}
           </div>
         )}
+        <div style={{ marginTop: 6 }}>
+          <button
+            onClick={() => setPwdOpen(true)}
+            style={{ background: 'transparent', border: '1px solid #666', color: '#fff', borderRadius: 6, padding: '2px 8px', fontSize: 12, cursor: 'pointer' }}
+          >
+            Alterar Senha
+          </button>
+        </div>
       </div>
+
+      <Modal show={pwdOpen} onHide={() => setPwdOpen(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Alterar Senha</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {pwdMsg && <div className="alert alert-info py-2">{pwdMsg}</div>}
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Senha atual</Form.Label>
+              <Form.Control type="password" value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>Nova senha</Form.Label>
+              <Form.Control type="password" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} />
+              <Form.Text>Mínimo de 6 caracteres.</Form.Text>
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setPwdOpen(false)}>Cancelar</Button>
+          <Button variant="primary" onClick={handleAlterarSenha} disabled={savingPwd}>
+            {savingPwd ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </header>
   );
 }
