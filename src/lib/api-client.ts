@@ -763,6 +763,10 @@ export const vendaTelemedicinaApiCompat = {
   cancelarAssinatura: (cancelarData: { idVenda: number; motivo?: string }) =>
     apiClient.post('/vendaTelemedicina/cancelar-assinatura', cancelarData),
 
+  // Cancelar por cliente (quando não há venda/assinatura específica)
+  cancelarCliente: (data: { cpf: string; motivo?: string }) =>
+    apiClient.post('/vendaTelemedicina/cancelar-cliente', data),
+
   // Métodos de delete
   deletarVenda: (idVenda: number) => {
     return apiClient.delete(`/vendaTelemedicina/deletar/${idVenda}`);
@@ -799,6 +803,9 @@ export const asaasApiClient = {
 
     return apiClient.get(endpoint);
   },
+
+  deletarCobrancasLote: (paymentIds: string[]) =>
+    apiClient.post('/asaas-api/cobrancas/deletar-lote', { paymentIds }),
 
   buscarCobrancasCliente: (customerId: string, filtros: {
     status?: string;

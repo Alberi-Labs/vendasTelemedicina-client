@@ -215,7 +215,14 @@ export default function PaginaGestaoClientes() {
       const vendasCliente = vendasApi.filter((v: any) => v.id_cliente === cliente.idCliente);
 
       if (!vendasCliente || vendasCliente.length === 0) {
-        alert("Nenhuma assinatura encontrada para este cliente.");
+        // Fallback: cancelar por CPF do cliente (sem venda)
+        const resp = await vendaTelemedicinaApiCompat.cancelarCliente({ cpf: cliente.cpf, motivo: 'Cancelamento solicitado via gestão de clientes' });
+        if ((resp as any)?.success) {
+          alert(resp.message || 'Cancelamento processado.');
+          carregarClientes();
+        } else {
+          alert(`Não foi possível processar o cancelamento: ${(resp as any)?.error || 'erro desconhecido'}`);
+        }
         return;
       }
 

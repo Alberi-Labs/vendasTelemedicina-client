@@ -10,6 +10,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
 import TableBody from '@mui/material/TableBody';
+import Checkbox from '@mui/material/Checkbox';
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
@@ -63,6 +64,9 @@ export const ChargesModal: React.FC<ChargesModalProps> = ({ open, onClose, cpf, 
     intervalMonths: 1,
   });
   const [showGenerate, setShowGenerate] = useState(false);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const selectedIds = useMemo(() => Object.keys(selected).filter(id => selected[id]), [selected]);
+  const [deletingBatch, setDeletingBatch] = useState(false);
 
   useEffect(() => {
     if (!open || (!cpf && !email)) return;
@@ -142,6 +146,29 @@ export const ChargesModal: React.FC<ChargesModalProps> = ({ open, onClose, cpf, 
 
   const reload = () => setRefreshKey(k => k + 1);
 
+  const toggleSelect = (id?: string) => {
+    if (!id) return;
+    setSelected(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const clearSelection = () => setSelected({});
+
+  const deletarSelecionadas = async () => {
+    if (!selectedIds.length) return;
+    setDeletingBatch(true);
+    try {
+      const resp = await asaasApiClient.deletarCobrancasLote(selectedIds);
+      if ((resp as any)?.success) {
+        clearSelection();
+        reload();
+      } else {
+        alert((resp as any)?.error || 'Falha ao deletar cobranças selecionadas');
+      }
+    } catch (e: any) {
+      alert(e.message || 'Erro ao deletar cobranças');
+    } finally { setDeletingBatch(false); }
+  };
+
   const truncate = (text?: string, max = 60) => {
     if (!text) return '—';
     return text.length > max ? text.slice(0, max - 1) + '…' : text;
@@ -193,9 +220,13 @@ export const ChargesModal: React.FC<ChargesModalProps> = ({ open, onClose, cpf, 
         <Typography variant="caption" sx={{ ml: 1, opacity: .7 }}>({filtered.length})</Typography>
       </DialogTitle>
       <DialogContent dividers>
-        <Box display="flex" gap={1} mb={2}>
+        <Box display="flex" gap={1} mb={2} alignItems="center" flexWrap="wrap">
           <Button variant="contained" size="small" onClick={() => setShowGenerate(true)}>Gerar Cobrança(s)</Button>
           <Button size="small" variant="outlined" startIcon={<RefreshIcon />} onClick={reload}>Atualizar</Button>
+          <Box flex={1} />
+          <Button size="small" color="error" disabled={!selectedIds.length || deletingBatch} onClick={deletarSelecionadas}>
+            Excluir selecionadas ({selectedIds.length})
+          </Button>
         </Box>
         {/* filtros */}
         <Box display="flex" gap={2} flexWrap="wrap" mb={2}>
@@ -252,6 +283,9 @@ export const ChargesModal: React.FC<ChargesModalProps> = ({ open, onClose, cpf, 
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
+                <TableCell padding="checkbox">
+                  <Checkbox disabled />
+                </TableCell>
                 <TableCell>Descrição</TableCell>
                 <TableCell>Tipo</TableCell>
                 <TableCell>Valor</TableCell>
@@ -263,7 +297,10 @@ export const ChargesModal: React.FC<ChargesModalProps> = ({ open, onClose, cpf, 
             </TableHead>
             <TableBody>
               {filtered.map((c, i) => (
-                <TableRow key={i} hover>
+                <TableRow key={c.id || i} hover>
+                  <TableCell padding="checkbox">
+                    <Checkbox checked={!!selected[c.id || '']} onChange={() => toggleSelect(c.id)} disabled={!c.id || c.status === 'RECEIVED'} />
+                  </TableCell>
                   <TableCell title={c.descricao || ''}>{truncate(c.descricao, 60)}</TableCell>
                   <TableCell>{c.billingType || '—'}</TableCell>
                   <TableCell>{typeof c.valor === 'number' ? `R$ ${c.valor.toFixed(2).replace('.', ',')}` : '—'}</TableCell>
