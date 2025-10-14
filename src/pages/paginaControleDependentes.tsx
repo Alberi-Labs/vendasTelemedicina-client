@@ -23,6 +23,10 @@ export default function PaginaControleDependentes() {
   const [showAviso, setShowAviso] = useState(false);
   const [avisoMensagem, setAvisoMensagem] = useState("");
   const [avisoTipo, setAvisoTipo] = useState<"success" | "warning" | "danger">("warning");
+  // Edição de nascimento
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editNascimento, setEditNascimento] = useState<string>("");
+  const [editDependente, setEditDependente] = useState<Dependente | null>(null);
   // Utilitário igual ao usado na página do titular (Apolice)
   const formatarDataVigencia = (data: string | undefined): string => {
     if (!data) return "—";
@@ -52,8 +56,8 @@ const buscarDependentesDoServidor = async () => {
     const lista = Array.isArray(resposta?.dependentes || resposta?.data?.dependentes)
       ? (resposta.dependentes || resposta.data.dependentes) : [];
 
-    const adaptado = lista.map((dep: any, i: number) => ({
-      id: i + 1,
+    const adaptado = lista.map((dep: any) => ({
+      id: dep.id, // id real do banco, usado para atualizar
       nome: dep.nome,
       cpf: dep.cpf,
       nascimento: dep.nascimento,
@@ -253,6 +257,25 @@ const buscarDependentesDoServidor = async () => {
                         <i className="bi bi-credit-card"></i>
                         Gerar Carteirinha
                       </Button>
+                      {dep.id && (
+                        <Button
+                          variant="outline-secondary"
+                          size="sm"
+                          className="d-inline-flex align-items-center gap-2 ms-2"
+                          onClick={() => {
+                            setEditDependente(dep);
+                            // Valor padrão compatível com input type=date
+                            const padrao = dep.nascimento.includes('/')
+                              ? dep.nascimento.split('/').reverse().join('-')
+                              : dep.nascimento;
+                            setEditNascimento(padrao);
+                            setShowEditModal(true);
+                          }}
+                        >
+                          <i className="bi bi-pencil-square"></i>
+                          Editar Nascimento
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -327,6 +350,56 @@ const buscarDependentesDoServidor = async () => {
             ) : (
               "Salvar"
             )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Modal de edição de nascimento */}
+      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Editar data de nascimento</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Data de Nascimento</Form.Label>
+              <Form.Control
+                type="date"
+                value={editNascimento}
+                onChange={(e) => setEditNascimento(e.target.value)}
+              />
+            </Form.Group>
+            {editDependente && (
+              <div className="text-muted small">Dependente: {editDependente.nome} • CPF: {editDependente.cpf}</div>
+            )}
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            onClick={async () => {
+              if (!editDependente?.id || !editNascimento) return;
+              try {
+                const resp = await dependenteApi.atualizar(editDependente.id, { nascimento: editNascimento });
+                if ((resp as any)?.success === false) {
+                  throw new Error((resp as any)?.error || 'Falha ao atualizar');
+                }
+                setAvisoMensagem('Nascimento atualizado com sucesso.');
+                setAvisoTipo('success');
+                setShowAviso(true);
+                setShowEditModal(false);
+                await buscarDependentesDoServidor();
+              } catch (e: any) {
+                setAvisoMensagem(e.message || 'Erro ao atualizar nascimento.');
+                setAvisoTipo('danger');
+                setShowAviso(true);
+              }
+            }}
+          >
+            Salvar
           </Button>
         </Modal.Footer>
       </Modal>
