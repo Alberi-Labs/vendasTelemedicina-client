@@ -277,6 +277,12 @@ export default function CadastroPf() {
                 const respostaAssinatura = await vendaTelemedicinaApiCompat.criarAssinatura(dadosAssinatura);
                 
                 if (!respostaAssinatura.success || !respostaAssinatura.paymentLink) {
+                    const rawError = String(respostaAssinatura.error || '');
+                    // Tratamento específico: Asaas -> "O campo value deve ser informado"
+                    if (/\bvalue\b/i.test(rawError) && /deve ser informado/i.test(rawError)) {
+                        setMensagemDeErro('O campo "Valor do plano" deve ser definido antes de fazer a venda. Peça ao administrador para configurar o Valor do plano na instituição.');
+                        return;
+                    }
                     throw new Error(respostaAssinatura.error || 'Erro ao criar assinatura');
                 }
                 
@@ -285,7 +291,12 @@ export default function CadastroPf() {
                 setShowPopup(true);
             } catch (error: any) {
                 console.error('Erro no processamento da venda:', error);
-                setMensagemDeErro(error.message || 'Erro inesperado.');
+                const msg: string = String(error?.message || '');
+                if (/\bvalue\b/i.test(msg) && /deve ser informado/i.test(msg)) {
+                    setMensagemDeErro('O campo "Valor do plano" deve ser definido antes de fazer a venda. Peça ao administrador para configurar o Valor do plano na instituição.');
+                } else {
+                    setMensagemDeErro(error.message || 'Erro inesperado.');
+                }
                 return;
             } finally {
                 setLoading(false);
@@ -640,6 +651,7 @@ export default function CadastroPf() {
                     mensagem={mensagemDeErro}
                     tipo="danger"
                     duracao={5000}
+                    offsetTop={20}
                     onClose={() => setMensagemDeErro(null)}
                 />
             )}
