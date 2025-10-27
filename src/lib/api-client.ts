@@ -62,7 +62,6 @@ export const authApi = {
   login: (cpf: string, password: string) =>
     apiClient.post('/auth/login', { cpf, password }),
 };
-
 export const clientesApi = {
   cadastrar: (clienteData: any) =>
     apiClient.post('/clientes/cadastrar', clienteData),

@@ -88,6 +88,7 @@ export default function PaginaGestaoClientes() {
         filtros.id_instituicao = parseInt(instituicaoFiltro, 10);
       }
       const data = await clientesApi.consultar(filtros);
+      
       const lista = data.clientes || data.data?.clientes || [];
       setClientes(lista);
     } catch (e) {
