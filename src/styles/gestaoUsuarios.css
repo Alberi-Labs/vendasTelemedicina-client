@@ -1,0 +1,21 @@
+.gestao-usuarios-filtros .form-label { font-size: .7rem; letter-spacing: .5px; }
+.gestao-usuarios-filtros .input-group-text { border-right: 0; }
+.gestao-usuarios-filtros .form-control:focus { box-shadow: 0 0 0 .15rem rgba(25,135,84,.25); }
+
+.table-warning { --bs-table-bg: #fff8e1; }
+
+.badge.text-uppercase { letter-spacing: .5px; }
+
+/* Hover refinement */
+.table-hover tbody tr:hover { background-color: #f6f9fc; }
+
+/* Subtle card-like wrapper possible future use */
+.gestao-usuarios-wrapper { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem 1.5rem; }
+
+/* Responsive tightening */
+@media (max-width: 768px) {
+  .gestao-usuarios-filtros { flex-direction: column; }
+}
+
+.table-sticky thead th { position: sticky; top: 0; z-index: 1; }
+.table-sticky { border-radius: 10px; overflow: hidden; }

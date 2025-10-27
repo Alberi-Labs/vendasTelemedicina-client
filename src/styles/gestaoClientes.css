@@ -1,0 +1,7 @@
+/* Estilo complementar para gestão de clientes, mantendo coesão visual */
+.gestao-clientes-table tbody tr:hover { background: #f8fafc; }
+
+.gestao-clientes-stats { font-size: .75rem; letter-spacing: .5px; text-transform: uppercase; color: #64748b; }
+
+/* Chips spacing inline (fallback if needed) */
+.chip-inline + .chip-inline { margin-left: .5rem; }

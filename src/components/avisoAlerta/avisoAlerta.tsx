@@ -6,9 +6,10 @@ interface AvisoAlertaProps {
   tipo?: "primary" | "secondary" | "success" | "danger" | "warning" | "info" | "light" | "dark";
   duracao?: number;
   onClose?: () => void;
+  offsetTop?: number;
 }
 
-export default function AvisoAlerta({ mensagem, tipo = "danger", duracao = 5000, onClose }: AvisoAlertaProps) {
+export default function AvisoAlerta({ mensagem, tipo = "danger", duracao = 5000, onClose, offsetTop = 0 }: AvisoAlertaProps) {
   const [show, setShow] = useState(false);
   const [progress, setProgress] = useState(100);
 
@@ -35,7 +36,7 @@ export default function AvisoAlerta({ mensagem, tipo = "danger", duracao = 5000,
   }, [mensagem, duracao, onClose]);
 
   return (
-    <ToastContainer position="top-end" className="p-3">
+    <ToastContainer position="top-end" className="p-3" style={{ top: offsetTop }}>
       <Toast
         bg={tipo}
         show={show}

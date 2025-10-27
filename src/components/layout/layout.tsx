@@ -5,39 +5,62 @@ import "../../styles/globals.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import FooterBar from "./footerBar";
 import Sidebar from "./sideBar";
+import AvisoManutencao from "../avisoManutencao/AvisoManutencao";
+import { AtendimentoProvider } from "@/app/context/AtendimentoContex";
+import { useAuth } from "@/app/context/AuthContext";
+import TopBar from './TopBar';
+import Breadcrumbs from '@/components/navigation/Breadcrumbs';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { user, isAuthLoaded } = useAuth();
+
+  const isLoginPage = router.pathname === '/' || router.pathname === '/loginCliente' || router.pathname === '/loginFuncionario' || router.pathname === '/vendaOnlline';
+
+  // Verifica se o sistema está em manutenção baseado na variável de ambiente
+  const isMaintenanceMode = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true';
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setIsAuthenticated(true);
-    } else {
+    if (isAuthLoaded && !user && !isLoginPage) {
+      // Redireciona para a página de login, exceto se já estiver na página de login
       router.push("/");
     }
-    setLoading(false);
-  }, [router]);
+  }, [user, isAuthLoaded, router, isLoginPage]);
 
-  if (loading) {
+  if (!isAuthLoaded) {
     return <div style={{ textAlign: "center", paddingTop: "50px" }}>Carregando...</div>;
   }
 
-  if (!isAuthenticated) {
-    return null;
+  if (!user && !isLoginPage) {
+    return <div style={{ textAlign: "center", paddingTop: "50px" }}>Redirecionando...</div>;
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", width: "100vw", backgroundColor: "white" }}>
-      <Sidebar />
+  <AtendimentoProvider>
+    <AvisoManutencao show={isMaintenanceMode} />
+    {!isLoginPage && <TopBar />}
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        width: "100vw",
+        backgroundColor: "white",
+        marginTop: isMaintenanceMode ? "80px" : (!isLoginPage ? "54px" : "0px"), 
+      }}
+    >
+      {!isLoginPage && <Sidebar />}
       <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-        <Container style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          {children}
-        </Container>
-        <FooterBar />
+        <div style={{ backgroundColor: "#f1f5f9", flex: 1, display: "flex", flexDirection: "column" }}>
+          <main style={{ flex: 1 }}>
+            <Breadcrumbs />
+            {children}
+          </main>
+        </div>
+
+        {!isLoginPage && <FooterBar />}
       </div>
     </div>
-  );
+  </AtendimentoProvider>
+);
+
 }

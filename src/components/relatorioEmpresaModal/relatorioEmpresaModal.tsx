@@ -13,19 +13,19 @@ interface Vida {
     created_at?: string;
 }
 
-interface Empresa {
-    idEmpresa: number;
-    nomeEmpresa: string;
+interface Instituicao {
+    idInstituicao: number;
+    nomeInstituicao: string;
 }
 
 interface RelatorioEmpresaModalProps {
     show: boolean;
     onClose: () => void;
-    empresa: Empresa | null;
+    instituicao: Instituicao | null;
     vidas: Vida[];
 }
 
-const RelatorioEmpresaModal: React.FC<RelatorioEmpresaModalProps> = ({ show, onClose, empresa, vidas }) => {
+const RelatorioEmpresaModal: React.FC<RelatorioEmpresaModalProps> = ({ show, onClose, instituicao, vidas }) => {
     const formatarData = (data?: string): string => {
         if (!data) return "-";
         const dataObj = new Date(data);
@@ -33,14 +33,14 @@ const RelatorioEmpresaModal: React.FC<RelatorioEmpresaModalProps> = ({ show, onC
     };
 
     const gerarPDF = () => {
-        if (!empresa) return;
+        if (!instituicao) return;
 
         const doc = new jsPDF();
         doc.setFont("helvetica");
 
         // Título
         doc.setFontSize(18);
-        doc.text(`Relatório da Empresa: ${empresa.nomeEmpresa}`, 14, 20);
+        doc.text(`Relatório da Instituicao: ${instituicao.nomeInstituicao}`, 14, 20);
 
         // Informações gerais
         doc.setFontSize(12);
@@ -74,19 +74,19 @@ const RelatorioEmpresaModal: React.FC<RelatorioEmpresaModalProps> = ({ show, onC
         doc.text(`Relatório gerado em: ${dataAtual}`, 14, doc.internal.pageSize.height - 10);
 
         // Salvar o arquivo
-        doc.save(`Relatorio_${empresa.nomeEmpresa}.pdf`);
+        doc.save(`Relatorio_${instituicao.nomeInstituicao}.pdf`);
     };
 
     return (
         <Modal show={show} onHide={onClose} centered size="lg">
             <Modal.Header closeButton>
-                <Modal.Title>Relatório da Empresa</Modal.Title>
+                <Modal.Title>Relatório da Instituicao</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                {empresa && (
+                {instituicao && (
                     <>
                         <div className="d-flex justify-content-between align-items-center mb-3">
-                            <h5>Empresa: {empresa.nomeEmpresa}</h5>
+                            <h5>Instituicao: {instituicao.nomeInstituicao}</h5>
                             <Button variant="danger" onClick={gerarPDF}>
                                 <i className="bi bi-file-earmark-pdf-fill me-2"></i> Gerar PDF
                             </Button>

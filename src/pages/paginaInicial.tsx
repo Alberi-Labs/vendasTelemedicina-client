@@ -1,64 +1,148 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import Loading from "@/components/loading/loading";
+import { motion } from "framer-motion";
+import Loading from "@/components/loading/loading"; // Importando o componente de loading
+import { useAuth } from "@/app/context/AuthContext";
+import { homepageModules } from "@/config/modulesConfig";
 
 export default function PaginaInicial() {
+  const { user } = useAuth();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);  // Estado para controlar o loading
+  const [isMounted, setIsMounted] = useState(false);
 
-  const handleNavigation = (path: string) => {
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
+
+  const handleNavigation = (item: { path?: string; href?: string }) => {
     setLoading(true);
-    router.push(path);
+    if (item.href) {
+      window.open(item.href, "_blank");
+      setLoading(false);
+    } else if (item.path) {
+      router.push(item.path);
+      setLoading(false);
+    }
   };
 
+  const visibleModules = homepageModules(user?.perfil).filter(m => m.path || m.href);
+
   return (
-    <div className="container text-center mt-5">
+  <div
+    className="container text-center d-flex flex-column justify-content-center min-vh-100"
+    
+  >
       {loading && (
-        <div 
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+        <div
+          className=" position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
           style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 1050 }}
         >
           <Loading />
         </div>
       )}
 
-      <h1>Olá, seja bem-vindo ao nosso sistema!</h1>
-      <p>
-        Aqui você pode efetuar vendas individuais ou empresariais, além de consultar relatórios para acompanhar seu desempenho.
-        O que você deseja fazer hoje?
-      </p>
-      <div className="d-flex justify-content-center gap-3 mt-4">
-        <div 
-          className="card p-3 text-center"
-          style={{ width: "200px", cursor: "pointer", transition: "background-color 0.3s ease-in-out" }}
-          onClick={() => handleNavigation("/cadastroPf")}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""} 
-        >
-          <i className="bi bi-person fs-1"></i>
-          <h5 className="mt-2">Venda Individual</h5>
-        </div>
-        <div 
-          className="card p-3 text-center"
-          style={{ width: "200px", cursor: "pointer", transition: "background-color 0.3s ease-in-out" }}
-          onClick={() => handleNavigation("/cadastroPj")}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""} 
-        >
-          <i className="bi bi-building fs-1"></i>
-          <h5 className="mt-2">Venda Empresarial</h5>
-        </div>
-        <div 
-          className="card p-3 text-center"
-          style={{ width: "200px", cursor: "pointer", transition: "background-color 0.3s ease-in-out" }}
-          onClick={() => handleNavigation("/consultarRelatorios")}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgb(181, 205, 0)"}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""} 
-        >
-          <i className="bi bi-clipboard-data fs-1"></i>
-          <h5 className="mt-2">Consultar Relatórios</h5>
-        </div>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+
+        {(user?.perfil === "cliente" || user?.perfil === "clientePJ") ? (
+          <motion.div
+            className="d-flex align-items-start gap-3 p-4 shadow-sm rounded-3 mx-auto mt-4"
+            style={{
+              background: "#f9f9f9",
+              borderLeft: "6px solid #0d6efd",
+              maxWidth: "680px",
+              textAlign: "left",
+            }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <i className="bi bi-info-circle-fill fs-3 text-primary mt-1"></i>
+            <div>
+              <h5 className="fw-bold mb-2">Informações importantes</h5>
+              <ul className="mb-2">
+                <li>
+                  <strong>Assistência Funeral / Seguro de Acidentes Pessoais:</strong> Ligue para o número informado no seu guia do usuário.
+                </li>
+                <li>
+                  <strong>Suporte ao cliente:</strong>{" "}
+                  <a href="https://wa.me/5561996363963" target="_blank" rel="noreferrer">
+                    (61) 99636-3963
+                  </a>{" "}
+                  — disponível via WhatsApp ou ligação.
+                </li>
+                <li>
+                  <strong>Atendimento:</strong> Segunda a sexta, das 8h às 18h.
+                </li>
+              </ul>
+              <p className="mb-0">
+                Em caso de dúvidas, acesse a aba <strong>“Suporte e Ajuda”</strong> abaixo.
+              </p>
+            </div>
+          </motion.div>
+        ) : null}
+
+      </motion.div>
+
+      <div className="d-flex flex-wrap justify-content-center gap-4 mt-4">
+        {visibleModules.map((item, index) => (
+          <motion.div
+            key={item.key}
+            className="card p-4 text-center shadow-lg border-0"
+            style={{
+              width: "250px",
+              cursor: "pointer",
+              borderRadius: "12px",
+              backgroundColor: "#f8f9fa",
+              transition: "transform 0.2s, background-color 0.2s",
+            }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: index * 0.05 }}
+            onClick={() => handleNavigation({ path: item.path, href: item.href })}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#e9ecef";
+              e.currentTarget.style.transform = "scale(1.03)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#f8f9fa";
+              e.currentTarget.style.transform = "scale(1)";
+            }}
+
+          >
+            <i
+              className={`bi ${item.icon} fs-1 mb-2`}
+              style={{
+                color:
+                  item.label === "Cancelamento"
+                    ? "#dc3545" // vermelho
+                    : item.label === "Suporte e Ajuda"
+                      ? "#ffc107" // amarelo
+                      : "#0d6efd" // padrão azul
+              }}
+            ></i>
+            <h6 className="fw-semibold" style={{ fontSize: "16px" }}>{item.label}</h6>
+            <p className="text-sm text-slate-500">{item.description}</p>
+          </motion.div>
+        ))}
       </div>
+
+      <motion.button
+        className="btn btn-warning position-fixed bottom-0 end-0 mb-4 me-4 shadow-lg"
+        style={{ borderRadius: "50px", padding: "10px 20px" }}
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 1 }}
+      >
+        <i className="bi bi-chat-dots me-2"></i> Suporte
+      </motion.button>
     </div>
   );
+
 }

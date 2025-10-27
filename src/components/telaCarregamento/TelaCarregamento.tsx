@@ -3,7 +3,11 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 
-const TelaCarregamento: React.FC = () => {
+interface TelaCarregamentoProps {
+  mensagem?: string;
+}
+
+const TelaCarregamento: React.FC<TelaCarregamentoProps> = ({ mensagem = "Carregando..." }) => {
   return (
     <Box
       sx={{
@@ -26,7 +30,7 @@ const TelaCarregamento: React.FC = () => {
         color="white"
         sx={{ marginTop: 2, textAlign: "center" }}
       >
-        Carregando...
+        {mensagem}
       </Typography>
     </Box>
   );
