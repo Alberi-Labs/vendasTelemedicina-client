@@ -226,8 +226,10 @@ export const apolicesApi = {
 };
 
 export const arquivoApi = {
-  downloadArquivo: (dscEmpresa: string) => {
-    const params = new URLSearchParams({ dscEmpresa });
+  downloadArquivo: (dscEmpresa?: string) => {
+    const params = new URLSearchParams();
+    // sempre inclui o parâmetro na query; se não informado, envia string vazia
+    params.append('dscEmpresa', dscEmpresa ?? '');
     const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/download?${params.toString()}`;
 
     // Retorna a URL para download direto ou para usar com fetch
@@ -237,8 +239,9 @@ export const arquivoApi = {
     };
   },
 
-  download: (dscEmpresa: string) => {
-    const params = new URLSearchParams({ dscEmpresa });
+  download: (dscEmpresa?: string) => {
+    const params = new URLSearchParams();
+    params.append('dscEmpresa', dscEmpresa ?? '');
     const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/arquivo/download?${params.toString()}`;
 
     // Retorna a URL para download direto ou para usar com fetch

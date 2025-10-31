@@ -24,6 +24,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Grid from '@mui/material/Grid';
 import Chip from '@mui/material/Chip';
 import { clientesApi, instituicoesEmpresaApi, vendaTelemedicinaApiCompat } from '../lib/api-client';
+import { displayValue } from '../lib/display';
 import { ActionButtons } from '@/components/gestao-clientes/ActionButtons';
 import { ChargesModal } from '@/components/gestao-clientes/ChargesModal';
 import { GenerateCarteirinhaModal } from '@/components/gestao-clientes/GenerateCarteirinhaModal';
@@ -69,6 +70,7 @@ export default function PaginaGestaoClientes() {
   const [busca, setBusca] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<string>('');
   const { user } = useAuth();
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [clienteParaCancelar, setClienteParaCancelar] = useState<Cliente | null>(null);
 
@@ -365,11 +367,36 @@ export default function PaginaGestaoClientes() {
             </Grid>
             <Grid item xs={12} md={4} textAlign={{ xs: 'left', md: 'right' }}>
               <Chip label={`Total: ${clientesFiltrados.length}`} color="primary" variant="outlined" />
-              {(busca || (user?.perfil==='admin' && instituicaoFiltro)) && (
-                <Button size="small" sx={{ ml: 1 }} onClick={() => { setBusca(''); setInstituicaoFiltro(''); }}>
-                  Limpar
+                {(busca || (user?.perfil==='admin' && instituicaoFiltro)) && (
+                  <Button size="small" sx={{ ml: 1 }} onClick={() => { setBusca(''); setInstituicaoFiltro(''); }}>
+                    Limpar
+                  </Button>
+                )}
+                <Button size="small" sx={{ ml: 1 }} onClick={async () => {
+                  // Gera e baixa PDF com todos os clientes
+                  try {
+                    const token = localStorage.getItem('token');
+                    const resp = await fetch(`${API_BASE_URL}/clientes/export/pdf`, {
+                      method: 'GET',
+                      headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    });
+                    if (!resp.ok) throw new Error('Falha ao gerar PDF');
+                    const blob = await resp.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'clientes.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                  } catch (e) {
+                    console.error('Erro ao exportar PDF:', e);
+                    alert('Erro ao exportar PDF. Veja o console para mais detalhes.');
+                  }
+                }}>
+                  Exportar PDF
                 </Button>
-              )}
             </Grid>
           </Grid>
 
@@ -393,7 +420,7 @@ export default function PaginaGestaoClientes() {
                       <TableCell>{cliente.nome}</TableCell>
                       <TableCell>{cliente.cpf}</TableCell>
                       <TableCell>{cliente.email}</TableCell>
-                      <TableCell>{cliente.status_cliente || '-'}</TableCell>
+                      <TableCell>{displayValue(cliente.status_cliente)}</TableCell>
                       <TableCell>
                         <div className="d-flex gap-2">
                           <ActionButtons
@@ -417,11 +444,11 @@ export default function PaginaGestaoClientes() {
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Detalhes do Cliente</DialogTitle>
         <DialogContent>
-          {selectedCliente && (
+              {selectedCliente && (
             <>
-              <Typography><strong>Nome:</strong> {selectedCliente.nome}</Typography>
-              <Typography><strong>CPF:</strong> {selectedCliente.cpf}</Typography>
-              <Typography><strong>Email:</strong> {selectedCliente.email}</Typography>
+              <Typography><strong>Nome:</strong> {displayValue(selectedCliente.nome)}</Typography>
+              <Typography><strong>CPF:</strong> {displayValue(selectedCliente.cpf)}</Typography>
+              <Typography><strong>Email:</strong> {displayValue(selectedCliente.email)}</Typography>
               <Typography variant="h6" sx={{ mt: 2 }}>Últimas 5 Vendas</Typography>
               {loadingVendas ? (
                 <CircularProgress size={24} />

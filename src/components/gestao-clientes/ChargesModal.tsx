@@ -21,6 +21,7 @@ import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { asaasApiClient } from '../../lib/api-client';
+import { displayValue, displayCurrency, displayDate } from '../../lib/display';
 
 interface Charge {
   id?: string;
@@ -170,7 +171,7 @@ export const ChargesModal: React.FC<ChargesModalProps> = ({ open, onClose, cpf, 
   };
 
   const truncate = (text?: string, max = 60) => {
-    if (!text) return '—';
+    if (!text) return displayValue(undefined);
     return text.length > max ? text.slice(0, max - 1) + '…' : text;
   };
 
@@ -302,10 +303,10 @@ export const ChargesModal: React.FC<ChargesModalProps> = ({ open, onClose, cpf, 
                     <Checkbox checked={!!selected[c.id || '']} onChange={() => toggleSelect(c.id)} disabled={!c.id || c.status === 'RECEIVED'} />
                   </TableCell>
                   <TableCell title={c.descricao || ''}>{truncate(c.descricao, 60)}</TableCell>
-                  <TableCell>{c.billingType || '—'}</TableCell>
-                  <TableCell>{typeof c.valor === 'number' ? `R$ ${c.valor.toFixed(2).replace('.', ',')}` : '—'}</TableCell>
-                  <TableCell>{c.dueDate ? new Date(c.dueDate).toLocaleDateString() : '—'}</TableCell>
-                  <TableCell>{c.originalObject?.clientPaymentDate ? new Date(c.originalObject?.clientPaymentDate).toLocaleDateString() : '—'}</TableCell>
+                  <TableCell>{displayValue(c.billingType)}</TableCell>
+                  <TableCell>{typeof c.valor === 'number' ? displayCurrency(c.valor) : displayValue(c.valor)}</TableCell>
+                  <TableCell>{c.dueDate ? displayDate(c.dueDate) : displayValue(undefined)}</TableCell>
+                  <TableCell>{c.originalObject?.clientPaymentDate ? displayDate(c.originalObject?.clientPaymentDate) : displayValue(undefined)}</TableCell>
                   <TableCell>
                     <Chip
                       size="small"
@@ -320,7 +321,7 @@ export const ChargesModal: React.FC<ChargesModalProps> = ({ open, onClose, cpf, 
                         <Button size="small" variant="outlined" onClick={() => window.open(c.invoiceUrl as string, '_blank')}>Abrir</Button>
                         <Button size="small" onClick={() => copyToClipboard(c.invoiceUrl as string)}>Copiar</Button>
                       </Stack>
-                    ) : '—'}
+                    ) : displayValue(undefined)}
                   </TableCell>
                 </TableRow>
               ))}
